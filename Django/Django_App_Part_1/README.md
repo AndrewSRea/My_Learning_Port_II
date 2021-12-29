@@ -223,3 +223,51 @@ The next step is to point the root URLconf at the **polls.urls** module. In **my
 The **[include()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include)** function allows referencing other URLconfs. Whenever Django encounters **[include()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include)**, it chops off whatever part of the URL matched up to that point and sends the remaining string to the included URLconf for further processing.
 
 The idea behind **[include()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include)** is to make it easy to plug-and-play URLs. Since polls are in their own URLconf (**polls/urls.py**), they can be placed under "/polls/", or under "/fun_polls/", or under "/content/polls/", or any other path root, and the app will still work.
+
+<hr>
+
+**When to use [include(https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include)](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include)**
+
+You should always use **include()** when you include other URL patterns. **admin.site.urls** is the only exception to this.
+
+<hr>
+
+You have now wired an **index** view into the URLconf. Verify it's working with the following command:
+```
+$ python manage.py runserver
+```
+Go to [http://localhost:8000/polls/](http://localhost:8000/polls/) in your browser, and you should see the text *"Hello, world. You're at the polls index."*, which you defined in the **index** view.
+
+<hr>
+
+**Page not found?**
+
+If you get an error page here, check that you're going to [http://localhost:8000/polls/](http://localhost:8000/polls/) and not [http://localhost:8000/](http://localhost:8000/).
+
+<hr>
+
+The **[path()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path)** function is passed four arguments, two required: **route** and **view**, and two optional: **kwargs** and **name**. At this point, it's worth reviewing what these arguments are for:
+
+### [path()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) argument: route
+
+**route** is a string that contains a URL pattern. When processing a request, Django starts at the first pattern in **urlpatterns** and makes its way down the list, comparing the requested URL against each pattern until it finds one that matches.
+
+Patterns don't search `GET` and `POST` parameters, or the domain name. For example, in a request to **https://www.example.com/myapp/**, the URLconf will look for **myapp/**. In a request to **https://www.example.com/myapp/?page=3**, the URLconf will also look for **myapp/**.
+
+### [path()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) argument: view
+
+When Django finds a matching pattern, it calls the specified view function with an **[HttpRequest](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest)** object as the first argument and any "captured" values from the route as keyword arguments. We'll give an example of this in a bit.
+
+### [path()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) argument: kwargs
+
+Arbitrary keyword arguments can be passed in a dictionary to the target view. We aren't going to use this feature of Django in the tutorial.
+
+### [path()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) argument: name
+
+Naming your URL lets you refer to it unambiguously from elsewhere in Django, especially from within templates. This powerful feature allows you to make global changes to the URL patterns of your project while only touching a single file.
+
+When you're comfortable with the basic request and response flow, read [Part 2 of this tutorial]() to start working with the database.
+
+<hr>
+
+[[Back to the Django opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django#django) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_1#writing-your-first-django-app---part-1) - [[Next page: Part 2]]()
