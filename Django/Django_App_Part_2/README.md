@@ -481,3 +481,22 @@ Things to note here:
 * The form is automatically generated from the `Question` model.
 * The different model field types ([`DateTimeField`](https://docs.djangoproject.com/en/3.1/ref/models/fields/#django.db.models.DateTimeField), [`CharField`](https://docs.djangoproject.com/en/3.1/ref/models/fields/#django.db.models.CharField)) correspond to the appropriate HTML input widget. Each type of field knows how to display itself in the Django admin.
 * Each [`DateTimeField`](https://docs.djangoproject.com/en/3.1/ref/models/fields/#django.db.models.DateTimeField) gets free JavaScript shortcuts. Dates get a "Today" shortcut and calendar popup, and times get a "Now" shortcut and a convenient popup that lists commonly entered times.
+
+The bottom part of the page gives you a couple of options:
+
+* **SAVE** - Saves changes and returns to the change-list page for this type of object.
+* **Save and continue editing** - Saves changes and reloads the admin page for this object.
+* **Save and add another** - Saves changes and loads a new, blank form for this type of object.
+* **Delete** - Displays a delete confirmation page.
+
+If the vakue of "Date published" dosn't match the time when you created the question in [Tutorial 1](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_1#writing-your-first-django-app---part-1), it probably means you forgot to set the correct value for the [`TIME_ZONE`]() setting. Change it, reload the page and check that the correct value appears.
+
+Change the "Date published" by clicking the "Today" and "Now" shortcuts. Then click "Save and continue editing". Then click "History" in the upper right. You'll see a page listing all changes made to this object via the Django admin, with the timestamp and username of the person who made the change:
+
+![Image of Django's "Change history" page on the admin site](https://docs.djangoproject.com/en/3.1/_images/admin06t.png)
+
+When you're comfortable with the models API and have familiarized yourself with the admin site, read [part 3 of this tutorial]() to learn about how to add more views to our polls app.
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_1#writing-your-first-django-app---part-1) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_2#writing-your-first-django-app---part-2) - [[Next page]]()
