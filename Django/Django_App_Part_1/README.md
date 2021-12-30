@@ -29,11 +29,11 @@ See [How to install Django](https://docs.djangoproject.com/en/4.0/topics/install
 
 If this is your first time using Django, you'll have to take care of some initial setup. Namely, you'll need to auto-generate some code that establishes a Django [project](https://docs.djangoproject.com/en/4.0/glossary/#term-project) -- a collection of settings for an instance of Django, including database configuration, Django-specific options and application-specific settings.
 
-From the command line, **`cd`** into a directory where you'd like to store your code, then run the following command (make sure you're in your [virtual environment in your terminal first](https://github.com/AndrewSRea/My_Learning_Port/tree/main/JavaScript/Server-Side_Website_Programming/Django_Web_Framework/Django_Development_Environment#setting-up-a-django-development-environment)):
+From the command line, `cd` into a directory where you'd like to store your code, then run the following command (make sure you're in your [virtual environment in your terminal first](https://github.com/AndrewSRea/My_Learning_Port/tree/main/JavaScript/Server-Side_Website_Programming/Django_Web_Framework/Django_Development_Environment#setting-up-a-django-development-environment)):
 ```
 $ django-admin startproject mysite
 ```
-This will create a **mysite** directory in your current directory. If it didn't work, see [Problems running django-admin](https://docs.djangoproject.com/en/4.0/faq/troubleshooting/#troubleshooting-django-admin).
+This will create a `mysite` directory in your current directory. If it didn't work, see [Problems running django-admin](https://docs.djangoproject.com/en/4.0/faq/troubleshooting/#troubleshooting-django-admin).
 
 <hr>
 
@@ -41,19 +41,19 @@ This will create a **mysite** directory in your current directory. If it didn't 
 
 <hr>
 
-**Note**: You'll need to avoid naming projects after built-in Python or Django components. In particular, this means you should avoid using names like **django** (which will conflict with Django itself) or **test** (which conflicts with a built-in Python package).
+**Note**: You'll need to avoid naming projects after built-in Python or Django components. In particular, this means you should avoid using names like `django` (which will conflict with Django itself) or `test` (which conflicts with a built-in Python package).
 
 <hr>
 
 **Where should this code live?**
 
-If your background is in plain old PHP (with no use of modern frameworks), you're probably used to putting code under the web server's document root (in a place such as **/var/www**). With Django, you don't do that. It's not a good idea to put any of this Python code within your web server's document root, because it risks the possibility that people may be able to view your code over the web. That's not goof for security.
+If your background is in plain old PHP (with no use of modern frameworks), you're probably used to putting code under the web server's document root (in a place such as `/var/www`). With Django, you don't do that. It's not a good idea to put any of this Python code within your web server's document root, because it risks the possibility that people may be able to view your code over the web. That's not goof for security.
 
-Put your code in some directory **outside** of the document root, such as **/home/mycode**.
+Put your code in some directory **outside** of the document root, such as `/home/mycode`.
 
 <hr>
 
-Let's look at what **[startproject](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-startproject)** created:
+Let's look at what [`startproject`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-startproject) created:
 ```
 mysite/
     manage.py
@@ -66,18 +66,18 @@ mysite/
 ```
 These files are:
 
-* The outer **mysite/** root directory is a container for your project. Its name doesn't matter to Django; you can rename it to anything you like.
-* **manage.py**: A command-line utility that lets you interact with this Django project in various ways. You can read all the details about **manage.py** in [django-admin and manage.py](https://docs.djangoproject.com/en/4.0/ref/django-admin/).
-* The inner **mysite/** directory is the actual Python package for your project. Its name is the Python package name you'll need to use to import anything inside it (e.g. **mysite.urls**).
-* **mysite/__init__.py**: An empty file that tells Python that this directory should be considered a Python package. If you're a Python beginner, read [more about packages](https://docs.python.org/3/tutorial/modules.html#tut-packages) in the official Python docs.
-* **mysite/settings.py**: Settings/configuration for this Django project. [Django settings](https://docs.djangoproject.com/en/4.0/topics/settings/) will tell you all about how settings work.
-* **mysite/urls.py**: The URL declarations for this Django project; a "table of contents" of your Django-powered site. You can read more about URLs in [URL dispatcher](https://docs.djangoproject.com/en/4.0/topics/http/urls/).
-* **mysite/asgi.py**: An entry-point for ASGI-compatible web servers to serve your project. See [How to deploy with ASGI](https://docs.djangoproject.com/en/4.0/howto/deployment/asgi/) for more details.
-* **mysite/wsgi.py**: An entry-point for WSGI-compatible web servers to serve your project. See [How to deploy with WSGI](https://docs.djangoproject.com/en/4.0/howto/deployment/wsgi/) for more details.
+* The outer `mysite/` root directory is a container for your project. Its name doesn't matter to Django; you can rename it to anything you like.
+* `manage.py`: A command-line utility that lets you interact with this Django project in various ways. You can read all the details about `manage.py` in [`django-admin` and `manage.py`](https://docs.djangoproject.com/en/4.0/ref/django-admin/).
+* The inner `mysite/` directory is the actual Python package for your project. Its name is the Python package name you'll need to use to import anything inside it (e.g. `mysite.urls`).
+* `mysite/__init__.py`: An empty file that tells Python that this directory should be considered a Python package. If you're a Python beginner, read [more about packages](https://docs.python.org/3/tutorial/modules.html#tut-packages) in the official Python docs.
+* `mysite/settings.py`: Settings/configuration for this Django project. [Django settings](https://docs.djangoproject.com/en/4.0/topics/settings/) will tell you all about how settings work.
+* `mysite/urls.py`: The URL declarations for this Django project; a "table of contents" of your Django-powered site. You can read more about URLs in [URL dispatcher](https://docs.djangoproject.com/en/4.0/topics/http/urls/).
+* `mysite/asgi.py`: An entry-point for ASGI-compatible web servers to serve your project. See [How to deploy with ASGI](https://docs.djangoproject.com/en/4.0/howto/deployment/asgi/) for more details.
+* `mysite/wsgi.py`: An entry-point for WSGI-compatible web servers to serve your project. See [How to deploy with WSGI](https://docs.djangoproject.com/en/4.0/howto/deployment/wsgi/) for more details.
 
 ## The development server
 
-Let's verify your Django project works. Change into the outer **mysite** directory, if you haven't already, and run the following commands:
+Let's verify your Django project works. Change into the outer `mysite` directory, if you haven't already, and run the following commands:
 ```
 python manage.py runserver
 ```
@@ -112,7 +112,7 @@ Now that the server's running, visit [http://127.0.0.1:8000/](http://127.0.0.1:8
 
 **Changing the port**
 
-By default, the **[runserver](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-runserver)** command starts the development server on the internal IP at port 8000.
+By default, the [`runserver`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-runserver) command starts the development server on the internal IP at port 8000.
 
 If you want to change the server's port, pass it as a command-line argument. For instance, this command starts the server on port 8080:
 ```
@@ -122,11 +122,11 @@ If you want to change the server's IP, pass it along with the port. For example,
 ```
 $ python manage.py runserver 0:8000
 ```
-**0** is a shortcut for **0.0.0.0**. Full docs for the development server can be found in the **[runserver](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-runserver)** reference.
+`0` is a shortcut for `0.0.0.0`. Full docs for the development server can be found in the [`runserver`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-runserver)` reference.
 
 <hr>
 
-**Automatic reloading of [runserver](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-runserver)**
+**Automatic reloading of [`runserver`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-runserver)**
 
 The development server automatically reloads Python code for each request as needed. You don't need to restart the server for code changes to take effect. However, some actions like adding files don't trigger a restart, so you'll have to restart the server in these cases.
 
@@ -146,13 +146,13 @@ What's the difference between a project and an app? An app is a web application 
 
 <hr>
 
-Your apps can live anywhere on your [Python path](https://docs.python.org/3/tutorial/modules.html#tut-searchpath). In this tutorial, we'll create our poll app in the same directory as your **manage.py** file so that it can be imported as its own top-level module, rather than a submodule of of **mysite**.
+Your apps can live anywhere on your [Python path](https://docs.python.org/3/tutorial/modules.html#tut-searchpath). In this tutorial, we'll create our poll app in the same directory as your `manage.py` file so that it can be imported as its own top-level module, rather than a submodule of of `mysite`.
 
-To create your app, make sure you're in the same directory as **manage.py** and type this command:
+To create your app, make sure you're in the same directory as `manage.py` and type this command:
 ```
 $ python manage.py startapp polls
 ```
-That'll create a directory **polls**, which is laid out like this:
+That'll create a directory `polls`, which is laid out like this:
 ```
 polls/
     __init__.py
@@ -170,18 +170,19 @@ This directory structure will house the poll application.
 
 Let's write the first view. Open the file **polls/views.py** and put the following Python code in it:
 
-    `polls/views.py`
-    ```
-    from django.http import HttpResponse
+`polls/views.py`
+
+```
+from django.http import HttpResponse
 
 
-    def index(request):
-        return HttpResponse("Hello, world. You're at the polls index.")
-    ```
+def index(request):
+    return HttpResponse("Hello, world. You're at the polls index.")
+```
 
 This is the simplest view possible in Django. To call the view, we need to map it to a URL -- and for this, we need a URLconf.
 
-To create a URLconf in the polls directory, create a file called **urls.py**. You app directory should now look like this:
+To create a URLconf in the polls directory, create a file called `urls.py`. You app directory should now look like this:
 ```
 polls/
     __init__.py
@@ -194,49 +195,51 @@ polls/
     urls.py
     views.py
 ```
-In the **polls/urls.py** file, include the following code:
+In the `polls/urls.py` file, include the following code:
 
-    `polls/urls.py`
-    ```
-    from django.urls import path
+`polls/urls.py`
 
-    from . import views
+```
+from django.urls import path
 
-    urlpatterns = [
-        path('', views.index, name='index'),
-    ]
-    ```
+from . import views
 
-The next step is to point the root URLconf at the **polls.urls** module. In **mysite/urls.py**, add an import for **django.urls.include** and insert an **[include()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include)** in the **urlpatterns** list, so you have:
+urlpatterns = [
+    path('', views.index, name='index'),
+]
+```
 
-    `mysite/urls.py`
-    ```
-    from django.contrib import admin
-    from django.urls import include, path
+The next step is to point the root URLconf at the `polls.urls` module. In `mysite/urls.py`, add an import for `django.urls.include` and insert an [`include()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include) in the `urlpatterns` list, so you have:
 
-    urlpatterns = [
-        path('polls/', include('polls.urls')),
-        path('admin/', admin.site.urls),
-    ]
-    ```
+`mysite/urls.py`
 
-The **[include()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include)** function allows referencing other URLconfs. Whenever Django encounters **[include()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include)**, it chops off whatever part of the URL matched up to that point and sends the remaining string to the included URLconf for further processing.
+```
+from django.contrib import admin
+from django.urls import include, path
 
-The idea behind **[include()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include)** is to make it easy to plug-and-play URLs. Since polls are in their own URLconf (**polls/urls.py**), they can be placed under "/polls/", or under "/fun_polls/", or under "/content/polls/", or any other path root, and the app will still work.
+urlpatterns = [
+    path('polls/', include('polls.urls')),
+    path('admin/', admin.site.urls),
+]
+```
 
-<hr>
+The [`include()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include) function allows referencing other URLconfs. Whenever Django encounters [`include()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include), it chops off whatever part of the URL matched up to that point and sends the remaining string to the included URLconf for further processing.
 
-**When to use [include(https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include)](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include)**
-
-You should always use **include()** when you include other URL patterns. **admin.site.urls** is the only exception to this.
+The idea behind [`include()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include) is to make it easy to plug-and-play URLs. Since polls are in their own URLconf (`polls/urls.py`), they can be placed under "/polls/", or under "/fun_polls/", or under "/content/polls/", or any other path root, and the app will still work.
 
 <hr>
 
-You have now wired an **index** view into the URLconf. Verify it's working with the following command:
+**When to use [`include()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include)**
+
+You should always use `include()` when you include other URL patterns. `admin.site.urls` is the only exception to this.
+
+<hr>
+
+You have now wired an `index` view into the URLconf. Verify it's working with the following command:
 ```
 $ python manage.py runserver
 ```
-Go to [http://localhost:8000/polls/](http://localhost:8000/polls/) in your browser, and you should see the text *"Hello, world. You're at the polls index."*, which you defined in the **index** view.
+Go to [http://localhost:8000/polls/](http://localhost:8000/polls/) in your browser, and you should see the text *"Hello, world. You're at the polls index."*, which you defined in the `index` view.
 
 <hr>
 
@@ -246,28 +249,28 @@ If you get an error page here, check that you're going to [http://localhost:8000
 
 <hr>
 
-The **[path()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path)** function is passed four arguments, two required: **route** and **view**, and two optional: **kwargs** and **name**. At this point, it's worth reviewing what these arguments are for:
+The [`path()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) function is passed four arguments, two required: `route` and `view`, and two optional: `kwargs` and `name`. At this point, it's worth reviewing what these arguments are for:
 
-### [path()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) argument: route
+### [`path()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) argument: route
 
-**route** is a string that contains a URL pattern. When processing a request, Django starts at the first pattern in **urlpatterns** and makes its way down the list, comparing the requested URL against each pattern until it finds one that matches.
+`route` is a string that contains a URL pattern. When processing a request, Django starts at the first pattern in `urlpatterns` and makes its way down the list, comparing the requested URL against each pattern until it finds one that matches.
 
-Patterns don't search `GET` and `POST` parameters, or the domain name. For example, in a request to **https://www.example.com/myapp/**, the URLconf will look for **myapp/**. In a request to **https://www.example.com/myapp/?page=3**, the URLconf will also look for **myapp/**.
+Patterns don't search `GET` and `POST` parameters, or the domain name. For example, in a request to `https://www.example.com/myapp/`, the URLconf will look for `myapp/`. In a request to `https://www.example.com/myapp/?page=3`, the URLconf will also look for `myapp/`.
 
-### [path()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) argument: view
+### [`path()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) argument: view
 
-When Django finds a matching pattern, it calls the specified view function with an **[HttpRequest](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest)** object as the first argument and any "captured" values from the route as keyword arguments. We'll give an example of this in a bit.
+When Django finds a matching pattern, it calls the specified view function with an [`HttpRequest`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest) object as the first argument and any "captured" values from the route as keyword arguments. We'll give an example of this in a bit.
 
-### [path()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) argument: kwargs
+### [`path()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) argument: kwargs
 
 Arbitrary keyword arguments can be passed in a dictionary to the target view. We aren't going to use this feature of Django in the tutorial.
 
-### [path()](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) argument: name
+### [`path()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) argument: name
 
 Naming your URL lets you refer to it unambiguously from elsewhere in Django, especially from within templates. This powerful feature allows you to make global changes to the URL patterns of your project while only touching a single file.
 
-When you're comfortable with the basic request and response flow, read [Part 2 of this tutorial]() to start working with the database.
+When you're comfortable with the basic request and response flow, read [Part 2 of this tutorial](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_2#writing-your-first-django-app---part-2) to start working with the database.
 
 <hr>
 
-[[Back to the Django opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django#django) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_1#writing-your-first-django-app---part-1) - [[Next page: Part 2]]()
+[[Back to the Django opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django#django) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_1#writing-your-first-django-app---part-1) - [[Next page: Part 2]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_2#writing-your-first-django-app---part-2)
