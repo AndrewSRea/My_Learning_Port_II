@@ -387,3 +387,97 @@ True
 >>> c = q.choice_set.filter(choice_text__startswith='Just hacking')
 >>> c.delete()
 ```
+For more information on model relations, see [Accessing related objects](https://docs.djangoproject.com/en/3.1/ref/models/relations/). For more on how to use double underscores to perform field lookups via the API, see [Field lookups](https://docs.djangoproject.com/en/3.1/topics/db/queries/#field-lookups-intro). For full details on the database API, see our [Database API reference](https://docs.djangoproject.com/en/3.1/topics/db/queries/).
+
+## Introducing the Django Admin
+
+<hr>
+
+**Philosophy**
+
+Generating admin sites for your staff or clients to add, change, and delete content is tedious work that doesn't require much creativity. For that reason, Django entirely automates creation of admin interfaces for models.
+
+Django was written in a newsroom environment, with a very clear separation between "content publishers" and the "public" site. Site managers use the system to add news stories, events, sports scores, etc., and that content is displayed on the public site. Django solves the problem of creating a unified interface for site administrators to edit content.
+
+The admin isn't intended to be used by site visitors. It's for site managers.
+
+<hr>
+
+### Creating an admin user
+
+First, we'll need to create a user who can login to the admin site. Run the following command:
+```
+$ python manage.py createsuperuser
+```
+Enter your desired username and press enter.
+```
+Username: admin
+```
+You will then be prompted for your desired email address:
+```
+Email address: admin@example.com
+```
+The final step is to enter your password. You will be asked to enter your password twice, the second time as a confirmation of the first.
+```
+Password: **********
+Password (again): **********
+Superuser created successfully.
+```
+
+### Start the development server
+
+The Django admin site is activated by default. Let's start the development server and explore it.
+
+If the server is not running, start it like so:
+```
+$ python manage.py runserver
+```
+Now, open a Web browser and go to "/admin/" on your local domain -- e.g., [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/). You should see the admin's login screen:
+
+![Image of Django's admin login screen](https://docs.djangoproject.com/en/3.1/_images/admin01.png)
+
+Since [translation](https://docs.djangoproject.com/en/3.1/topics/i18n/translation/) is turned on by default, if you set [`LANGUAGE_CODE`](https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-LANGUAGE_CODE), the login screen will be displayed in the given language (if Django has appropriate translations).
+
+### Enter the admin site
+
+Now, try logging in with the superuser account you created in the previous step. You should see the Django admin index page:
+
+![Image of Django's admin index page](https://docs.djangoproject.com/en/3.1/_images/admin02.png)
+
+You should see a few types of editable content: groups and users. They are provided by [`django.contrib.auth`](https://docs.djangoproject.com/en/3.1/topics/auth/#module-django.contrib.auth), the authentication framework shipped by Django.
+
+### Make the poll app modifiable in the admin
+
+But where's our poll app? It's not displayed on the admin index page.
+
+Only one more thing to do: we need to tell the admin that `Question` objects have an admin interface. To do this, open the `polls/admin.py` file, and edit it to look like this:
+
+`polls/admin.py`
+
+```
+from django.contrib import admin
+
+from .models import Question
+
+admin.site.register(Question)
+```
+
+### Explore the free admin functionality
+
+Now we've registered `Question`, Django knows that it should be displayed on the admin index page:
+
+![Image of Django's admin index page with the "Questions" model choice](https://docs.djangoproject.com/en/3.1/_images/admin03t.png)
+
+Click "Questions". Now you're at the "change list" page for questions. This page displays all the questions in the database and lets you choose one to change it. There's the "What's up?" question we created eariler:
+
+![Image of Django's "Select question to change" page on the admin site](https://docs.djangoproject.com/en/3.1/_images/admin04t.png)
+
+Click the "What's up?" question to edit it:
+
+![Image of Django's "Change question" page on the admin site](https://docs.djangoproject.com/en/3.1/_images/admin05t.png)
+
+Things to note here: 
+
+* The form is automatically generated from the `Question` model.
+* The different model field types ([`DateTimeField`](https://docs.djangoproject.com/en/3.1/ref/models/fields/#django.db.models.DateTimeField), [`CharField`](https://docs.djangoproject.com/en/3.1/ref/models/fields/#django.db.models.CharField)) correspond to the appropriate HTML input widget. Each type of field knows how to display itself in the Django admin.
+* Each [`DateTimeField`](https://docs.djangoproject.com/en/3.1/ref/models/fields/#django.db.models.DateTimeField) gets free JavaScript shortcuts. Dates get a "Today" shortcut and calendar popup, and times get a "Now" shortcut and a convenient popup that lists commonly entered times.
