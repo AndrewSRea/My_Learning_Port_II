@@ -80,3 +80,37 @@ When somebody requests a page from your website -- say, "/polls/34/", Django wil
 detail(request=<HttpRequest object>, question_id=34)
 ```
 The `question_id=34` part comes from `<int:question_id>`. Using angle brackets "captures" part of the URL and sends it as a keyword argument to the view function. The `question_id` part of the string defines the name that will be used to identify the matched pattern, and the `int` part is a converter that determines what patterns should match this part of the URL path. The colon (`:`) separates the converter and pattern name.
+
+## Write views that actually do something
+
+Each view is responsible for doing one of two things: returning an [`HttpResponse`](https://docs.djangoproject.com/en/3.1/ref/request-response/#django.http.HttpResponse) object containing the content for the requested page, or raising an exception such as [`Http404`](https://docs.djangoproject.com/en/3.1/topics/http/views/#django.http.Http404). The rest is up to you.
+
+Your view can read records from a database, or not. It can use a template system such as Django's -- or a third-party Python template system -- or not. It can generate a PDF file, output XML, create a ZIP file on the fly, anything you want, using whatever Python libraries you want.
+
+All Django wants is that [`HttpResponse`](https://docs.djangoproject.com/en/3.1/ref/request-response/#django.http.HttpResponse). Or an exception.
+
+Because it's convenient, let's use Django's own database API, which we covered in [Tutorial 2](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_2#writing-your-first-django-app---part-2). Here's one stab at a new `index()` view, which displays the latest 5 poll questions in the system, separated by commas, according to publication date:
+
+`polls/views.py`
+
+```
+from django.http import HttpResponse
+
+from .models import Question
+
+
+def index(request):
+    latest_question_list = Question.objects.order_by('-pub_date')[:5]
+    output = ', '.join([q.question_text for q in latest_question_list])
+    return HttpResponse(output)
+
+# Leave the rest of the views (detail, results, vote) unchanged.
+```
+
+There's a problem here, though: the page's design is hard-coded in the view. If you want to change the way the page looks, you'll have to edit this Python code. So let's use Django's template system to separate the design from Python by creating a template that the view can use.
+
+First, create a directory called `templates` in your `polls` directory. Django will look for templates in there.
+
+Your project's [`TEMPLATES`](https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-TEMPLATES) setting describes how Django will load and render templates. The default settings file configures a `DjangoTemplates` backend whose [`APP_DIRS`](https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-TEMPLATES-APP_DIRS) option is set to `True`. By convention, `DjangoTemplates` looks for a "templates" subdirectory in each of the [`INSTALLED_APPS`](https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-INSTALLED_APPS).
+
+Within the `templates` directory you have just created, create another directory called `polls`, and within that create a file called `index.html`. In other words, your template should be at `polls/templates/polls/index.html`. Because of how the `app_directories` template loader works as described above, you can refer to this template within Django as `polls/index.html`.
