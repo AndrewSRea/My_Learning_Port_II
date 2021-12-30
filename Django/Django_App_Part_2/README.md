@@ -103,4 +103,58 @@ Each field is represented by an instance of a [`Field`](https://docs.djangoproje
 
 The name of each [`Field`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field) instance (e.g. `question_text` or `pub_date`) is the field's name, in machine-friendly format. You'll use this value in your Python code, and your database will use it as the column name.
 
-You can use an optional first positional argument to a [`Field`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field) to designate a human-readable name. That's used in a couple of introspective parts of Django, and it doubles as documentation. If this field isn't provided, Django will use...
+You can use an optional first positional argument to a [`Field`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field) to designate a human-readable name. That's used in a couple of introspective parts of Django, and it doubles as documentation. If this field isn't provided, Django will use the machine-readable name. In this example, we've only defined a human-readable name for `Question.pub_date`. For all other fields in this model, the field's machine-readable name will suffice as its human-readable name.
+
+Some [`Field`](https://docs.djangoproject.com/en/3.1/ref/models/fields/#django.db.models.Field) classes have required arguments. [`CharField`](https://docs.djangoproject.com/en/3.1/ref/models/fields/#django.db.models.CharField), for example, requires that you give it a [`max_length`](https://docs.djangoproject.com/en/3.1/ref/models/fields/#django.db.models.CharField.max_length). That's used not only in the database schema, but in validation, as we'll soon see.
+
+A [`Field`](https://docs.djangoproject.com/en/3.1/ref/models/fields/#django.db.models.Field) can also have various optional arguments; in this case, we've set the [`default`](https://docs.djangoproject.com/en/3.1/ref/models/fields/#django.db.models.Field.default) value of `votes` to 0.
+
+Finally, note a relationship is defined, using [`ForeignKey`](https://docs.djangoproject.com/en/3.1/ref/models/fields/#django.db.models.ForeignKey). That tells Django each `Choice` is related to a single `Question`. Django supports all the common database relationships: many-to-one, many-to-many, and one-to-one.
+
+## Activating models
+
+That small bit of model code gives Django a lot of information. With it, Django is able to:
+
+* Create a database schema (`CREATE TABLE` statements) for this app.
+* Create a Python database-access API for accessing `Question` and `Choice` objects.
+
+But first we need to tell our project that the `polls` app is installed.
+
+<hr>
+
+**Philosophy**
+
+Django apps are "pluggable": You can use an app in multiple projects, and you can distribute apps, because they don't have to be tied to a given Django installation.
+
+<hr>
+
+To include the app in our project, we need to add a reference to its configuration class in the [`INSTALLED_APPS`](https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-INSTALLED_APPS) setting. The `PollsConfig` class is in the `polls/apps.py` file, so its dotted path is `'polls.apps.PollsConfig'`. Edit the `mysite/settings.py` file and add that dotted path to the [`INSTALLED_APPS`]() setting. It'll look like this:
+
+`mysite/settings.py`
+
+```
+INSTALLED_APPS =[
+    'polls.apps.PollsConfig',
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    django.contrib.staticfiles',
+]
+```
+
+Now Django knows to include the `polls` app. Let's run another command:
+```
+$ python manage.py makemigrations polls
+```
+You should see something similar to the following:
+```
+Migrations for 'polls':
+    polls/migrations/0001_initial.py
+        - Create model Question
+        - Create model Choice
+```
+By running `makemigrations`, you're telling Django that you've made some changes to your models (in this case, you've made new ones) and that you'd like the changes to be stored as a *migration*.
+
+Migrations are how Django stores changes to your models (and thus your database schema) -- they're files on disk. You can read the migration for your new model if you like; it's the file `polls/migrations/0001_initial.py`. Don't worry, you're not expected to read...
