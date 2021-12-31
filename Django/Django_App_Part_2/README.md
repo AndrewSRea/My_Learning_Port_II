@@ -495,8 +495,8 @@ Change the "Date published" by clicking the "Today" and "Now" shortcuts. Then cl
 
 ![Image of Django's "Change history" page on the admin site](https://docs.djangoproject.com/en/3.1/_images/admin06t.png)
 
-When you're comfortable with the models API and have familiarized yourself with the admin site, read [part 3 of this tutorial]() to learn about how to add more views to our polls app.
+When you're comfortable with the models API and have familiarized yourself with the admin site, read [part 3 of this tutorial](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_3#writing-your-first-django-app---part-3) to learn about how to add more views to our polls app.
 
 <hr>
 
-[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_1#writing-your-first-django-app---part-1) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_2#writing-your-first-django-app---part-2) - [[Next page]]()
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_1#writing-your-first-django-app---part-1) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_2#writing-your-first-django-app---part-2) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_3#writing-your-first-django-app---part-3)
