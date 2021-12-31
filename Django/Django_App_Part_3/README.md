@@ -145,7 +145,7 @@ Put the following code in that template:
 
 <hr>
 
-:attention: **Attention**: It's strange that the Django documentation would refer to using "normal" HTML documentation above, when Django has its own [template language](https://docs.djangoproject.com/en/4.0/ref/templates/language/) for creating HTML templates.
+:exclamation: **Attention**: It's strange that the Django documentation would refer to using "normal" HTML documentation above, when Django has its own [template language](https://docs.djangoproject.com/en/4.0/ref/templates/language/) for creating HTML templates.
 
 <hr>
 
