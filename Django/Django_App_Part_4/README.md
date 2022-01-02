@@ -225,8 +225,8 @@ Run the server, and use your new polling app based on generic views.
 
 For full details on generic views, see the [generic views documentation](https://docs.djangoproject.com/en/3.1/topics/class-based-views/).
 
-When you're comfortable with forms and generic views, read [part 5 of this tutorial]() to learn about testing our polls app.
+When you're comfortable with forms and generic views, read [part 5 of this tutorial](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_5#writing-your-first-django-app---part-5) to learn about testing our polls app.
 
 <hr>
 
-[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_3#writing-your-first-django-app---part-3) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_4#writing-your-first-django-app---part-4) - [[Next page]]()
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_3#writing-your-first-django-app---part-3) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_4#writing-your-first-django-app---part-4) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_5#writing-your-first-django-app---part-5)
