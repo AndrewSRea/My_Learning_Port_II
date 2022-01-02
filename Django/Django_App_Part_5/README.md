@@ -480,3 +480,35 @@ At a certain point, you are bound to look at your tests and wonder whether your 
 It might seem that our tests are growing out of control. At this rate, there will soon be more code in our tests than in our application, and the repetition is unaesthetic, compared to the elegant conciseness if the rest of our code.
 
 **It doesn't matter**. Let them grow. For the most part, you can write a test once and then forget about it. It will continue performing its useful function as you continue to develop your program.
+
+Sometimes tests will need to be updated. Suppose that we amend our views so that only `Question`s with `Choice`s are published. In that case, many of our existing test will fail -- *telling us exactly which tests need to be amended to bring them up to date*, so to that extent, tests help look after themselves.
+
+At worst, as you continue developing, you might find that you have some tests that are now redundant. Even that's not a problem; in testing, redundancy is a *good* thing.
+
+As long as your tests are sensibly arranged, they won't become unmanageable. Good rules-of-thumb include having:
+
+* A separate `TestClass` for each model or view.
+* A separate test method for each set of conditions you want to test.
+* Test method names that describe their function.
+
+## Further testing
+
+This tutorial only introduces some of the basics of testing. There's a great deal more you can do, and a number of very useful tools at your disposal to achieve some very clever things.
+
+For example, while our tests here have covered some of the internal logic of a model and the way our views publish information, you can use an "in-browser" framework such as [Selenium](https://www.selenium.dev/) to test the way your HTML actually renders in a browser. These tools allow you to check not just the behavior of your Django code, but also, for example, of your JavaScript. It's quite something to see the tests launch a browser, and start interacting with your site, as if a human being were driving it! Django includes [`LiveServerTestCase`](https://docs.djangoproject.com/en/3.1/topics/testing/tools/#django.test.LiveServerTestCase) to facilitate integration with tools like Selenium.
+
+If you have a complex application, you may want to run tests automatically with every commit for the purposes of [continuous integration](https://en.wikipedia.org/wiki/Continuous_integration), so that quality control is itself -- at least, partially -- automated.
+
+A good way to spot untested parts of your application is to check code coverage. This also helps identify fragile or even dead code. If you can't test a piece of code, it usually means that code should be refactored or removed. Coverage will help to identify dead code. See [integration with `coverage.py`](https://docs.djangoproject.com/en/3.1/topics/testing/advanced/#topics-testing-code-coverage) for details.
+
+[Testing in Django](https://docs.djangoproject.com/en/3.1/topics/testing/) has comprehensive information about testing.
+
+## What's next?
+
+For full details on testing, see [Testing in Django](https://docs.djangoproject.com/en/3.1/topics/testing/).
+
+When you're comfortable with testing Django views, read [part 6 of this tutorial]() to learn about static files management.
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_4#writing-your-first-django-app---part-4) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_5#writing-your-first-django-app---part-5) - [[Next page]]()
