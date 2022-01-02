@@ -160,7 +160,7 @@ If instead you're getting a `NameError` here, you may have missed a step in [Par
 What happened is this:
 
 * `manage.py test polls` looked for tests in the `polls` application.
-* It found a subclass of the [`django.test.TestCase`]() class.
+* It found a subclass of the [`django.test.TestCase`](https://docs.djangoproject.com/en/3.1/topics/testing/tools/#django.test.TestCase) class.
 * It created a special database for the purpose of testing.
 * It looked for test methods -- ones whose names begin with `test`.
 * In `test_was_published_recently_with_future_question`, it created a `Question` instance whose `pub_date` field is 30 days in the future.
@@ -221,5 +221,191 @@ def test_was_published_recently_with_recent_question(self):
     time = timezone.now() - datetime.timedelta(hours=23, minutes=59, seconds=59)
     recent_question = Question(pub_date=time)
     self.assertIs(recent_question.was_published_recently(), True)
+```
+
+And now we have three tests that confirm that `Question.was_published_recently()` returns sensible values for past, recent, and future questions.
+
+Again, `polls` is a minimal application, but however complex it grows in the future and whatever other code it interacts with, we now have some guarantee that the method we have written tests for will behave in expected ways.
+
+## Test a view
+
+The polls application is fairly undiscriminating: it will publish any question, including ones whose `pub_date` field lies in the future. We should improve this. Setting a `pub_date` in the future should mean that the `Question` is published at that moment, but invisible until then.
+
+### A test for a view
+
+When we fixed the bug above, we wrote the test first and then the code to fix it. In fact, that was an example of test-driven development, but it doesn't really matter in which order we do the work.
+
+In our first test, we focused closely on the internal behavior of the code. For this test, we want to check its behavior as it would be experienced by a user through a web browser.
+
+before we try to fix anything, let's have a look at the tools at our disposal.
+
+### The Django test client
+
+Django provides a test [`Client`](https://docs.djangoproject.com/en/3.1/topics/testing/tools/#django.test.Client) to simulate a user interacting with the code at the view level. We can use it in `tests.py` or even in the [`shell`](https://docs.djangoproject.com/en/3.1/ref/django-admin/#django-admin-shell).
+
+We will start again with the [`shell`](https://docs.djangoproject.com/en/3.1/ref/django-admin/#django-admin-shell), where we need to do a couple of things that won't be necessary in `tests.py`. The first is to set up the test environment in the [`shell`](https://docs.djangoproject.com/en/3.1/ref/django-admin/#django-admin-shell):
+```
+$ python manage.py shell
+```
+```
+>>> from django.test.utils import setup_test_environment
+>>> setup_test_environment()
+```
+[`setup_test_environment`](https://docs.djangoproject.com/en/3.1/topics/testing/advanced/#django.test.utils.setup_test_environment) installs a template renderer which will allow us to examine some additional attributes on responses such as `response.context` that otherwise wouldn't be available. Note that this method *does not* setup a test database, so the following will be run against the existing database and the output may differ slightly depending on what questions you already created. You might get unexpected results if your `TIME_ZONE` in `settings.py` isn't correct. If you don't remember setting it earlier, check it before continuing.
+
+Next, we need to import the test client class (later in `tests.py`, we will use the [`django.test.TestCase`](https://docs.djangoproject.com/en/3.1/topics/testing/tools/#django.test.TestCase) class, which comes with its own client, so this won't be required):
+```
+>>> from django.test import Client
+>>> # create an instance of the client for our use
+>>> client = Client()
+```
+With that ready, we can ask the client to do some work for us:
+```
+>>> # get a response from '/'
+>>> response = client.get('/')
+Not Found: /
+>>> # we should expect a 404 from that address; if you instead see an
+>>> # "Invalid HTTP_HOST header" error and a 400 response, you probably
+>>> # omitted the setup_test_environment() call described earlier.
+>>> response.status_code
+404
+>>> # on the other hand, we should expect to find something at '/polls/'
+>>> # we'll use 'reverse()' rather than a hardcoded URL
+>>> from django.urls import reverse
+>>> response = client.get(reverse('polls:index'))
+>>> response.status_code
+200
+>>> response.content
+b' \n    <ul>\n     \n        <li><a href="/polls/1/">What&#x27;s up?</a></li>\n    \n    </ul>\n  '
+>>> response.context['latest_question_list']
+<QuerySet [<Question: What's up?>]>
+```
+
+### Improving our view
+
+The list of polls shows polls that aren't published yet (i.e. those that have a `pub_date` in the future). Let's fix that.
+
+In [Tutorial 4](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_4#writing-your-first-django-app---part-4), we introduced a class-based view, based on [`ListView`](https://docs.djangoproject.com/en/3.1/ref/class-based-views/generic-display/#django.views.generic.list.ListView):
+
+`polls/views.py`
+
+```
+class IndexView(generic.ListView):
+    template_name = 'polls/index.html'
+    context_object_name = 'latest_question_list'
+
+    def get_queryset(self):
+        """Return the last five published questions."""
+        return Question.objects.order_by('-pub_date')[:5]
+```
+
+We need to amend the `get_queryset()` method and change it so that it also checks the date by comparing it with `timezone.now()`. First, we need to add an import:
+
+`polls/views.py`
+
+```
+from django.utils import timezone
+```
+
+...and then we must amend the `get_queryset()` method like so:
+
+`polls/views.py`
+
+```
+def get_queryset(self):
+    """
+    Return the last five published questions (not including those set to be 
+    published in the future).
+    """
+    return Question.objects.filter(
+        pub_date__lte=timezone.now()
+    ).order_by('-pub_date')[:5]
+```
+
+`Question.objects.filter(pub_date__lte=timezone.now())` returns a queryset containing `Question`s whose `pub_date` is less than or equal to -- that is, earlier than or equal to -- `timezone.now`.
+
+### Testing our new view
+
+Now you can satify yourself that this behaves as expected by firing up `runserver`, loading the site in your browser, creating `Questions` with dates in the past and future, and checking that only those that have been published are listed. You don't want to have to do that *every single time you make any change that might affect this* -- so let's also create a test, based on our [`shell`]() session above.
+
+Add the following to `polls/tests.py`:
+
+`polls/tests.py`
+
+```
+from django.urls import reverse
+```
+
+...and we'll create a shortcut function to create questions as well as a new test class:
+
+`polls/tests.py`
+
+```
+def create_question(question_text, days):
+    """
+    Create a question with the given `question_text` and published the
+    given number of `days` offset to now (negative for questions published
+    in the past, positive for questions that have yet to be published).
+    """
+    time = timezone.now() + datetime.timedelta(days=days)
+    return Question.objects.create(question_text=question_text, pub_date=time)
+
+
+class QuestionIndexViewTests(TestCase):
+    def test_no_questions(self):
+        """
+        If no questions exist, an appropriate message is displayed.
+        """
+        response = self.client.get(reverse('polls:index'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No polls are available.")
+        self.assertQuerysetEqual(response.context['latest_question_list'], [])
+
+    def test_past_question(self):
+        """
+        Questions with a pub_date in the past are displayed on the 
+        index page.
+        """
+        create_question(question_text="Past question.", days=-30)
+        response = self.client.get(reverse('polls:index'))
+        self.assertQuerysetEqual(
+            response.context['latest_question_list'],
+            ['<Question: Past question.>']
+        )
+
+    def test_future_question(self):
+        """
+        Questions with a pub_date in the future aren't displayed on
+        the index page.
+        """
+        create_question(question_text="Future question.", days=30)
+        response = self.client.get(reverse('polls:index'))
+        self.assertContains(response, "No polls are available.")
+        self.assertQuerysetEqual(response.context['latest_question_list'], [])
+
+    def test_future_question_and_past_question(self):
+        """
+        Even if both past and future questions exist, only past questions
+        are displayed.
+        """
+        create_question(question_text="Past question.", days=-30)
+        create_question(question_text="Future question.", days=30)
+        response = self.client.get(reverse('polls:index'))
+        self.assertQuerysetEqual(
+            response.context['latest_question_list'],
+            ['<Question: Past question.>']
+        )
+
+    def test_two_past_questions(self):
+        """
+        The questions index page may display multiple questions.
+        """
+        create_question(question_text="Past question 1.", days=-30)
+        create_question(question_text="Past question 2.", days=-5)
+        response = self.client.get(reverse('polls:index'))
+        self.assertQuerysetEqual(
+            response.context['latest_question_list'],
+            ['<Question: Past question 2.>', '<Question: Past question 1.>']
+        )
 ```
 
