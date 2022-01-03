@@ -1,0 +1,3 @@
+# Writing your first Django app - Part 7
+
+This tutorial begins where [Tutorial 6](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_6#writing-your-first-django-app---part-6) left off. We're continuing the Web-poll application and will focus on customizing Django's automatically-generated admin site that we first explored in [Tutorial 2](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_2#writing-your-first-django-app---part-2).
