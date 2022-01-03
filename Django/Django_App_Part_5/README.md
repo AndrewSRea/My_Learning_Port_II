@@ -507,8 +507,8 @@ A good way to spot untested parts of your application is to check code coverage.
 
 For full details on testing, see [Testing in Django](https://docs.djangoproject.com/en/3.1/topics/testing/).
 
-When you're comfortable with testing Django views, read [part 6 of this tutorial]() to learn about static files management.
+When you're comfortable with testing Django views, read [part 6 of this tutorial](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_6#writing-your-first-django-app---part-6) to learn about static files management.
 
 <hr>
 
-[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_4#writing-your-first-django-app---part-4) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_5#writing-your-first-django-app---part-5) - [[Next page]]()
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_4#writing-your-first-django-app---part-4) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_5#writing-your-first-django-app---part-5) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_6#writing-your-first-django-app---part-6)
