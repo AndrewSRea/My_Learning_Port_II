@@ -207,3 +207,78 @@ search_fields = ['question_text']
 That adds a search box at the top of the change list. When somebody enters search terms, Django will search the `question_text` field. You can use as many fields as you'd like -- although because it uses a `LIKE` query behind the scenes, limiting the number of search fields to a reasonable number will make it easier for your database to do the search.
 
 Now's also a good time to note that change lists give you free pagination. The default is to display 100 items per page. [Change list pagination](https://docs.djangoproject.com/en/3.1/ref/contrib/admin/#django.contrib.admin.ModelAdmin.list_per_page), [search boxes](https://docs.djangoproject.com/en/3.1/ref/contrib/admin/#django.contrib.admin.ModelAdmin.search_fields), [filters](https://docs.djangoproject.com/en/3.1/ref/contrib/admin/#django.contrib.admin.ModelAdmin.list_filter), [date-hierarchies](https://docs.djangoproject.com/en/3.1/ref/contrib/admin/#django.contrib.admin.ModelAdmin.date_hierarchy), and [column-header-ordering](https://docs.djangoproject.com/en/3.1/ref/contrib/admin/#django.contrib.admin.ModelAdmin.list_display) all work together like you think they should.
+
+## Customize the admin look and feel
+
+Clearly, having "Django administration" at the top of each admin page is ridiculous. It's just placeholder text.
+
+You can change it, though, using Django's template system. The Django admin is powered by Django itself, and its interfaces use Django's own template system.
+
+### Customizing your *project's* templates
+
+Create a `templates` directory in your project directory (the one that contains `manage.py`). Templates can live anywhere on your filesystem that Django can access. (Django runs as whatever user your server runs.) However, keeping your templates within the project is a good convention to follow.
+
+Open your settings file (`mysite/settings.py`, remember) and add a [`DIRS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-DIRS) option in the [`TEMPLATES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES) setting:
+
+`mysite/settings.py`
+
+```
+TEMPLATES = [
+    {
+        'BACKEND': 'django.templates.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+```
+
+[`DIRS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-DIRS) is a list of filesystem directories to check when loading Django templates; it's a search path.
+
+<hr>
+
+**Organizing templates**
+
+Just like the static files, we *could* have all our templates together, in one big templates directory, and it would work perfectly well. However, templates that belong to a particular application should be placed in that application's template directory (e.g. `polls/templates`) rather than the project's (`templates`). We'll discuss in more detail in the [reusable apps tutorial](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_8#advanced-tutorial-how-to-write-reusable-apps) *why* we do this.
+
+<hr>
+
+Now create a directory called `admin` inside `templates`, and copy the template `admin/base_site.html` from within the default Django admin template directory in the source code of Django itself (`django/contrib/admin/templates`) into that directory.
+
+<hr>
+
+**Where are the Django source files?**
+
+If you have difficulty finding where the Django source files are located on your system, run the following command:
+```
+$ python -c "import django; print(django.__path__)"
+```
+
+<hr>
+
+:exclamation: **Attention**: I had a bit of difficulty finding the file path leading to the default Django admin template directory with the `admin/base_site.html` template file inside it.
+
+I own a MacBook laptop so I only have instructions for those with macOS: Once you run the terminal command shown above:
+```
+$ python -c "import django; print(django.__path__)"
+```
+...you should receive a file path similar to this one:
+```
+['/Users/<your-username>/.virtualenvs/<name-of-your-virtualenv>/lib/python3.10/site-packages/django']
+```
+This is where your `admin/base_site.html` file is located, which was downloaded into your hard drive when you downloaded Django into your system.
+
+Open your Finder window, and once you open the folder `/Users/<your-username>/`, you won't immediately see the `/.virtualenvs/` folder. You will have to then press the `command` + `shift` + `.` keys together, which shows all of the hidden files on your hard drive.
+
+Then follow this path: `.virtualenvs > <name-of-your-virtual-environment> > lib > python3.10 > site-packages > django > contrib > admin > templates > admin > base_site.html`.
+
+Copy that .html file and put it into your `mysite/templates/admin` folder.
+
+<hr>
