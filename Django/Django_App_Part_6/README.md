@@ -86,8 +86,8 @@ The `{% static %}` template tag is not available for use in static files which a
 
 These are the **basics**. For more details on settings and other bits included with the framework, see [the static files howto](https://docs.djangoproject.com/en/3.1/howto/static-files/) and [the staticfiles reference](https://docs.djangoproject.com/en/3.1/ref/contrib/staticfiles/). [Deploying static files](https://docs.djangoproject.com/en/3.1/howto/static-files/deployment/) discusses how to use static files on a real server.
 
-When you're comfortable with the static files, read [part 7 of this tutorial]() to learn how to customize Django's automatically-generated admin site.
+When you're comfortable with the static files, read [part 7 of this tutorial](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_7#writing-your-first-django-app---part-7) to learn how to customize Django's automatically-generated admin site.
 
 <hr>
 
-[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_5#writing-your-first-django-app---part-5) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_6#writing-your-first-django-app---part-6) - [[Next page]]()
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_5#writing-your-first-django-app---part-5) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_6#writing-your-first-django-app---part-6) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_7#writing-your-first-django-app---part-7)
