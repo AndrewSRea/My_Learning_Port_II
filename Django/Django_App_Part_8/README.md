@@ -63,3 +63,75 @@ mysite/
         admin/
             base_site.html
 ```
+
+<hr>
+
+:exclamation: **Attention**: Some folders or files you might have in your application aren't listed above, like `__pycache__` or `db.sqlite3`. Don't delete these folders or files just because they aren't listed above.
+
+<hr>
+
+You created `mysite/templates` in [Tutorial 7](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_7#customizing-your-projects-templates), and `polls/templates` in [Tutorial 3](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_3#write-views-that-actually-do-something). Now perhaps it is clearer why we chose to have separate template directories for the project and application: everything that is part of the polls application is in `polls`. It makes the application self-contained and easier to drop into a new project.
+
+The `polls` directory could now be copied into a new Django project and immediately reused. It's not quite ready to be published though. For that, we need to package the app to make it easy for others to install.
+
+## Installing some prerequisites
+
+The current state of Python packaging is a bit muddled with various tools. For this tutorial, we're going to use [setuptools](https://pypi.org/project/setuptools/) to build our package. It's the recommended packaging tool (merged with the `distribute` fork). We'll also be using [pip](https://pypi.org/project/pip/) to install and uninstall it. You should install these two packages now. If you need help, you can refer to [how to install Django with pip](https://docs.djangoproject.com/en/4.0/topics/install/#installing-official-release). You can install `setuptools` the same way.
+
+## Packaging your app
+
+Python *packaging* refers to preparing your app in a specific format that can be easily installed and used. Django itself is packaged very much like this. For a small app like polls, this process isn't too difficult.
+
+1. First, create a parent directory for `polls`, outside of your Django project. Call this directory `django-polls`.
+
+<hr>
+
+**Choosing a name for your app**
+
+When choosing a name for your package, check resources like PyPI to avoid naming conflicts with existing packages. It's often useful to prepend `django-` to your module name when creating a package to distribute. This helps others looking for Django apps identify your app as Django specific.
+
+Application labels (that is, the final part of the dotted path to application packages) *must* be unique in [`INSTALLED_APPS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-INSTALLED_APPS). Avoid using the same label as any of the Django [contrib packages]() -- for example, `auth`, `admin`, or `messages`.
+
+<hr>
+
+2. Move the `polls` directory into the `django-polls` directory.
+
+3. Create a file `django-polls/README.rst` with the following contents:
+
+`django-polls/README.rst`
+
+```
+=====
+Polls
+=====
+
+Polls is a Django app to conduct web-based polls. For each question,
+visitors can choose between a fixed number of answers.
+
+Detailed documentation is in the "docs" directory.
+
+Quick start
+-----------
+
+1. Add "polls" to your INSTALLED_APPS setting like this::
+
+    INSTALLED_APPS = [
+        ...
+        'polls',
+    ]
+
+2. Include the polls URLconf in your project urls.py like this::
+
+    path('polls/', include('polls.urls')),
+
+3. Run ``python manage.py migrate`` to create the polls models.
+
+4. Start the development server and visit http://127.0.0.1:8000/admin/
+   to create a poll (you'll need the Admin app enabled).
+
+5. Visit http://127.0.0.1:8000/polls/ to participate in the poll.
+```
+
+4. Create a `django-polls/LICENSE` file. Choosing a license is beyond the scope of this tutorial, but suffice it to say that code released publicly without a license is *useless*. Django and many Django-compatible apps are distributed under the BSD license; however, you're free to pick your own license. Just be aware that your licensing choice will affect who is able to use your code.
+
+5. Next, we'll create `pyproject.toml`, `setup.cfg`, and `setup.py` files which detail how to build and install the app. A full explanation of these files is beyond the scope of this tutorial, but the [setuptools documentation](https://setuptools.pypa.io/en/latest/) has a good explanation.
