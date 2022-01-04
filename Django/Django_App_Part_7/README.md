@@ -265,7 +265,9 @@ $ python -c "import django; print(django.__path__)"
 
 :exclamation: **Attention**: I had a bit of difficulty finding the file path leading to the default Django admin template directory with the `admin/base_site.html` template file inside it.
 
-I own a MacBook laptop so I only have instructions for those with macOS: Once you run the terminal command shown above:
+I own a MacBook laptop so I only have instructions for those with macOS: 
+
+Once you run the terminal command shown above:
 ```
 $ python -c "import django; print(django.__path__)"
 ```
@@ -279,6 +281,44 @@ Open your Finder window, and once you open the folder `/Users/<your-username>/`,
 
 Then follow this path: `.virtualenvs > <name-of-your-virtual-environment> > lib > python3.10 > site-packages > django > contrib > admin > templates > admin > base_site.html`.
 
-Copy that .html file and put it into your `mysite/templates/admin` folder.
+Copy that .html file and put it into your application's `mysite/templates/admin` folder.
 
 <hr>
+
+Then, edit the file and replace `{{ site_header|default:_('Django administration') }}` (including the curly braces) with your own site's name as you see fit. You should end up with a section of code like:
+```
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">Polls Administration</a></h1>
+{% endblock %}
+```
+We use this approach to teach you how to override templates. In an actual project, you would probably use the [`django.contrib.admin.AdminSite.site_header`](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#django.contrib.admin.AdminSite.site_header) attribute to more easily make this particular customization.
+
+This template file contains lots of text like `{% block branding %}` and `{{ title }}`. The `{%` and `{{` tags are part of Django's template language. When Django renders `admin/base_site.html`, this template language will be evaluated to produce the final HTML page, just like we saw in [Tutorial 3](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_3#writing-your-first-django-app---part-3).
+
+Note that any of Django's default admin templates can be overridden. To override a template, do the same thing you did with `base_site.html` -- copy it from the default directory into your custom directory, and make changes.
+
+### Customizing your *application's* templates
+
+Astute readers will ask: But if [`DIRS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-DIRS) was empty by default, how was Django finding the default admin templates? The answer is that, since [`APP_DIRS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-APP_DIRS) is set to `True`, Django automatically looks for a `templates/` subdirectory within each application package, for use as a fallback (don't forget that `django.contrib.admin` is an application).
+
+Our poll application is not very complex and dosn't need custom admin templates. But if it grew more sophisticated and required modification of Django's standard admin templates for some of its functionality, it would be more sensible to modify the *application's* templates, rather than those in the *project*. That way, you could include the polls application in any way new project and be assured that it would find the custom templates it needed.
+
+See the [template loading documentation](https://docs.djangoproject.com/en/4.0/topics/templates/#template-loading) for more information about how Django finds its templates.
+
+## Customize the admin index page
+
+On a similar note, you might want to customize the look and feel of the Django admin index page.
+
+By default, it displays all the apps in [`INSTALLED_APPS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-INSTALLED_APPS) that have been registered with the admin application, in alphabetical order. You may want to make significant changes to the layout. After all, the index is probably the most important page of the admin, and it should be easy to use.
+
+The template to customize is `admin/index.html`. (Do the same as with `admin/base_site.html` in the previous section -- copy it from the default directory to your custom template directory.) Edit the file, and you'll see it uses a template variable called `app_list`. That variable contains every installed Django app. Instead of using that, you can hard-code links to object-specific admin pages in whatever way you think is best.
+
+## What's next?
+
+The beginner tutorial ends here. In the meantime, you might want to check out some pointers on [where to go from here](https://docs.djangoproject.com/en/4.0/intro/whatsnext/).
+
+If you are familiar with Python packaging and interested in learning how to turn polls into a "reusable app", check out [Advanced tutorial: How to write reusable apps](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_8#advanced-tutorial-how-to-write-reusable-apps).
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_6#writing-your-first-django-app---part-6) - [[Top]]() - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_8#advanced-tutorial-how-to-write-reusable-apps)
