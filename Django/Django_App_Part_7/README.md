@@ -321,4 +321,4 @@ If you are familiar with Python packaging and interested in learning how to turn
 
 <hr>
 
-[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_6#writing-your-first-django-app---part-6) - [[Top]]() - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_8#advanced-tutorial-how-to-write-reusable-apps)
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_6#writing-your-first-django-app---part-6) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_7#writing-your-first-django-app---part-7) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_8#advanced-tutorial-how-to-write-reusable-apps)
