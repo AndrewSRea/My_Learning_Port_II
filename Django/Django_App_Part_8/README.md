@@ -239,7 +239,7 @@ Now that we've packaged and tested `django-polls`, it's ready to share with the 
 
 * Email the package to a friend.
 * Upload the package on your website.
-* Post the package on a public repository, such as [the Python Package Index (PyPI)](). [packaging.python.org]() has [a good tutorial]() for doing this.
+* Post the package on a public repository, such as [the Python Package Index (PyPI)](https://pypi.org/). [packaging.python.org](https://packaging.python.org/en/latest/) has [a good tutorial](https://packaging.python.org/en/latest/tutorials/packaging-projects/#uploading-the-distribution-archives) for doing this.
 
 ## Installing Python packages with a virtual environment
 
@@ -248,7 +248,7 @@ Earlier, we installed the polls app as a user library. This has some disadvantag
 * Modifying the user libraries can affect other Python software on your system.
 * You won't be able to run multiple versions of this package (or others with the same name).
 
-Typically, these situations only arise once you're maintaining several Django projects. When they do, the best solution is to use [venv](). This tool allows you to maintain multiple isolated Python environments, each with its own copy of the libraries and package namespace.
+Typically, these situations only arise once you're maintaining several Django projects. When they do, the best solution is to use [venv](https://docs.python.org/3/tutorial/venv.html). This tool allows you to maintain multiple isolated Python environments, each with its own copy of the libraries and package namespace.
 
 ## What to read next
 
