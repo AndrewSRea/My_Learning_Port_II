@@ -256,4 +256,4 @@ This advanced tutorial ends here. In the meantime, you might want to check out s
 
 <hr>
 
-[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_7) - [[Top]]() - [[Back to Django overview]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django#django)
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_7) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_App_Part_8#advanced-tutorial-how-to-write-reusable-apps) - [[Back to Django overview]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django#django)
