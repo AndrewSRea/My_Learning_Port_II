@@ -8,7 +8,7 @@ The goal of this document is to give you enough technical specifics to understan
 
 Although you can use Django without a database, it comes with an [object-relational mapper](https://en.wikipedia.org/wiki/Object%E2%80%93relational_mapping) in which you describe your database layout in Python code.
 
-The [data-model syntax]() <!-- link to internal folder? Or to DjangoProjects? (https://docs.djangoproject.com/en/4.0/topics/db/models/) --> offers many rich ways of representing your models -- so far, it's been solving many years' worth of database-schema problems. Here's a quick example (within a `models.py` folder):
+The [data-model syntax]() <!-- link to internal folder? Or to DjangoProjects? (https://docs.djangoproject.com/en/4.0/topics/db/models/) --> offers many rich ways of representing your models -- so far, it's been solving many years' worth of database-schema problems. Here's a quick example (within a `models.py` file):
 ```
 from django.db import models
 
@@ -39,7 +39,7 @@ The [`makemigrations`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#d
 
 ## Enjoy the free API
 
-With that, you've got a free, and rich, [Python API]() to access your data. The API is created on the fly, no code generation necessary.
+With that, you've got a free, and rich, [Python API]() <!-- link to internal folder ("Make queries")? Or to DjangoProjects? (https://docs.djangoproject.com/en/4.0/topics/db/queries/) --> to access your data. The API is created on the fly, no code generation necessary.
 
 (The code displayed below is being input into a Terminal using a [Python shell](https://docs.djangoproject.com/en/4.0/ref/django-admin/#shell). Terminal commands in a Python shell are preceeded by `>>>`, and the output from each command is listed right below each command.)
 ```
@@ -111,4 +111,47 @@ DoesNotExist: Reporter matching query does not exist.
 
 # Delete an object with delete().
 >>> r.delete()
+```
+
+## A dynamic admin interface: it's not just scaffolding -- it's the whole house
+
+Once your models are defined, Django can automatically create a professional, production ready [administrative interface]() <!-- link to internal folder ("The Django admin site")? Or to DjangoProjects? (https://docs.djangoproject.com/en/4.0/ref/contrib/admin/) --> -- a website that lets authenticated users add, chamnge, and delete objects. The only step required is to register your model in the admin site (within a `models.py` file):
+```
+from django.db import models
+
+class Article(models.Model):
+    pub_date = modelsDateField()
+    headline = models.CharField(max_length=200)
+    content = models.TextField()
+    reporter = models.ForeignKey(Reporter, on_delete=models.CASCADE)
+```
+And within an `admin.py` file:
+```
+from django.contrib import admin
+
+from . import models
+
+admin.site.register(models.Article)
+```
+The philosophy here is that your site is edited by a staff member, or a client, or maybe just you -- and you don't want to have to deal with creating backend interfaces only to manage content.
+
+One typical workflow in creating Django apps is to create models and get the admin sites up and running as fast as possible, so your staff (or clients) can start populating data. Then, develop the way data is presented to the public. 
+
+## Design your URLs
+
+A clean, elegant URL scheme is an important detail in a high-quality web application. Django encourages beautiful URL design and doesn't put any *cruft* (badly designed, unnecessarily complicated, or unwanted code) in URLs, like `.php` or `.asp`.
+
+To design URLs for an app, you create a Pyhton module called a [URLconf](). <!-- link to internal folder ("URL dispatcher")? Or to DjangoProjects? (https://docs.djangoproject.com/en/4.0/topics/http/urls/) --> A table of contents for your app, it contains a mapping between URL patterns and Python callback functions. URLconfs also serve to decouple URLs from Python code.
+
+Here's what a URLconf might look like for the `Reporter`/`Article` example above (code snippet put within a `urls.py` file):
+```
+from django.urls import path
+
+from . import views
+
+urlpatterns = [
+    path('articles/<int:year>/', views.year_archive),
+    path('articles/<int:year>/<int:month>/', views.month_archive),
+    path('articles/<int:year>/<int:month>/<int:pk>/', views.article_detail),
+]
 ```
