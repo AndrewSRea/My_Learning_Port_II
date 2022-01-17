@@ -223,3 +223,20 @@ Here's what the "base.html" template, including the use of [static files]() <!--
 ```
 Simplistically, it defines the look-and-feel of the site (with the site's logo), and provides "holes" for child templates to fill. This means that a site redesign can be done by changing a single file -- the base template.
 
+It also lets you create multiple versions of a site, with different base templates, while reusing child templates. Django's creators have used this technique to create strikingly different mobile versions of sites by only creating a new base template.
+
+Note that you don't have to use Django's template system if you prefer another system. While Django's template system is particularly well-integrated with Django's model layer, nothing forces you to use it. For that matter, you don't have to use Django's database API, either. Yo0u can use another database abstraction layer, you can read XML files, you can read files off disk, or anything you want. Each piece of Django -- models, views, templates -- is decoupled from the next.
+
+## This is just the surface
+
+This has been only a quick overview of Django's functionality. Some more useful features:
+
+* A [caching framework]() <!-- link to internal folder ("Django’s cache framework")? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/topics/cache/) --> that integrates with memchached or other backends.
+* A [syndication framework]() <!-- link to internal folder ("The syndication feed framework")? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/ref/contrib/syndication/) --> that lets you create RSS and Atom feeds by writing a small Python class.
+* More attractive automatically-generated admin features -- this overview barely scratched the surface.
+
+The next steps are for you to [download Django](https://www.djangoproject.com/download/), read [the tutorial](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Tutorial/Django_App_Part_1#writing-your-first-django-app---part-1), and join [the community](https://www.djangoproject.com/community/). Thanks for your interest!
+
+<hr>
+
+[[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Starting_with_Django#django-at-a-glance) - [[Next page]]()
