@@ -9,15 +9,15 @@ It'll consist of two parts:
 * A public site that lets people view polls and vote in them.
 * An admin site that lets you add, change, and delete polls.
 
-We'll assume you have [Django installed](https://docs.djangoproject.com/en/4.0/intro/install/) already. You can tell Django is installed and which version by running the following command in a shell prompt (indicated by the `$` prefix):
+We'll assume you have [Django installed](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Getting_Started/Quick_Install#quick-install-guide) already. You can tell Django is installed and which version by running the following command in a shell prompt (indicated by the `$` prefix):
 ```
 $ python -m django --version
 ```
 If Django is installed, you should see the version of your installation. If it isn't, you'll get an error telling "No module named django".
 
-This tutorial is written for Django 4.0, which supports Python 3.8 and later (at the time of this writing). If the Django version doesn't match, you can refer to the [Django's own tutorial](https://docs.djangoproject.com/en/4.0/intro/tutorial01/) for your version of Django by using the version switcher at the bottom right corner of Django's tutorial page (the little box marked "Documentation version: 4.0"), or update Django to the newest version. If you're using an older version of Python, check [What Python version can I use with Django?](https://docs.djangoproject.com/en/4.0/faq/install/#faq-python-version-support) to find a compatible version of Django.
+This tutorial is written for Django 4.0, which supports Python 3.8 and later (at the time of this writing). If the Django version doesn't match, you can refer to [Django's own tutorial](https://docs.djangoproject.com/en/4.0/intro/tutorial01/) for your version of Django by using the version switcher at the bottom right corner of Django's tutorial page (the little box marked "Documentation version: 4.0"), or update Django to the newest version. If you're using an older version of Python, check [What Python version can I use with Django?](https://docs.djangoproject.com/en/4.0/faq/install/#faq-python-version-support) to find a compatible version of Django.
 
-See [How to install Django](https://docs.djangoproject.com/en/4.0/topics/install/) for advice on how to remove older versions of Django and install a newer one.
+See [How to install Django]() <!-- link to internal folder? Or to DjangoProject?(https://docs.djangoproject.com/en/4.0/topics/install/) --> for advice on how to remove older versions of Django and install a newer one.
 
 <hr>
 
