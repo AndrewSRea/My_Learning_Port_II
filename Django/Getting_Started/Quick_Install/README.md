@@ -47,8 +47,8 @@ You may have another version of Django installed.
 
 ## That's it!
 
-That's it -- you can now [move onto the tutorial]().
+That's it -- you can now [move onto the tutorial](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Getting_Started/Tutorial_1#writing-your-first-django-app---part-1).
 
 <hr>
 
-[[Previous page]]() - [[Top]]() - [[Next page]]()
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Getting_Started/Django_at_a_Glance#django-at-a-glance) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Getting_Started/Quick_Install#quick-install-guide) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Getting_Started/Tutorial_1#writing-your-first-django-app---part-1)
