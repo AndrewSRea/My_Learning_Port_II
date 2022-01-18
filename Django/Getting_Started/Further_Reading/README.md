@@ -44,7 +44,7 @@ You can read Django documentation in several ways. They are, in order of prefere
 
 ### On the web
 
-The most recent version of the Django documentation lives at [https://docs.djangoproject.com/en/dev/](https://docs.djangoproject.com/en/dev/). These HTML pages are generated automatically from the text files in source control. That means they reflect the "latest and greatest" in Django -- they include the very latest corrections and additions, and they discuss the latest Django features, which may only be available to users of the Django development version. (See [Differences between versions]() below.)
+The most recent version of the Django documentation lives at [https://docs.djangoproject.com/en/dev/](https://docs.djangoproject.com/en/dev/). These HTML pages are generated automatically from the text files in source control. That means they reflect the "latest and greatest" in Django -- they include the very latest corrections and additions, and they discuss the latest Django features, which may only be available to users of the Django development version. (See [Differences between versions](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Getting_Started/Further_Reading#differences-between-versions) below.)
 
 We encourage you to help improve the docs by submitting changes, corrections, and suggestions in the [ticket system](https://code.djangoproject.com/). The Django developers actively monitor the ticket system and use your feedback to improve the documentation for everybody.
 
@@ -89,4 +89,16 @@ make.bat html
 
 ## Differences between versions
 
-The 
+The text documentation in the main branch of the Git repository contains the "latest and greatest" changes and additions. These changes include documentation of new features targeted for Django's next [feature release](https://docs.djangoproject.com/en/4.0/internals/release-process/#term-feature-release). For that reason, it's worht pointing out our policy to highlight recent changes and additions to Django.
+
+We follow this policy:
+
+* The development documentation at [https://docs.djangoproject.com/en/dev/](https://docs.djangoproject.com/en/dev) is from the main branch. These docs correspond to the latest feature release, plus whatever features have been added/changed in the framework since then.
+* As we add features to Django's development version, we update the documentation in the same Git commit transaction.
+* To distinguish feature changes/additions in the docs, we use the phrase: "New in Django Development version" for the version of Django that hasn't been released yet, or "New in version X.Y" for released versions.
+* Documentation fixes and improvements may be backported to the last release branch, at the discretion of the committer, however, once a version of Django is [no longer supported](https://docs.djangoproject.com/en/4.0/internals/release-process/#supported-versions-policy), that version of the docs won't get any further updates.
+* The [main documentation web page]() includes links to documentation for previous versions. Be sure you are using the version of the docs corresponding to the version of Django you are using!
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Getting_Started/Tutorial_8#advanced-tutorial-how-to-write-reusable-apps) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Getting_Started/Further_Reading#what-to-read-next) - [[Forward to Django Documentation]]() - [[Back to the Getting Started Table of Contents]]()
