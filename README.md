@@ -31,8 +31,8 @@ Some skills and technologies I have achieved from my previous **[My_Learning_Por
 
 ## The Purpose of This Repository
 
-Although I did complete and graduate from the University of Oregon Coding Bootcamp, I must confess it was a bit difficult to retain all of the knowledge which was afforded to me through the UofO program. But studying through [Mozilla's Development Network](https://developer.mozilla.org/en-US/) (as represented in **[My_Learning_Port](https://github.com/AndrewSRea/My_Learning_Port)** respository), I truly feel as though I have gained a much deeper knowledge of the previous languages and technologies I have listed above.
+Although I did complete and graduate from the University of Oregon Coding Bootcamp, I must confess it was a bit difficult to retain all of the knowledge which was afforded to me through the UofO program. But studying through [Mozilla's Development Network](https://developer.mozilla.org/en-US/) (as represented in **[My_Learning_Port](https://github.com/AndrewSRea/My_Learning_Port)** repository), I truly feel as though I have gained a much deeper knowledge of the previous languages and technologies I have listed above.
 
 I have created this **My_Learning_Port_II** repository -- well, mainly because I was running out of room in my previous **My_Learning_Port** repository :smile: -- but also to further my knowledge of languages and technologies beyond the scope of *Mozilla's Developer Network*, starting with a continuation of the Django web framework technology (mainly because I had so much fun working with Django in the previous repository!)
 
-So, follow along with me as I take a deeper dive into [Django]()! Thanks for coming along! 
+So, follow along with me as I take a deeper dive into [Django](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django#django)! Thanks for coming along! 
