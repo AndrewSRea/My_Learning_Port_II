@@ -2,7 +2,7 @@
 
 Because Django was developed in a fast-paced newsroom environment, it was designed to make common web development tasks fast and easy. Here's an informal overview of how to write a database-driven web app with Django.
 
-The goal of this document is to give you enough technical specifics to understand how Django works, but this isn't intended to be a tutorial or reference -- but we've got both! When you're ready to start a project, you can [start with the tutorial](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Tutorial/Django_App_Part_1#writing-your-first-django-app---part-1) or [dive right into more detailed documentation]().
+The goal of this document is to give you enough technical specifics to understand how Django works, but this isn't intended to be a tutorial or reference -- but we've got both! When you're ready to start a project, you can [start with the tutorial](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Getting_Started/Tutorial_1#writing-your-first-django-app---part-1) or [dive right into more detailed documentation]().
 
 ## Design your model
 
@@ -182,7 +182,7 @@ This example uses Django's [template system]() <!-- link to internal folder ("Te
 
 The code above loads the `news/year_archive.html` template.
 
-Django has a template search path, which allows you to minimize redundancy among templates. In your Django settings, you specify a list of directories to check for temp[altes with [`DIRS`](). If a template doesn't exist in the first directory, it checks the second, and so on.
+Django has a template search path, which allows you to minimize redundancy among templates. In your Django settings, you specify a list of directories to check for templates with [`DIRS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-DIRS). If a template doesn't exist in the first directory, it checks the second, and so on.
 
 Let's say the `news/year_archive.html` template was found. Here's what that might look like (in a file directory like `mysite/news/templates/news/year_archive.html`):
 ```
@@ -235,8 +235,8 @@ This has been only a quick overview of Django's functionality. Some more useful 
 * A [syndication framework]() <!-- link to internal folder ("The syndication feed framework")? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/ref/contrib/syndication/) --> that lets you create RSS and Atom feeds by writing a small Python class.
 * More attractive automatically-generated admin features -- this overview barely scratched the surface.
 
-The next steps are for you to [download Django](https://www.djangoproject.com/download/), read [the tutorial](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Tutorial/Django_App_Part_1#writing-your-first-django-app---part-1), and join [the community](https://www.djangoproject.com/community/). Thanks for your interest!
+The next steps are for you to [download Django](https://www.djangoproject.com/download/), read [the tutorial](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Getting_Started/Tutorial_1#writing-your-first-django-app---part-1), and join [the community](https://www.djangoproject.com/community/). Thanks for your interest!
 
 <hr>
 
-[[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Starting_with_Django#django-at-a-glance) - [[Next page]]()
+[[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Getting_Started/Django_at_a_Glance#django-at-a-glance) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Getting_Started/Quick_Install#quick-install-guide)
