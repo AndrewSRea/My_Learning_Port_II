@@ -45,3 +45,58 @@ In addition to a database backend, you'll need to make sure your Python database
 If you plan to use Django's `manage.py migrate` command to automatically create database tables for your models (after first installing Django and creating a project), you'll need to ensure that Django has permission to create and alter tables in the database you're using; if you plan to manually create the tables, you can grant Django `SELECT`, `INSERT`, `UPDATE`, and `DELETE` permissions. After creating a database user with these permissions, you'll specify the details in your project's settings file, see [`DATABASES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASES) for details.
 
 If you're using Django's [testing framework]() to test database queries, Django will need permission to create a test database. <!-- possible link to internal folder? -->
+
+## Install the Django code
+
+Installation instructions are slightly different depending on whether you're installing a distribution-specific package, downloading the latest official release, or fetching the latest development version.
+
+### Installing an official release with `pip`
+
+This is the recommended way to install Django.
+
+1. Install [pip](https://pip.pypa.io/en/stable/). The easiest is to use the [standalone pip installer](https://pip.pypa.io/en/latest/installation/). If your distribution already has `pip` installed, you might need to update it if it's outdated. If it's outdated, you'll know because installation won't work.
+
+2. Take a look at [venv](https://docs.python.org/3/tutorial/venv.html). This tool provides isolated Python environments, which are more practical than installing packages systemwide. It also allows installing packages without administrator privileges. The [contributing tutorial](https://docs.djangoproject.com/en/4.0/intro/contributing/) walks through how to create a virtual environment.
+
+3. After you've created and activated a virtual environment, enter the command:
+```
+$ python -m pip install Django
+```
+
+### Installing a distribution-specific package
+
+Check the [distribution specific notes](https://docs.djangoproject.com/en/4.0/misc/distributions/) to see if your platform/distribution provides Django packages/installers. Distribution-provided packages will typically allow for automatic installation of dependencies and supported upgrade paths; however, these packages will rarely contain the latest release of Django.
+
+### Installing the development version
+
+<hr>
+
+**Tracking Django development**
+
+If you decide to use the latest development version of Django, you'll want to pay close attention to [the development timeline](https://code.djangoproject.com/timeline), and you'll want to keep an eye on the [release notes for the upcoming release](https://docs.djangoproject.com/en/4.0/releases/#development-release-notes). This will help you stay on top of any new features you might want to use, as well as any changes you'll need to make to your code when updating your copy of Django. (For stable releases, any necessary changes are documented in the release notes.)
+
+<hr>
+
+If you'd like to be able to update your Django code occasionally with the latest bug fixes and improvements, follow these instructions:
+
+1. Make sure that you have [Git](https://git-scm.com/) installed and that you can run its commands from a shell. (Enter `git help` at a shell prompt to test this.)
+
+2. Check out Django's main development branch like so:
+```
+$ git clone https://github.com/django/django.git
+```
+This will create a directory `django` in your current directory.
+
+3. Make sure that the Python interpreter can load Django's code. The most convenient way to do this is to use a virtual environment and [pip](https://pip.pypa.io/en/stable/). The [continuing tutorial](https://docs.djangoproject.com/en/4.0/intro/contributing/) walks through how to create a virtual environment.
+
+4. After setting up and activating the virtual environment, run the following command:
+```
+$ python -m pip install -e django/
+```
+This will make Django's code importable, and will also make the `django-admin` utility command available. In other words, you're all set!
+
+When you want to update your copy of the Django source code, run the command `git pull` from within the `django` directory. When you do this, Git will download any changes.
+
+<hr>
+
+[[Back to the Django Documentation Table of Contents]]() - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Install_Django#how-to-install-django) - [[Next module: Models and databases]]()
