@@ -245,3 +245,94 @@ class Car(models.Model):
     manufacturer = models.ForeignKey(Manufacturer, on_delete=models.CASCADE)
     # ...
 ```
+You can also create [recursive relationships](https://docs.djangoproject.com/en/4.0/ref/models/fields/#recursive-relationships) (an object with a many-to-one relationship to itself) and [relationships to models not yet defined](https://docs.djangoproject.com/en/4.0/ref/models/fields/#lazy-relationships); see [the model field reference](https://docs.djangoproject.com/en/4.0/ref/models/fields/#ref-foreignkey) for details.
+
+It's suggested, but not required, that the anme of a `ForeignKey` field (`manufacturer` in the example above) be the name of the model, lowercase. You can call the field whatever you want. For example:
+```
+class Car(models.Model):
+    company_that_makes_it = models.ForeignKey(
+        Manufacturer,
+        on_delete=models.CASCADE,
+    )
+    # ...
+```
+
+<hr>
+
+**See also**: `ForeignKey` fields accept a number of extra arguments which are explained in [the model field reference](https://docs.djangoproject.com/en/4.0/ref/models/fields/#foreign-key-arguments). These options help define how the relationship should work; all are optional.
+
+For details on accessing backwards-related objects, see the [Following relationships backward example](). <!-- in the "Making queries" module -->
+
+For sample code, see the [Many-to-one relationship model example](https://docs.djangoproject.com/en/4.0/topics/db/examples/many_to_one/).
+
+<hr>
+
+#### Many-to-many relationships
+
+To define a many-to-many relationship, use [`ManyToManyField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField). You use it just like any other [`Field`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field) type: by including it as a class attribute of your model.
+
+`ManyToManyField` requires a positional argument: the class to which the model is related.
+
+For example, if a `Pizza` has multiple `Topping` objects -- that is, a `Topping` can be on multiple pizzas and each `Pizza` has multiple toppings -- here's how you'd represent that:
+```
+from django.db import models
+
+class Topping(models.Model):
+    # ...
+    pass
+
+class Pizza(models.Model):
+    # ...
+    toppings = models.ManyToManyField(Topping)
+```
+As with [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey), you can also create [recursive relationships](https://docs.djangoproject.com/en/4.0/ref/models/fields/#recursive-relationships) (an object with a many-to-many relationship to itself) and [relationships to models not yet defined](https://docs.djangoproject.com/en/4.0/ref/models/fields/#lazy-relationships).
+
+It's suggested, but not required, that the name of a `ManyToManyField` (`toppings` in the example above) be a plural describing the set of related model objects.
+
+It doesn't matter which model has the `ManyToManyField`, but you should only put it in one of the models -- not both.
+
+Generally, `ManyToManyField` instances should go in the object that's going to be edited on a form. In the above example, `toppings` is in `Pizza` (rather than `Topping` having a `pizzas` `ManyToManyField`) because it's more natural to think about a pizza having toppings than a topping being on multiple pizzas. The way it's set up above, the `Pizza` form would let users select the toppings.
+
+<hr>
+
+**See also**: See the [Many-to-many relationship model example](https://docs.djangoproject.com/en/4.0/topics/db/examples/many_to_many/) for a full example.
+
+<hr>
+
+`ManyToManyField` fields also accept a number of extra arguments which are explained in [the model field reference](https://docs.djangoproject.com/en/4.0/ref/models/fields/#manytomany-arguments). These options help define how the relationship should work; all are optional.
+
+### Extra fields on many-to-many relationships
+
+When you're only dealing with many-to-many relationships such as mixing and matching pizzas and toppings, a standard [`ManyToManyField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField) is all you need. However, sometimes you may need to associate data with the relationship between two models.
+
+For example, consider the case of an application tracking the musical groups which musicians belong to. There is a many-to-many relationship between a person and the groups of which they are a member, so you could use a `ManyToManyField` to represent this relationship. However, there is a lot of detail about the membership that you might want to collect, such as the date at which the person joined the group.
+
+For these situations, Django allows you to specify the model that will be used to govern the many-to-many relationship. You can then put extra fields on the intermediate model. The intermediate model is associated with the `ManyToManyField` using the [`through`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField.through) argument to point to the model that will act as an intermediary. For our musician example, the code would look something like this:
+```
+from django.db import models
+
+class Person(models.Model):
+    name = models.CharField(max_length=128)
+
+    def __str__(self):
+        return self.name
+
+class Group(models.Model):
+    name = models.CharField(max_length=128)
+    members = models.ManyToManyField(Person, through='Membership')
+
+    def __str__(self):
+        return self.name
+    
+class Membership(models.Model):
+    person = models.ForeignKey(Person, on_delete=models.CASCADE)
+    group = models.ForeignKey(Group, on_delete=models.CASCADE)
+    date_joined = models.DateField()
+    invite_reason = models.CharField(max_length=64)
+```
+When you set up the intermediary model, you explicitly specify foreign keys to the models that are involved in the many-to-many relationship. This explicit declaration defines how the two models are related.
+
+There are a few restrictions on the intermediate model:
+
+* Your intermediate model must contain one -- and *only* one -- foreign key to the source model (this would be `Group` in our example), or you must explicitly specify the foreign keys Django should use for the relationship using [`ManyToManyField.through_fields`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField.through_fields). If you have more than one foreign key and `through_fields` is not specified, a validation error will be raised. A similar restriction applies to the foreign key to the target model (this would be `Person` in our example).
+* For a model which has a many-to-many relationship to itself through an intermediary model, two foreign keys to the same model are permitted, but they will be treated as the two (different) sides of the many-to-many relationship. If there are *more* than two foreign keys though, you must also specify `through_fields` as above, or a validation error will be raised.
