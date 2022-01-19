@@ -18,7 +18,7 @@ class Person(models.Model):
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)
 ```
-`first_name` and `last_name` are [fields]() <!-- below --> of the model. Each field is specified as a class attribute, and each attribute maps to a database column.
+`first_name` and `last_name` are [fields](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#fields) of the model. Each field is specified as a class attribute, and each attribute maps to a database column.
 
 The above `Person` model would create a database table like this:
 ```
@@ -144,4 +144,104 @@ You can also use enumeration classes to define `choices` in a concise way:
 from django.db import models
 
 class Runner(models.Model):
-    
+    MedalType = models.TextChoices('MedalType', 'GOLD SILVER BRONZE')
+    name = models.CharField(max_length=60)
+    medal = models.CharField(blank=True, choices=MedalType.choices, max_length=10)
+```
+Further examples are available in the [model field reference](https://docs.djangoproject.com/en/4.0/ref/models/fields/#field-choices).
+
+**[`default`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.default)**
+
+The default value for the field. This can be a value or a callable object. If callable, it will be called every time a new object is created.
+
+**[`help_text`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.help_text)**
+
+Extra "help" text to be displayed with the form widget. It's useful for documentation even if your field isn't used on a form.
+
+**[`primary_key`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.primary_key)**
+
+If `True`, this field is the primary key for the model.
+
+If you don't specify `primary_key=True` for any fields in your model, Django will automatically add an [`IntegerField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.IntegerField) to hold the primary key, so you don't need to set `primary_key=True` on any of your fields unless you want to override the default primary-key behavior. For more, see [Automatic primary key fields](). <!-- below -->
+
+The primary key field is read-only. If you change the value of the primary key on an existing object and then save it, a new object will be created alongside the old one. For example:
+```
+from django.db import models
+
+class Fruit(models.Model):
+    name = models.CharField(max_length=100, primary_key=True)
+```
+```
+>>> fruit = Fruit.objects.create(name='Apple')
+>>> fruit.name = 'Pear'
+>>> fruit.save()
+>>> Fruit.objects.values_list('name', flat=True)
+<QuerySet ['Apple', 'Pear']>
+```
+
+**[`unique`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.unique)**
+
+If `True`, this field must be unique throughout the table.
+
+Again, these are just short descriptions of the most common field options. Full details can be found in the [common model field option reference](https://docs.djangoproject.com/en/4.0/ref/models/fields/#common-model-field-options).
+
+### Automatic primary key fields
+
+By default, Django gives each model an auto-incrementing primary key with the type specified per app in [`AppConfig.default_auto_field](https://docs.djangoproject.com/en/4.0/ref/applications/#django.apps.AppConfig.default_auto_field) or globally in the [`DEFAULT_AUTO_FIELD`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DEFAULT_AUTO_FIELD) setting. For example:
+```
+id = models.BigAutoField(primary_key=True)
+```
+If you'd like to specify a custom primary key, specify `primary_key=True` on one of your fields. If Django sees you've explicitly set [`Field.primary_key`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.primary_key), it won't add the automatic `id` column.
+
+Each model requires exactly one field to have `primary_key=True` (either explicitly declared or automatically added).
+
+### Verbose field names
+
+Each field type, except for [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey), [`ManyToManyField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField), and [`OneToOneField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.OneToOneField), takes an optional first positional argument -- a verbose name. If the verbose name isn't given, Django will automatically create it using the field's attribute name, converting underscores to spaces.
+
+In this example, the verbose name is `"person's first name"`:
+```
+first_name = models.CharField("person's first name", max_length=30)
+```
+In this example, the verbose name is `"first name"`:
+```
+first_name = models.CharField(max_length=30)
+```
+`ForeignKey`, `ManyToManyField`, and `OneToOneField` require the first argument to be a model class, so use the [`verbose_name`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.verbose_name) keyword argument:
+```
+poll = models.ForeignKey(
+    Poll,
+    on_delete=models.CASCADE,
+    verbose_name="the related poll",
+)
+sites = models.ManyToManyField(Site, verbose_name="list of sites")
+place = models.OneToOneField(
+    Place,
+    on_delete=models.CASCADE,
+    verbose_name="related place",
+)
+```
+The convention is not to capitalize the first letter of the `verbose_name`. Django will automatically capitalize the first letter where it needs to.
+
+### Relationships
+
+Clearly, the power of relational databases lies in relating tables to each other. Django offers ways to define the three most common types of database relationships: many-to-one, many-to-many, and one-to-one.
+
+#### Many-to-one relationships
+
+To define a many-to-one relationship, use [`django.db.models.ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey). You use it just like any other [`Field`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field) type: by including it as a class attribute of your model.
+
+`ForeignKey` requires a positional argument: the class to which the model is related.
+
+For example, if a `Car` model has a `Manufacturer` -- that is, a `Manufacturer` makes multiple cars but each `Car` only has one `Manufacturer` -- use the following definitions:
+```
+from django.db import models
+
+class Manufacturer(models.Model):
+    # ...
+    pass
+
+class Car(models.Model):
+    manufacturer = models.ForeignKey(Manufacturer, on_delete=models.CASCADE)
+    # ...
+```
