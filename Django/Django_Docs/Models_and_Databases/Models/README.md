@@ -301,7 +301,7 @@ Generally, `ManyToManyField` instances should go in the object that's going to b
 
 `ManyToManyField` fields also accept a number of extra arguments which are explained in [the model field reference](https://docs.djangoproject.com/en/4.0/ref/models/fields/#manytomany-arguments). These options help define how the relationship should work; all are optional.
 
-### Extra fields on many-to-many relationships
+#### Extra fields on many-to-many relationships
 
 When you're only dealing with many-to-many relationships such as mixing and matching pizzas and toppings, a standard [`ManyToManyField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField) is all you need. However, sometimes you may need to associate data with the relationship between two models.
 
@@ -336,3 +336,140 @@ There are a few restrictions on the intermediate model:
 
 * Your intermediate model must contain one -- and *only* one -- foreign key to the source model (this would be `Group` in our example), or you must explicitly specify the foreign keys Django should use for the relationship using [`ManyToManyField.through_fields`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField.through_fields). If you have more than one foreign key and `through_fields` is not specified, a validation error will be raised. A similar restriction applies to the foreign key to the target model (this would be `Person` in our example).
 * For a model which has a many-to-many relationship to itself through an intermediary model, two foreign keys to the same model are permitted, but they will be treated as the two (different) sides of the many-to-many relationship. If there are *more* than two foreign keys though, you must also specify `through_fields` as above, or a validation error will be raised.
+
+Now that you have set up your `ManyToManyField` to use your intermediary model (`Membership`, in this case), you're ready to start creating some many-to-many relationships. You do this by creating instances of the intermediate model:
+```
+>>> ringo = Person.objects.create(name="Ringo Starr")
+>>> paul = Person.objects.create(name="Paul McCartney")
+>>> beatles = Group.objects.create(name="The Beatles")
+>>> m1 = Membership(person=ringo, group=beatles,
+...     date_joined=date(1962, 8, 16),
+...     invite_reason="Needed a new drummer.")
+>>> m1.save()
+>>> beatles.members.all()
+<QuerySet [<Group: The Beatles>]>
+>>> m2 = Membership.objects.create(person=paul, group=beatles,
+...     date_joined=date(1960, 8, 1),
+...     invite_reason="Wanted to form a band.")
+>>> beatles.members.all()
+<QuerySet [<Person: Ringo Starr>, <Person: Paul McCartney>]>
+```
+You can also use [`add()`](https://docs.djangoproject.com/en/4.0/ref/models/relations/#django.db.models.fields.related.RelatedManager.add), [`create()`](https://docs.djangoproject.com/en/4.0/ref/models/relations/#django.db.models.fields.related.RelatedManager.create), or [`set()`](https://docs.djangoproject.com/en/4.0/ref/models/relations/#django.db.models.fields.related.RelatedManager.set) to create relationships, as long as you specify `through_defaults` for any required fields:
+```
+>>> beatles.members.add(john, through_defaults={'date_joined': date(1960, 8, 1)})
+>>> beatles.members.create(name="George Harrison", through_defaults={'date_joined': date(1960, 8, 1)})
+>>> beatles.members.set([john, paul, ringo, george], through_defaults={'date_joined': date(1960, 8, 1)})
+```
+You may prefer to create instances of the intermediate model directly.
+
+If the custom through table defined by the intermediate model does not enforce uniqueness on the `(model1, model2)` pair, allowing multiple values, the [`remove()`](https://docs.djangoproject.com/en/4.0/ref/models/relations/#django.db.models.fields.related.RelatedManager.remove) call will remove all intermediate model instances:
+```
+>>> Membership.objects.create(person=ringo, group=beatles,
+...     date_joined=date(1968, 9, 4),
+...     invite_reason="You've been gone for a month and we miss you.")
+>>> beatles.members.all()
+<QuerySet [<Person: Ringo Starr>, <Person: Paul McCartney>, <Person: Ringo Starr>]>
+>>> # This deletes both of the intermediate model instances for Ringo Starr
+>>> beatles.members.remove(ringo)
+>>> beatles.members.all()
+<QuerySet [<Person: Paul McCartney>]>
+```
+The [`clear()`](https://docs.djangoproject.com/en/4.0/ref/models/relations/#django.db.models.fields.related.RelatedManager.clear) method can be used to remove all many-to-many relationships for an instance:
+```
+>>> # Beatles have broken up
+>>> beatles.members.clear()
+>>> # Note that this deletes the intermediate model instances
+>>> Membership.objects.all()
+<QuerySet []>
+```
+Once you have established the many-to-many relationships, you can issue queries. Just as with normal many-to-many relationships, you can query using the attributes of the many-to-many-related model:
+```
+# Find all the groups with a member whose name starts with 'Paul'
+>>> Group.objects.filter(members__name__startswith='Paul')
+<QuerySet [<Group: The Beatles>]>
+```
+As you are using an intermediate model, you can also query on its attributes:
+```
+# Find all the members of The Beatles that joined after Jan. 1st, 1961
+>>> Person.objects.filter(
+...     group__name='The Beatles',
+...     membership__date_joined__gt=date(1961,1,1))   # I'm sure the date order is subject to change
+<QuerySet [<Person: Ringo Starr>]>
+```
+If you need to access a membership's information, you may do so by directly querying the `Membership` model:
+```
+>>> ringos_membership = Membership.objects.get(group=beatles, person=ringo)
+>>> ringos_membership.date_joined
+datetime.date(1962, 8, 16)
+>>> ringos_membership.invite_reason
+'Needed a new drummer.'
+```
+Another way to access the same information is by querying the [many-to-many reverse relationship](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#many-to-many-relationships) from a `Person` object:
+```
+>>> ringos_membership = ringo.membership_set.get(group=beatles)
+>>> ringos_membership.date_joined
+datetime.date(1962, 8, 16)
+>>> ringos_membership.invite_reason
+'Needed a new drummer.'
+```
+
+#### One-to-one relationships
+
+To define a one-to-one relationship, use [`OneToOneField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.OneToOneField). You use it just like any other `Field` type: by including it as a class attribute of your model.
+
+This is most useful on the primary key of an object when that object "extends" another object in some way.
+
+`OneToOneField` requires a positional argument: the class to which the model is related.
+
+For example, if you were buidling a database of "places", you would build pretty standard stuff such as address, phone number, etc., in the database. Then, if you wanted to build a database of restaurants on top of the places, instead of repeating yourself and replicating those fields in the `Restaurant` model, you could make `Restaurant` have a `OneToOneField` to `Place` (because a restaurant "is a" place; in fact, to handle this, you'd typically use [inheritance]() <!-- below -->, which involves an implicit one-to-one relation).
+
+As with [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey), a [recursive relationship](https://docs.djangoproject.com/en/4.0/ref/models/fields/#recursive-relationships) can be defined and [references to as-yet undefined models](https://docs.djangoproject.com/en/4.0/ref/models/fields/#lazy-relationships) can be made.
+
+<hr>
+
+**See also**: See the [One-to-one relationship model example](https://docs.djangoproject.com/en/4.0/topics/db/examples/one_to_one/) for a full example.
+
+<hr>
+
+`OneToOneField` fields also accept an optional [`parent_link`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.OneToOneField.parent_link) argument.
+
+`OneToOneField` classes used to automatically become the primary key on a model. This is no longer true (although you can manually pass in the [`primary_key`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.primary_key) argument if you like). Thus, it's now possible to have multiple fields of type `OneToOneField` on a single model.
+
+### Models across files
+
+It's perfectly OK to relate a model to one from another app. To do this, import the related model at the top of the file where your model is defined. Then, refer to the other model class wherever needed. For example:
+```
+from django.db import models
+from geography.models import ZipCode
+
+class Restaurant(models.Model):
+    # ...
+    zip_code = models.ForeignKey(
+        ZipCode,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
+```
+
+### Field name restrictions
+
+Django places some restrictions on model field names:
+
+1. A field name cannot be a Python reserved word, because that would result in a Python syntax error. For example:
+```
+class Example(models.Model):
+    pass = models.IntegerField()   # 'pass' is a reserved word!
+```
+
+2. A field name cannot contain more than one underscore in a row, due to the way Django's query lookup syntax works. For example:
+```
+class Example(models.Model):
+    foo__bar = models.IntegerField()   # 'foo__bar' has two underscores!
+```
+
+3. A field name cannot end with an underscore, for similar reasons.
+
+These limitations can be worked around, though, because your field name doesn't necessarily have to match your database column name. See the [`db_column`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.db_column) option.
+
+SQL reserved words, such as `join`, `where`, or `select`, *are* allowed as model field names, because Django escapes all database table names and column names and column names in every underlying SQL query. It uses the quoting syntax of your particular database engine.
