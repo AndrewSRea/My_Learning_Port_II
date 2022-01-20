@@ -259,7 +259,9 @@ class Car(models.Model):
 
 <hr>
 
-**See also**: `ForeignKey` fields accept a number of extra arguments which are explained in [the model field reference](https://docs.djangoproject.com/en/4.0/ref/models/fields/#foreign-key-arguments). These options help define how the relationship should work; all are optional.
+**See also**
+
+`ForeignKey` fields accept a number of extra arguments which are explained in [the model field reference](https://docs.djangoproject.com/en/4.0/ref/models/fields/#foreign-key-arguments). These options help define how the relationship should work; all are optional.
 
 For details on accessing backwards-related objects, see the [Following relationships backward example](). <!-- in the "Making queries" module -->
 
@@ -295,7 +297,9 @@ Generally, `ManyToManyField` instances should go in the object that's going to b
 
 <hr>
 
-**See also**: See the [Many-to-many relationship model example](https://docs.djangoproject.com/en/4.0/topics/db/examples/many_to_many/) for a full example.
+**See also**
+
+See the [Many-to-many relationship model example](https://docs.djangoproject.com/en/4.0/topics/db/examples/many_to_many/) for a full example.
 
 <hr>
 
@@ -427,7 +431,9 @@ As with [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#
 
 <hr>
 
-**See also**: See the [One-to-one relationship model example](https://docs.djangoproject.com/en/4.0/topics/db/examples/one_to_one/) for a full example.
+**See also**
+
+See the [One-to-one relationship model example](https://docs.djangoproject.com/en/4.0/topics/db/examples/one_to_one/) for a full example.
 
 <hr>
 
@@ -587,7 +593,7 @@ It's also important that you pass through the arguments that can be passed to th
 
 <hr>
 
-:attention: **Overridden model methods are not called on bulk operations**
+:warning: **Overridden model methods are not called on bulk operations**
 
 Note that the [`delete()`](https://docs.djangoproject.com/en/4.0/ref/models/instances/#django.db.models.Model.delete) method for an object is not necessarily called when [deleting objects in bulk using a QuerySet](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#deleting-objects) or as a result of a [`cascading delete`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey.on_delete). To ensure customized delete logic gets executed, you can use [`pre_delete`](https://docs.djangoproject.com/en/4.0/ref/signals/#django.db.models.signals.pre_delete) and/or [`post_delete`](https://docs.djangoproject.com/en/4.0/ref/signals/#django.db.models.signals.post_delete) signals.
 
@@ -608,8 +614,8 @@ The only decision you have to make is whether you want the parent models to be m
 There are three styles of inheritance that are possible in Django.
 
 1. Often, you will want to use the parent class to hold information that you don't want to have to type out for each child model. This class isn't going to ever be used in isolation, so [Abstract base classes](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#abstract-base-classes) are what you're after.
-2. If you're subclassing an existing model (perhaps something from another application entirely) and want each model to have its own database table, [Multi-table inheritance]() is the way to go. <!-- below -->
-3. Finally, if you only want to modify the Python-level behavior of a model, without changing the models fields in any way, you can use [Proxy models](). <!-- below -->
+2. If you're subclassing an existing model (perhaps something from another application entirely) and want each model to have its own database table, [Multi-table inheritance](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#multi-table-inheritance) is the way to go.
+3. Finally, if you only want to modify the Python-level behavior of a model, without changing the models fields in any way, you can use [Proxy models](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#proxy-models).
 
 ### Abstract base classes
 
@@ -797,4 +803,184 @@ models.ManyToManyField(Place, related_name='provider')`
 
 As mentioned, Django will automatically create a [`OneToOneField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.OneToOneField) linking your child class back to any non-abstract parent models. If you want to control the name of the attribute linking back to the parent, you can create your own `OneToOneField` and set [`parent_link=True`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.OneToOneField.parent_link) to indicate that your field is the link back to the parent class.
 
-### Proxy models
+### Proxy models 
+
+When using [multi-table inheritance](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#multi-table-inheritance), a new database table is created for each subclass of a model. This is usually the desired behavior, since the subclass needs a place to store any additional data fields that are not present on the base class. Sometimes, however, you only want to change the Python behavior of a model -- perhaps to change the default manager, or add a new method.
+
+This is what proxy model inheritance is for: creating a *proxy* for the original model. You can create, delete, and update instances of the proxy model and all the data will be saved as if you were using the original (non-proxied) model. The difference is that you can  change things like the default model ordering or the default manager in the proxy, without having to alter the original.
+
+Proxy models are declared like normal models. You tell Django that it's a proxy model by setting the [`proxy`]() attribute of the `Meta` class to `True`.
+
+For example, suppose you want to add a method to the `Person` model. You can do it like this:
+```
+from django.db import models
+
+class Person(models.Model):
+    first_name = models.CharField(max_length=30)
+    last_name = models.CharField(max_length=30)
+
+class MyPerson(Person):
+    class Meta:
+        proxy = True
+
+    def do_something(self):
+        # ...
+        pass
+```
+The `MyPerson` class operates on the same database table as its parent `Person` class. In particular, any new instances of `Person` will also be accessible through `MyPerson`, and vice-versa:
+```
+>>> p = Person.objects.create(first_name="foobar")
+>>> MyPerson.objects.get(first_name="foobar")
+<MyPerson: foobar>
+```
+You could also use a proxy model to define a different default ordering on a model. You might not always want to order the `Person` model, but regularly order by the `last_name` attribute when you use the proxy:
+```
+class OrderedPerson(Person):
+    class Meta:
+        ordering = ["last_name"]
+        proxy = True
+```
+Now normal `Person` queries will be unordered and `OrderedPerson` queries will be ordered by `last_name`.
+
+Proxy models inherit `Meta` attributes [in the same way as regular models](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#meta-and-multi-table-inheritance).
+
+#### `QuerySet`s still return the model that was requested
+
+There is no way to have Django return, say, a `MyPerson` object whenever you query for `Person` objects. A queryset for `Person` objects will return those types of objects. The whole point of proxy objects is that code relying on the original `Person` will use those and your own code can use the extensions you included (that no other code is relying on anyway). It is not a way to replace the `Person` (or any other) model everywhere with something of your own creation.
+
+#### Base class restrictions
+
+A proxy model must inherit from exactly one non-abstract model class. You can't inherit from multiple non-abstract models as the proxy model doesn't provide any connection between the rows in the different database tables. A proxy model can inherit from any number of abstract model classes, providing they do *not* define any model fields. A proxy model may also inherit from any number of proxy models that share a common non-abstract parent class.
+
+#### Proxy model managers
+
+If you don't specify any model managers on a proxy model, it inherits the managers from its model parents. If you define a manager on the proxy model, it will become the default, although any managers defined on the parent classes will still be available.
+
+Continuing our example from above, you could change the default manager used when you query the `Person` model like this:
+```
+from django.db import models
+
+class NewManager(models.Manager):
+    # ...
+    pass
+
+class MyPerson(Person):
+    objects = NewManager()
+
+    class Meta:
+        proxy = True
+```
+If you wanted to add a new manager to the Proxy, without replacing the existing default, you can use the techniques described in the [custom manager]() documentation <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/topics/db/managers/#custom-managers-and-inheritance) -->: create a base class containing the new managers and inherit that after the primary base class:
+```
+# Create an abstract class for the new manager.
+class ExtraManagers(models.Model):
+    secondary = NewManager()
+
+    class Meta:
+        abstract = True
+
+    class MyPerson(Person, ExtraManagers):
+        class Meta:
+            proxy = True
+```
+You probably won't need to do this very often, but, when you do, it's possible.
+
+#### Differences between proxy inheritance and unmanaged models
+
+Proxy model inheritance might look fairly similar to creating an unmanaged model, using the [`managed`](https://docs.djangoproject.com/en/4.0/ref/models/options/#django.db.models.Options.managed) attribute on a model's `Meta` class.
+
+With careful setting of [`Meta.db_table`](https://docs.djangoproject.com/en/4.0/ref/models/options/#django.db.models.Options.db_table), you could create an unmanaged model that shadows an existing model and adds Python methods to it. However, that would be very repetitive and fragile as you need to keep both copies synchronized if you make any changes.
+
+On the other hand, proxy models are intended to behave exactly like the model they are proxying for. They are always in sync with the parent model since they directly inherit its fields and managers.
+
+The general rules are:
+
+1. If you are mirroring an existing model or database table and don't want all the original database table columns, use `Meta.managed=False`. That option is normally useful for modeling database views and tables not under the control of Django.
+2. If you are wanting to change the Python-only behavior of a model, but keep all the smae fields as in the original, use `Meta.proxy=True`. This sets things up so that the proxy model is an exact copy of the storage structure of the original model when data is saved.
+
+### Multiple inheritance
+
+Just as with Python's subclassing, it's possible for a Django model to inherit from multiple parent models. Keep in mind that normal Python name resolution rules apply. The first base class that a particular name (e.g. `Meta`) appears in will be the one that is used; for example, this means that if multiple parents contain a `Meta` class, only the first one is going to be used, and all others will be ignored.
+
+Generally, you won't need to inherit from multiple parents. The main use-case where this is useful is for "mix-in" classes: adding a particular extra field or method to every class that inherits the mix-in. Try to keep your inheritance heirarchies as simple and straightforward as possible so that you won't have to struggle to work out where a particular piece of information is coming from.
+
+Note that inheriting from multiple models that have a common `id` primary key field will raise an error. To properly use multiple inheritance, you can use an explicit [`AutoField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.AutoField) in the base models:
+```
+class Article(models.Model):
+    article_id = models.AutoField(primary_key=True)
+    ...
+
+class Book(models.Model):
+    book_id = models.AutoField(primary_key=True)
+    ...
+
+class BookReview(Book, Article):
+    pass
+```
+Or use a common ancestor to hold the `AutoField`. This requires using an explicit [`OneToOneField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.OneToOneField) from each parent model to the common ancestor to avoid a clash between the fields that are automatically generated and inherited by the child:
+```
+class Piece(models.Model):
+    pass
+
+class Article(Piece):
+    article_piece = models.OneToOneField(Piece, on_delete=models.CASCADE, parent_link=True)
+    ...
+
+class Book(Piece):
+    book_piece =models.OneToOneField(Piece, on_delete=models.CASCADE, parent_link=True)
+    ...
+
+class BookReview(Book, Article):
+    pass
+```
+
+### Field name "hiding" is not permitted
+
+In normal Python class inheritance, it is permissible for a child class to override any attribute from the parent class. In Django, this isn't usually permitted for model fields. If a non-abstract model base class has a field called `author`, you can't create another model fields or define an attribute called `author` in any class that inherits from that base class.
+
+This restriction doesn't apply to model fields inherited from an abstract model. Such fields may be overridden with another field or value, or be removed by setting `field_name = None`.
+
+<hr>
+
+:warning: **Warning**: Model managers are inherited from abstract base classes. Overriding an inherited field which is referenced by an inherited [`Manager`](https://docs.djangoproject.com/en/4.0/topics/db/managers/#django.db.models.Manager) may cause subtle bugs. See [custom managers and model inheritance](). <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/topics/db/managers/#custom-managers-and-inheritance) -->
+
+<hr>
+
+**Note**: Some fields define extra attributes on the model, e.g. a [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey) defines an extra attribute with `_id` appended to the field name, as well as `related_name` and `related_query_name` on the foreign model.
+
+These extra attributes cannot be overridden unless the field that defines it is changed or removed so that is no longer defines the extra attribute.
+
+<hr>
+
+Overriding fields in a parent model leads to difficulties in areas such as initializing new instances (specifying which field is being initialized in `Model.__init__`) and serialization. These are features which normal Python class inheritance doesn't have to deal with in quite the same way, so the difference between Django model inheritance and Python class inheritance isn't arbitrary.
+
+This restriction only applies to attributes which are [`Field`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field) instances. Normal Python attributes can be overridden if you wish. It also only applies to the name of the attribute as Python sees it: if you are manually specifying the database column name, you can have the same column name appearing in both a child and an ancestor model for multi-table inheritance (they are columns in two different database tables).
+
+Django will raise a [`FieldError`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.FieldError) if you override any model field in any ancestor model.
+
+Note that because of the way fields are resolved during class definition, model fields inherited from multiple abstract parent models are resolved in a strict depth-first order. This contrasts with standard Python MRO, which is resolved breadth-first in cases of diamond shaped inheritance. This difference only affects complex model hierarchies, which (as per the advice above) you should try to avoid.
+
+## Organizing models in a package
+
+The [`manage.py startapp`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-startapp) command creates an application structure that includes a `models.py` file. If you have many models, organizing them in separate files may be useful.
+
+To do so, create a `models` package. Remove `models.py` and create a `myapp/models/` directory with an `__init__.py` file and the files to store your models. You must import the models in the `__init__.py` file.
+
+For example, if you had `organic.py` and `synthetic.py` in the `models` directory, then in a `myapp/models/__init__.py` you would write:
+```
+from .organic import Person
+from .synthetic import Robot
+```
+Explicitly importing each model rather than using `from .models import *` has the advantage of not cluttering the namespace, making code more readable, and keeping code analysis tools useful.
+
+<hr>
+
+**See also**
+
+[The Models Reference](https://docs.djangoproject.com/en/4.0/ref/models/) <!-- link to internal file/folder? -->
+
+Covers all the model related APIs including model fields, related objects, and `QuerySet`.
+
+<hr>
+
+[[Back to the **Models and Databases** Guide links]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases#models-and-databases) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#models) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#making-queries)
