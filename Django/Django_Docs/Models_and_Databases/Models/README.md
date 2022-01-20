@@ -31,7 +31,7 @@ CREATE TABLE myapp_person (
 Some technical notes:
 
 * The name of the table, `myapp_person`, is automatically derived from some model metadata but can be overridden. See [Table names]() for more details. <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/ref/models/options/#table-names) -->
-* An `id` field is added automatically, but this behavior can be overridden. See [Automatic primary key fields](). <!-- below -->
+* An `id` field is added automatically, but this behavior can be overridden. See [Automatic primary key fields](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#automatic-primary-key-fields).
 * The `CREATE TABLE` SQL in this example is formatted using PostgreSQL syntax, but it's worth noting Django uses SQL tailored to the database backend specified in your [settings file](). <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/topics/settings/) -->
 
 ## Using models
@@ -162,7 +162,7 @@ Extra "help" text to be displayed with the form widget. It's useful for document
 
 If `True`, this field is the primary key for the model.
 
-If you don't specify `primary_key=True` for any fields in your model, Django will automatically add an [`IntegerField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.IntegerField) to hold the primary key, so you don't need to set `primary_key=True` on any of your fields unless you want to override the default primary-key behavior. For more, see [Automatic primary key fields](). <!-- below -->
+If you don't specify `primary_key=True` for any fields in your model, Django will automatically add an [`IntegerField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.IntegerField) to hold the primary key, so you don't need to set `primary_key=True` on any of your fields unless you want to override the default primary-key behavior. For more, see [Automatic primary key fields](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#automatic-primary-key-fields).
 
 The primary key field is read-only. If you change the value of the primary key on an existing object and then save it, a new object will be created alongside the old one. For example:
 ```
@@ -534,7 +534,7 @@ class Person(models.Model):
 ```
 The last method in this example is a [property](https://docs.djangoproject.com/en/4.0/glossary/#term-property).
 
-The [model instance reference]() <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/ref/models/instances/) --> has a complete list of [methods automatically given to each model](). <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/ref/models/instances/#model-instance-methods) --> You can override most of these -- see [overriding predefined model methods]() below -- but there are a couple that you'll almost always want to define:
+The [model instance reference]() <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/ref/models/instances/) --> has a complete list of [methods automatically given to each model](). <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/ref/models/instances/#model-instance-methods) --> You can override most of these -- see [overriding predefined model methods](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#overriding-predefined-model-methods) below -- but there are a couple that you'll almost always want to define:
 
 **[`__str__()`](https://docs.djangoproject.com/en/4.0/ref/models/instances/#django.db.models.Model.__str__)**
 
@@ -567,3 +567,66 @@ class Blog(models.Model):
         super().save(*args, **kwargs)   # Call the "real" save() method.
         do_something_else()
 ```
+You can also prevent saving:
+```
+from django.db import models
+
+class Blog(models.Model):
+    name = models.CharField(max_length=100)
+    tagline = models.TextField()
+
+    def save(self, *args, **kwargs):
+        if self.name == "Yoko Ono's blog":
+            return # Yoko shall never have her own blog!
+        else:
+            super().save(*args, **kwargs)   # Call the "real" save() method.
+```
+It's important to remember to call the superclass method -- that's the `super().save(*args, **kwargs)` business -- to ensure that the object still gets saved into the database. If you forget to call the superclass method, the default behavior won't happen and the database won't get touched.
+
+It's also important that you pass through the arguments that can be passed to the model method -- that's what the `*args, **kwargs` bit does. Django will, from time to time, extend the capabilities of built-in model methods, adding new arguments. If you use `*args, **kwargs` in your method definitions, you are guaranteed that your code will automatically support those arguments when they are added.
+
+<hr>
+
+:attention: **Overridden model methods are not called on bulk operations**
+
+Note that the [`delete()`](https://docs.djangoproject.com/en/4.0/ref/models/instances/#django.db.models.Model.delete) method for an object is not necessarily called when [deleting objects in bulk using a QuerySet](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#deleting-objects) or as a result of a [`cascading delete`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey.on_delete). To ensure customized delete logic gets executed, you can use [`pre_delete`](https://docs.djangoproject.com/en/4.0/ref/signals/#django.db.models.signals.pre_delete) and/or [`post_delete`](https://docs.djangoproject.com/en/4.0/ref/signals/#django.db.models.signals.post_delete) signals.
+
+Unfortunately, there isn't a workaround when [`creating`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.bulk_create) or [`updating`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.update) objects in bulk, since none of [`save()`](https://docs.djangoproject.com/en/4.0/ref/models/instances/#django.db.models.Model.save), [`pre_save`](https://docs.djangoproject.com/en/4.0/ref/signals/#django.db.models.signals.pre_save), and [`post_save`](https://docs.djangoproject.com/en/4.0/ref/signals/#django.db.models.signals.post_save) are called.
+
+<hr>
+
+### Executing custom SQL
+
+Another common pattern is writing custom SQL statements in model methods and module-level methods. For more details on using raw SQL, see the documentation on [using raw SQL](). <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/topics/db/sql/) -->
+
+## Model inheritance
+
+Model inheritance in Django works almost identically to the way normal class inheritance works in Python, but the basics at the beginning of the page should still be followed. That means the base class should subclass [`django.db.models.Model`](https://docs.djangoproject.com/en/4.0/ref/models/instances/#django.db.models.Model).
+
+The only decision you have to make is whether you want the parent models to be models in their own right (with their own database tables), or if the parents are just holders of common information that will only be visible through the child models.
+
+There are three styles of inheritance that are possible in Django.
+
+1. Often, you will want to use the parent class to hold information that you don't want to have to type out for each child model. This class isn't going to ever be used in isolation, so [Abstract base classes]() <!-- below --> are what you're after.
+2. If you're subclassing an existing model (perhaps something from another application entirely) and want each model to have its own database table, [Multi-table inheritance]() is the way to go. <!-- below -->
+3. Finally, if you only want to modify the Python-level behavior of a model, without changing the models fields in any way, you can use [Proxy models](). <!-- below -->
+
+### Abstract base classes
+
+Abstract base classes are useful when you want to put some common information into a number of other models. You write your base class and put `abstract=True` in the [Meta](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#meta-options) class. This model will then not be used to create any database table. Instead, when it is used as a base class for other models, its fields will be added to those of the child class. 
+
+An example:
+```
+from django.db import models
+
+class CommonInfo(models.Model):
+    name = models.CharField(max_length=100)
+    age = models.PositiveIntegerField()
+
+    class Meta:
+        abstract = True
+
+class Student(CommonInfo):
+    home_group = models.CharField(max_length=5)
+```
+The `Student` model will have three fields: `name`, `age`, and `home_group`. The `CommonInfo` model cannot be used as a normal Django model, since it is an abstract base class. It does not generate a database table or have a manager, and cannot be instantiated or saved directly.
