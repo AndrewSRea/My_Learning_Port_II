@@ -9,6 +9,15 @@ Once you've created your [data models](https://github.com/AndrewSRea/My_Learning
 
 
 
+
+
+
+## Retrieving objects
+
+To retrieve objects...
+
+
+
 ### Many-to-many relationships
 
 Both ends...
