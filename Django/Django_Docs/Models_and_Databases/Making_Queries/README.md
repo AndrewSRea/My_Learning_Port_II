@@ -18,6 +18,12 @@ To retrieve objects...
 
 
 
+## Deleting objects
+
+The delete method...
+
+
+
 ### Many-to-many relationships
 
 Both ends...
