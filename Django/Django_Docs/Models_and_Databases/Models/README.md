@@ -473,3 +473,97 @@ class Example(models.Model):
 These limitations can be worked around, though, because your field name doesn't necessarily have to match your database column name. See the [`db_column`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.db_column) option.
 
 SQL reserved words, such as `join`, `where`, or `select`, *are* allowed as model field names, because Django escapes all database table names and column names and column names in every underlying SQL query. It uses the quoting syntax of your particular database engine.
+
+### Custom field types
+
+If one of the existing model fields cannot be used to fit your purposes, or if you wish to take advantage of some less common database column types, you can create your own field class. Full coverage of creating your own fields is provided in [How to create custom model fields](https://docs.djangoproject.com/en/4.0/howto/custom-model-fields/). <!-- possible future folder/file? -->
+
+## `Meta` options
+
+Give your model metadata by using an inner `class Meta`, like so:
+```
+from django.db import models
+
+class Ox(models.Model):
+    horn_length = models.IntegerField()
+
+    class Meta:
+        ordering = ["horn_length"]
+        verbose_name_plural = "oxen"
+```
+Model metadata is "anything that's not a field", such as ordering options ([`ordering`](https://docs.djangoproject.com/en/4.0/ref/models/options/#django.db.models.Options.ordering)), database table name ([`db_table`](https://docs.djangoproject.com/en/4.0/ref/models/options/#django.db.models.Options.db_table)), or human-readable singular and plural names ([`verbose_name`](https://docs.djangoproject.com/en/4.0/ref/models/options/#django.db.models.Options.verbose_name) and [`verbose_name_plural`](https://docs.djangoproject.com/en/4.0/ref/models/options/#django.db.models.Options.verbose_name_plural)). None are required, and adding `class Meta` to a model is completely optional.
+
+A complete list of all possible `Meta` options can be found in the [model option reference](https://docs.djangoproject.com/en/4.0/ref/models/options/).
+
+## Model attributes
+
+**`objects`**
+
+The most important attribute of a model is the [`Manager`](https://docs.djangoproject.com/en/4.0/topics/db/managers/#django.db.models.Manager). It's the interface through which database query operations are provided to Django models and is used to [retrieve the instances](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#retrieving-objects) from the database. If no custom `Manager` is defined, the default name is [`objects`](https://docs.djangoproject.com/en/4.0/ref/models/class/#django.db.models.Model.objects). Managers are only accessible via model classes, not the model instances.
+
+## Model methods
+
+Define custom methods on a model to add custom "row-level" functionality to your objects. Whereas `Manager` methods are intended to do "table-wide" things, model methods should act on a particular model instance.
+
+This is a valuable technique for keeping business logic in one place -- the model.
+
+For example, this model has a few custom methods:
+```
+from django.db import models
+
+class Person(models.Model):
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    birth_date = models.DateField()
+
+
+    def baby_boomer_status(self):
+        "Returns the person's baby-boomer status."
+        import datetime
+        if self.birth_date < datetime.date(1945, 8, 1):
+            return "Pre-boomer"
+        elif self.birth_date < datetime.date(1965, 1, 1):
+            return "Baby boomer"
+        else:
+            return "Post-boomer"
+
+    @property
+    def full_name(self):
+        "Returns the person's full name."
+        return '%s %s' % (self.first_name, self.last_name)
+```
+The last method in this example is a [property](https://docs.djangoproject.com/en/4.0/glossary/#term-property).
+
+The [model instance reference]() <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/ref/models/instances/) --> has a complete list of [methods automatically given to each model](). <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/ref/models/instances/#model-instance-methods) --> You can override most of these -- see [overriding predefined model methods]() below -- but there are a couple that you'll almost always want to define:
+
+**[`__str__()`](https://docs.djangoproject.com/en/4.0/ref/models/instances/#django.db.models.Model.__str__)**
+
+A Python "magic method" that returns a string representation of any object. This is what Python and Django will use whenever a model instance needs to be coerced and displayed as a plain string. Most notably, this happens when you display an object in an interactive console or in the admin.
+
+You'll always want to define this method; the default isn't very helpful at all.
+
+**[`get_absolute_url()`](https://docs.djangoproject.com/en/4.0/ref/models/instances/#django.db.models.Model.get_absolute_url)**
+
+This tells Django how to calculate the URL for an object. Django uses this in its admin interface, and any time it needs to figure out a URL for an object.
+
+Any object that has a URL that uniquely identifies it should define this method.
+
+### Overriding predefined model methods
+
+There's another set of [model methods]() <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/ref/models/instances/#model-instance-methods) --> that encapsulates a bunch of database behavior that you'll want to customize. In particular, you'll often want to change the way [`save()`](https://docs.djangoproject.com/en/4.0/ref/models/instances/#django.db.models.Model.save) and [`delete()`](https://docs.djangoproject.com/en/4.0/ref/models/instances/#django.db.models.Model.delete) work.
+
+You're free to override these methods (and any other model method) to alter behavior.
+
+A classic use-case for overriding the built-in methods is if you want something to happen whenever you save an object. For example (see [`save()`](https://docs.djangoproject.com/en/4.0/ref/models/instances/#django.db.models.Model.save) for documentation of the parameters it accepts):
+```
+from django.db import models
+
+class Blog(models.Model):
+    name = models.CharField(max_length=100)
+    tagline = models.TextField()
+
+    def save(self, *args, **kwargs):
+        do_something()
+        super().save(*args, **kwargs)   # Call the "real" save() method.
+        do_something_else()
+```
