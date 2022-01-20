@@ -607,7 +607,7 @@ The only decision you have to make is whether you want the parent models to be m
 
 There are three styles of inheritance that are possible in Django.
 
-1. Often, you will want to use the parent class to hold information that you don't want to have to type out for each child model. This class isn't going to ever be used in isolation, so [Abstract base classes]() <!-- below --> are what you're after.
+1. Often, you will want to use the parent class to hold information that you don't want to have to type out for each child model. This class isn't going to ever be used in isolation, so [Abstract base classes](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#abstract-base-classes) are what you're after.
 2. If you're subclassing an existing model (perhaps something from another application entirely) and want each model to have its own database table, [Multi-table inheritance]() is the way to go. <!-- below -->
 3. Finally, if you only want to modify the Python-level behavior of a model, without changing the models fields in any way, you can use [Proxy models](). <!-- below -->
 
@@ -719,3 +719,82 @@ class ChildB(Base):
 The reverse name of the `common.ChildA.m2m` field will be `common_childa_related` and the reverse query name will be `common_childas`. The reverse name of the `common.ChildB.m2m` field will be `common_childb_related` and the reverse query name will be `common_childbs`. Finally, the reverse name of the `rare.ChildB.m2m` field will be `rare_childb_related` and the reverse query name will be `rare_childbs`. It's up to you how you use the `'%(class)s'` and `'%(app_label)s'` portion to construct your related name or related query name but if you forget to use it, Django will raise errors when you perform system checks (or run [`migrate`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-migrate)). <!-- possible future file/folder? -->
 
 If you don't specify a `related_name` attribute for a field in an abstract base class, the default reverse name will be the name of the child class followed by `'_set'`, just as it normally would be if you'd declared the field directly on the child class. For example, in the above code, if the `related_name` attribute was omitted, the reverse name for the `m2m` field would be `childa_set` in the `ChildA` case and `childb_set` for the `ChildB` field.
+
+### Multi-table inheritance
+
+The second type of model inheritance supported by Django is when each model in the hierarchy is a model all by itself. Each model corresponds to its own database table and can be queried and created individually. The inheritance relationship introduces links between the child model and each of its parents (via an automatically-created [`OneToOneField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.OneToOneField)). For example:
+```
+from django.db import models
+
+class Place(models.Model):
+    name = models.CharField(max_length=50)
+    address = models.CharField(max_length=80)
+
+class Restaurant(Place):
+    serves_hot_dogs = models.BooleanField(default=False)
+    serves_pizza = models.BooleanField(default=False)
+```
+All of the fields of `Place` will also be available in `Restaurant`, although the data will reside in a different database table. So these are both possible:
+```
+>>> Place.objects.filter(name="Bob's Cafe")
+>>> Restaurant.objects.filter(name="Bob's Cafe")
+```
+If you have a `Place` that is also a `Restaurant`, you can get from the `Place` object to the `Restaurant` object by using the lowercase version of the model name:
+```
+>>> p = Place.objects.get(id=12)
+# If p is a Restaurant object, this will give the child class:
+>>> p.restaurant
+<Restaurant: ...>
+```
+However, if `p` in the above example was *not* a `Restaurant` (it had been created directly as a `Place` object or was the parent of some other class), referring to `p.restaurant` would raise a `Restaurant.DoesNotExist` exception. 
+
+The automatically-created `OneToOneField` on `Restaurant` that links it to `Place` looks like this:
+```
+place_ptr = models.OneToOneField(
+    Place, on_delete=models.CASCADE,
+    parent_link=True,
+    primary_key=True,
+)
+```
+You can override that field by declaring your own `OneToOneField` with [`parent_link=True`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.OneToOneField.parent_link) on `Restaurant`.
+
+#### `Meta` and multi-table inheritance
+
+In the multi-table inheritance situation, it doesn't make sense for a child class to inherit from its parent's [`Meta`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#meta-options) class. All the `Meta` options have already been applied to the parent class and applying them again would normally only lead to contradictory behavior (this is in contrast with the abstract's base class case, where the base class doesn't exist in its own right).
+
+So a child model does not have access to its parent's `Meta` class. However, there are a few limited cases where the child inherits behavior from the parent: if the child does not specify an [`ordering`](https://docs.djangoproject.com/en/4.0/ref/models/options/#django.db.models.Options.ordering) attribute or a [`get_latest_by`](https://docs.djangoproject.com/en/4.0/ref/models/options/#django.db.models.Options.get_latest_by) attribute, it will inherit these from its parent.
+
+If the parent has an ordering and you don't want the child to have any natural ordering, you can explicitly disable it:
+```
+class ChildModel(ParentModel):
+    # ...
+    class Meta:
+        # Remove parent's ordering effect
+        ordering = []
+```
+
+#### Inheritance and reverse relations
+
+Because multi-table inheritance uses an implicit [`OneToOneField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.OneToOneField) to link the child and the parent, it's possible to move from the parent down to the child, as in the above example. However, this uses up the name that is the default [`related_name`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey.related_name) value for [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey) and [`ManyToManyField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField) relations. If you are putting those types of relations on a subclass of the parent model, you **must** specify the `related_name` attribute on each such field. If you forget, Django will raise a validation error.
+
+For example, using the above `Place` class again, let's create another subclass with a `ManyToManyField`:
+```
+class Supplier(Place):
+    customers = models.ManyToManyField(Place)
+```
+This results in the error:
+```
+Reverse query name for 'Supplier.customers' clashes with reverse query name for 'Supplier.place_ptr'.
+
+HINT: Add or change a related_name argument to the definition for 'Supplier.customers' or 'Supplier.place_ptr'.
+```
+Adding `related_name` to the `customers` field as follows would resolve the error:
+```
+models.ManyToManyField(Place, related_name='provider')`
+```
+
+#### Specifying the parent link field
+
+As mentioned, Django will automatically create a [`OneToOneField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.OneToOneField) linking your child class back to any non-abstract parent models. If you want to control the name of the attribute linking back to the parent, you can create your own `OneToOneField` and set [`parent_link=True`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.OneToOneField.parent_link) to indicate that your field is the link back to the parent class.
+
+### Proxy models
