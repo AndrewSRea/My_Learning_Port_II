@@ -613,7 +613,7 @@ There are three styles of inheritance that are possible in Django.
 
 ### Abstract base classes
 
-Abstract base classes are useful when you want to put some common information into a number of other models. You write your base class and put `abstract=True` in the [Meta](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#meta-options) class. This model will then not be used to create any database table. Instead, when it is used as a base class for other models, its fields will be added to those of the child class. 
+Abstract base classes are useful when you want to put some common information into a number of other models. You write your base class and put `abstract=True` in the [`Meta`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#meta-options) class. This model will then not be used to create any database table. Instead, when it is used as a base class for other models, its fields will be added to those of the child class. 
 
 An example:
 ```
@@ -630,3 +630,92 @@ class Student(CommonInfo):
     home_group = models.CharField(max_length=5)
 ```
 The `Student` model will have three fields: `name`, `age`, and `home_group`. The `CommonInfo` model cannot be used as a normal Django model, since it is an abstract base class. It does not generate a database table or have a manager, and cannot be instantiated or saved directly.
+
+Fields inherited from abstract base classes can be overridden with another field or value, or be removed with `None`.
+
+For many uses, this type of model inheritance will be exactly what you want. It provides a way to factor out common information at the Python level, while still only creating one database per child model at the database level.
+
+#### `Meta` inheritance 
+
+When an abstract base class is created, Django makes any [`Meta`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#meta-options) inner class you declared in the base class available as an attribute. If a child class does not declare its own `Meta` class, it will inherit the parent's `Meta`. If the child wants to extend the parent's `Meta` class, it can subclass it. For example:
+```
+from django.db import models
+
+class CommonInfo(models.Model):
+    # ...
+    class Meta:
+        abstract = True
+        ordering = ['name']
+
+class Student(CommonInfo):
+    # ...
+    class Meta(CommonInfo.Meta):
+        db_tabel = 'student_info'
+```
+Django does make one adjustment to the `Meta` class of an abstract base class: before installing the `Meta` attribute, it sets `abstract=False`. This means that children of abstract base classes don't automatically become abstract classes themselves. To mkae an abstract base class that inherits from another abstract base class, you need to explicitly set `abstract=True` on the child.
+
+Some attributes won't make sense to include in the `Meta` class of an abstract base class. For example, including `db_table` would mean that all the child classes (the ones that don't specify their own `Meta`) would use the same database table, which is almost certainly not what you want.
+
+Due to the way Python inheritance works, if a child class inherits from multiple abstract base classes, only the `Meta` options from the first listed class will be inherited by default. To inherit `Meta` options from multiple abstract base classes, you must explicitly declare the `Meta` inheritance. For example:
+```
+from django.db immport models
+
+class CommonInfo(models.Model):
+    name = models.CharField(max_length=100)
+    age = models.PositiveIntegerField()
+
+    class Meta:
+        abstract = True
+        ordering = ['name']
+
+class Unmanaged(models.Model):
+    class Meta:
+        abstract = True
+        managed = False
+
+class Student(CommonInfo, Unmanaged):
+    home_group = models.CharField(max_length=5)
+
+    class Meta(CommonInfo.Meta, Unmanaged.Meta):
+        pass
+```
+
+#### Be careful with `related_name` and `related_query_name`
+
+If you are using [`related_name`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey.related_name) or [`related_query_name`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey.related_query_name) on a `ForeignKey` or `ManyToManyField`, you must always specify a *unique* reverse name and query name for the field. This would normally cause a problem in abstractbase classes, since the fields on this class are included into each of the child classes, with exactly the same values for the attributes (including `related_name` and `related_query_name`) each time.
+
+To work around this problem, when you are using `related_name` or `related_query_name` in an abstract base class (only), part of the value should contain `'%(app_label)s'` and `'%(class)s'`.
+
+* `'%(class)s'` is replaced by the lowercased name of the child class that the field is used in.
+* `'%(app_label)s'` is replaced by the lowercased name of the app the child class is contained within. Each installed application name must be unique and the model class names within each app must also be unique, therefore the resulting name will end up being different.
+
+For example, given an app `common/models.py`:
+```
+from django.db import models
+
+class Base(models.Model):
+    m2m = models.ManyToManyField(
+        OtherModel,
+        related_name="%(app_label)s_%(class)s_related",
+        related_query_name="%(app_label)s_%(class)ss",
+    )
+
+    class Meta:
+        abstract = True
+
+class ChildA(Base):
+    pass
+
+class ChildB(Base):
+    pass
+```
+Along with another app `rare/models.py`:
+```
+from common.models import Base
+
+class ChildB(Base):
+    pass
+```
+The reverse name of the `common.ChildA.m2m` field will be `common_childa_related` and the reverse query name will be `common_childas`. The reverse name of the `common.ChildB.m2m` field will be `common_childb_related` and the reverse query name will be `common_childbs`. Finally, the reverse name of the `rare.ChildB.m2m` field will be `rare_childb_related` and the reverse query name will be `rare_childbs`. It's up to you how you use the `'%(class)s'` and `'%(app_label)s'` portion to construct your related name or related query name but if you forget to use it, Django will raise errors when you perform system checks (or run [`migrate`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-migrate)). <!-- possible future file/folder? -->
+
+If you don't specify a `related_name` attribute for a field in an abstract base class, the default reverse name will be the name of the child class followed by `'_set'`, just as it normally would be if you'd declared the field directly on the child class. For example, in the above code, if the `related_name` attribute was omitted, the reverse name for the `m2m` field would be `childa_set` in the `ChildA` case and `childb_set` for the `ChildB` field.
