@@ -147,7 +147,7 @@ Returns a new `QuerySet` containing objects that match the given lookup paramete
 
 Returns a new `QuerySet` containing objects that do *not* match the given lookup parameters.
 
-The lookup parameters (`**kwargs` in the above function definitions) should be in the format described in [Field lookups]() below.
+The lookup parameters (`**kwargs` in the above function definitions) should be in the format described in [Field lookups](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#field-lookups) below.
 
 For example, to get a `QuerySet` of blog entries from the year 2006, use [`filter()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.filter) like so:
 ```
@@ -203,7 +203,7 @@ If you know there is only one object that matches your query, you can use the [`
 ```
 >>> one_entry = Entry.objects.get(pk=1)
 ```
-You can use any query expression with `get()`, just like with `filter()` -- again, see [Field lookups]() below.
+You can use any query expression with `get()`, just like with `filter()` -- again, see [Field lookups](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#field-lookups) below.
 
 Note that there is a difference between using `get()`, and using `filter()` with a slice of `[0]`. If there are no results that match the query, `get()` will raise a `DoesNotExist` exception. This exception is an attribute of the model class that the query is being performed on -- so in the code above, if there is no `Entry` object with a primary key of 1, Django will raise `Entry.DoesNotExist`.
 
@@ -245,7 +245,80 @@ Note, however, that the first of these will raise `IndexError` while the second 
 
 ### Field lookups
 
+Field lookups are how you specify the meat of an SQL `WHERE` clause. They're specified as keyword arguments to the [`QuerySet`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet) methods [`filter()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.filter), [`exclude()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.exclude), and [`get()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.get).
 
+Basic lookups' keyword arguments take the form `field__lookuptype=value`. (That's a double-underscore.) For example:
+```
+>>> Entry.objects.filter(pub_date__lte='2006-01-01')
+```
+...translates (roughly) into the following SQL:
+```
+SELECT * FROM blog_entry WHERE pub_date <= '2006-01-01';
+```
+
+<hr>
+
+**How is this possible?**
+
+Python has the ability to define functions that accept arbitrary name-value arguments whose names and values are evaluated at runtime. For more information, see [Keyword Arguments](https://docs.python.org/3/tutorial/controlflow.html#tut-keywordargs) in the official Python tutorial.
+
+<hr>
+
+The field specified in a lookup has to be the name of a model field. There's one exception, though: in case of a [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey), you can specify the field name suffixed with `_id`. In this case, the value parameter is expected to contain the raw value of the foreign model's primary key. For example:
+```
+>>> Entry.objects.filter(blog_id=4)
+```
+If you pass an invalid keyword argument, a lookup function will raise `TypeError`.
+
+The database API supports about two dozen lookup types; a complete reference can be found in the [field lookup reference](). To give you a taste of what's available, here's some of the more common lookups you'll probably use:
+
+**[`exact`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-exact)**
+
+An "exact" match. For example:
+```
+>>> Entry.objects.get(headline__exact="Cat bites dog")
+```
+...would generate SQL along these lines:
+```
+SELECT ... WHERE headline = 'Cat bites dog';
+```
+If you don't provide a lookup type -- that is, if your keyword argument doesn't contain a double underscore -- the lookup type is assumed to be `exact`.
+
+For example, the following two statements are equivalent:
+```
+>>> Blog.objects.get(id__exact=14)   # Explicit form
+>>> Blog.objects.get(id=14)          # __exact is implied
+```
+
+This is for convenience, because `exact` lookups are the common case.
+
+**[`iexact`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-iexact)**
+
+A case-insensitive match. So, the query:
+```
+>>> Blog.objects.get(name__iexact="beatles blog")
+```
+...would match a `Blog` title `"Beatles Blog"`, `"beatles blog"`, or even `"BeAtlES blOG"`.
+
+**[`contains`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-contains)**
+
+Case-sensitive containment test. For example:
+```
+Entry.objects.get(headline__contains='Lennon')
+```
+...roughly translates to this SQL:
+```
+SELECT ... WHERE headline LIKE '%Lennon%';
+```
+Note this will match the headline `'Today Lennon honored'` but not `'today lennon honored'`.
+
+There's also a case-insensitive version, **[`icontains`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-icontains)**.
+
+**[`startswith`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-startswith)**, **[`endswith`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-endswith)**
+
+Starts-with and ends-with search, respectively. There are also case-insensitive versions called **[`istartswith`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-istartswith)** and **[`iendswith`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-iendswith)**.
+
+Again, this only scratches the surface. A complete reference can be found in the [field lookup reference](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#field-lookups).
 
 
 
