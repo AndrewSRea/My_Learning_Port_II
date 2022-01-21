@@ -84,7 +84,7 @@ Updating a [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/field
 >>> entry.blog = cheese_blog
 >>> entry.save()
 ```
-Updating a [`ManyToManyField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField) works a little differently -- use the [`add()`]() method on the field to add a record to the relation. This example adds the `Author` instance `joe` to the `entry` object:
+Updating a [`ManyToManyField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField) works a little differently -- use the [`add()`](https://docs.djangoproject.com/en/4.0/ref/models/relations/#django.db.models.fields.related.RelatedManager.add) method on the field to add a record to the relation. This example adds the `Author` instance `joe` to the `entry` object:
 ```
 >>> from blog.models import Author
 >>> joe = Author.objects.create(name="Joe")
@@ -100,19 +100,90 @@ To add multiple records to a `ManyToManyField` in one go, include multiple argum
 ```
 Django will complain if you try to assign or add an object of the wrong type.
 
-
-
-
-
-
-
-
-
-
-
 ## Retrieving objects
 
-To retrieve objects...
+To retrieve objects from your database, construct a [`QuerySet`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet) via a [`Manager`]() on your model class. <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/topics/db/managers/#django.db.models.Manager) -->
+
+A `QuerySet` represents a collection of objects from your database. It can have zero, one, or many *filters*. Filters narrow down the query results based on the given parameters. In SQL terms, a `QuerySet` equates a `SELECT` statement, and a filter is a limiting clause such as `WHERE` or `LIMIT`.
+
+You get a `QuerySet` by using your model's `Manager`. Each model has at least one `Manager`, and it's called [`objects`]() by default. Access it directly via the model class, like so: <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/ref/models/class/#django.db.models.Model.objects) -->
+```
+>>> Blog.objects
+<django.db.models.manager.Manager object at... >
+>>> b = Blog(name='Foo', tagline='Bar')
+>>> b.objects
+Traceback:
+    ...
+AttributeError: "Manager isn't accessible via Blog instances."
+```
+
+<hr>
+
+**Note**: `Managers` are accessible only via model classes, rather than from model instances, to enforce a separation between "table-level" operations and "record-level" operations.
+
+<hr>
+
+The `Manager` is the main source of `QuerySets` for a model. For example, `Blog.objects.all()` returns a `QuerySet` that contains all `Blog` objects in the database.
+
+### Retrieving all objects
+
+The simplest way to retrieve objects from a table is to get all of them. To do this, use the [`all()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.all) method on a `Manager`:
+```
+>>> all_entries = Entry.objects.all()
+```
+The `all()` method returns a `QuerySet` of all the objects in the database.
+
+### Retrieving specific objects with filters
+
+The `QuerySet` returned by `all()` describes all objects in the database table. Usually, though, you'll need to select only a subset of the complete set of objects. 
+
+To create such a subset, you refine the initial `QuerySet`, adding filter conditions. The two most common ways to refine a `QuerySet` are:
+
+**`filter(\*\*kwargs)`**
+
+Returns a new `QuerySet` containing objects that match the given lookup parameters.
+
+**`exclude(\*\*kwargs)`**
+
+Returns a new `QuerySet` containing objects that do *not* match the given lookup parameters.
+
+The lookup parameters (`**kwargs` in the above function definitions) should be in the format described in [Field lookups]() below.
+
+For example, to get a `QuerySet` of blog entries from the year 2006, use [`filter()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.filter) like so:
+```
+Entry.objects.filter(pub_date__year=2006)
+```
+With the default manager class, it is the same as:
+```
+Entry.objects.all().filter(pub_date__year=2006)
+```
+
+#### Chaining filters
+
+The result of refining a `QuerySet` is itself a `QuerySet`, so it's possible to chanin refinements together. For example:
+```
+>>> Entry.objects.filter(
+...     headline__startswith='What'
+... ).exclude(
+...     pub_date__gte=datetime.date.today()
+... ).filter(
+...     pub_date__gte=datetime.date(2005, 1, 30)
+... )
+```
+This takes the initial `QuerySet` of all entries in the database, adds a filter, then an exclusion, then another filter. The final result is a `QuerySet` containing all entries with a headline that starts with "What", that were published between January 20, 2005, and the current day.
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
