@@ -585,6 +585,124 @@ Here are some examples of other actions that will result in the entire queryset 
 
 <hr>
 
+## Querying `JSONField`
+
+Lookups implementation is different in [`JSONField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.JSONField), mainly due to the existence of key transformations. To demonstrate, we will use the following example model:
+```
+from django.db import models
+
+class Dog(models.Model):
+    name = models = models.CharField(max_length=200)
+    date = models.JSONField(null=True)
+
+    def __str__(self):
+    return self.name
+```
+
+### Storing and querying for `None`
+
+As with other fields, storing `None` as the field's value will store it as SQL `NULL`. While not recommended, it is possible to store JSON scalar `null` instead of SQL `NULL` by using [`Value('null')`](https://docs.djangoproject.com/en/4.0/ref/models/expressions/#django.db.models.Value).
+
+Whichever of the values is stored, when retrieved from the database, the Python representation of the JSON scalar `null` is the same as SQL `NULL`, i.e. `None`. Therefore, it can be hard to distinguish between them. 
+
+This only applies to `None` as the top-level value of the field. If `None` is inside a [`list`](https://docs.python.org/3/library/stdtypes.html#list) or [`dict`](https://docs.python.org/3/library/stdtypes.html#dict), it will always be interpreted as JSON `null`.
+
+When querying, `None` value will always be interpreted as JSON `null`. To query for SQL `NULL`, use [`isnull`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-isnull):
+```
+>>> Dog.objects.create(name='Max', data=None)   # SQL NULL
+<Dog: Max>
+>>> Dog.objects.create(name='Archie', data=Value('null'))   # JSON null
+<Dog: Archie>
+>>> Dog.objects.filter(data=None)
+<QuerySet [<Dog: Archie>]>
+>>> Dog.objects.filter(data=Value('null'))
+<QuerySet [<Dog: Archie>]>
+>>> Dog.objects.filter(date__isnull=True)
+<QuerySet [<Dog: Max>]>
+>>> Dog.objects.filter(data__isnull=False)
+<QuerySet [<Dog: Archie>]>
+```
+Unless you are sure you wish to work with SQL `NULL` values, consider setting `null=False` and providing a suitable default for empty values, such as `default=dict`.
+
+<hr>
+
+**Note**: Storing JSON scalar `null` does not violate [`null=False`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.null).
+
+<hr>
+
+### Key, index, and path transforms
+
+To query based on a given dictionary key, use that key as the lookup name:
+```
+>>> Dog.objects.create(name='Rufus', data={
+...     'breed': 'labrador',
+...     'owner': {
+...         'name': 'Bob',
+...         'other_pets': [{
+...             'name': 'Fishy',
+...          }],
+...     },
+... })
+<Dog: Rufus>
+>>> Dog.objects.create(name='Meg', data={'breed': 'collie', 'owner': None})
+<Dog: Meg>
+>>> Dog.objects.filter(data__breed='collie')
+<QuerySet [<Dog: Meg>]>
+```
+Multiple keys can be chained together to form a path lookup:
+```
+>>> Dog.objects.filter(data__owner__name='Bob')
+<QuerySet [<Dog: Rufus>]>
+```
+If the key is an integer, it will be interpreted as an index transform in an array:
+```
+>>> Dog.objects.filter(data__owner__other_pets__0__name='Fishy')
+<QuerySet [<Dog: Rufus>]>
+```
+If the key you wish to query by clashes with the name of another lookup, use the [`contains`](https://docs.djangoproject.com/en/4.0/topics/db/queries/#std:fieldlookup-jsonfield.contains) lookup instead.
+
+To query for missing keys, use the `isnull` lookup:
+```
+>>> Dog.objects.create(name='Shep', data={'breed': 'collie'})
+<Dog: Shep>
+>>> Dog.objects.filter(data__owner__isnull=True)
+<QuerySet [<Dog: Shep>]>
+```
+
+<hr>
+
+**Note**: The lookup examples given above implicitly use the [`exact`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-exact) lookup. Key, index, and path transforms can also be chained with: [`icontains`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-icontains), [`endswith`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-endswith), [`iendswith`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-iendswith), [`iexact`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-iexact), [`regex`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-regex), [`iregex`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-iregex), [`startswith`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-startswith), [`istartswith`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-istartswith), [`lt`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-lt), [`lte`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-lte), [`gt`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-gt), and [`gte`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-gte), as well as with [Containment and key lookups](). <!-- below -->
+
+<hr>
+
+**Note**: Due to the way in which key-path queries work, [`exclude()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.exclude) and [`filter()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.filter) are not guaranteed to produce exhaustive sets. If you want to include objects that do not have the path, add the `isnull` lookup.
+
+<hr>
+
+:warning: **Warning**: Since any string could be a key in a JSON object, any lookup other than those listed below will be interpreted as a key lookup. No errors are raised. Be extra careful for typing mistakes, and always check your queries work as you intend.
+
+<hr>
+
+**MariaDB and Oracle users**
+
+Using [`order_by()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.order_by) on key, index, or path transforms will sort the objects using the string representation of the values. This is because MariaDB and Oracle Database do not provide a function that converts JSON values into their equivalent SQL values.
+
+<hr>
+
+**Oracle users**
+
+On Oracle Database, using `None` as the lookup value in an `exclude()` query will return objects that do not have `null` as the value at the given path, including objects that do not have the path. On other database backends, the query will return objects that have the path and the value is not `null`.
+
+<hr>
+
+**PostgreSQL users**
+
+On PostgreSQL, if only one key or index is used, the SQL operator `->` is used. If multiple operators are used, then the `#>` operator is used.
+
+<hr>
+
+### Containment and key lookups
+
 
 
 
