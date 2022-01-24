@@ -471,7 +471,119 @@ Oracle doesn't support bitwise XOR operation.
 
 <hr>
 
+### Expressions can reference transforms
 
+Django supports using transforms in expressions.
+
+For example, to find all `Entry` objects published in the same year as they were last modified:
+```
+>>> Entry.objects.filter(pub_date__year=F('mod_date__year'))
+```
+To find the earliest year an entry was published, we can issue the query:
+```
+>>> Entry.objects.aggregate(first_published_yearMin('pub_date__year'))
+```
+This example finds the value of the highest rated entry and the total number of comments on all entries for each year:
+```
+>>> Entry.objects.values('pub_date__year').annotate(
+...     top_rating=Subquery(
+...         Entry.objects.filter(
+...             pub_date__year=OuterRef('pub_date__year'),
+...         ).order_by('-rating').values('rating')[:1]
+...     ),
+...     total_comments=Sum('number_of_comments'),
+... )
+```
+
+### The `pk` lookup shortcut
+
+For convenience, Django provides a `pk` lookup shortcut, which stands for "primary key".
+
+In the example `Blog` model, the primary key is the `id` field, so these three statements are equivalent:
+```
+>>> Blog.objects.get(id__exact=14)   # Explicit form
+>>> Blog.objects.get(id=14)          # __exact is implied
+>>> Blog.objects.get(pk=14)          # pk implies id__exact
+```
+The use of `pk` isn't limited to `__exact` queries -- any query term can be combined with `pk` to perform a query on the primary key of a model:
+```
+# Get blogs entries with id 1, 4, and 7
+>>> Blog.objects.filter(pk__in=[1,4,7])
+
+# Get all blog entries with id > 14
+>>> Blog.objects.filter(pk__gt=14)
+```
+`pk` lookups also work across joins. For example, these three statements are equivalent:
+```
+>>> Entry.objects.filter(blog__id__exact=3)   # Explicit form
+>>> Entry.objects.filter(blog__id=3)          # __exact is implied
+>>> Entry.objects.filter(blog__pk=3)          # __pk implies __id__exact
+```
+
+### Escaping percent signs and underscores in `LIKE` statements
+
+The field lookups that equate to `LIKE` SQL statements (`iexact`, `contains`, `icontains`, `startswith`, `istartswith`, `endswith`, and `iendswith`) will automatically escape the two special characters used in `LIKE` statements -- the percent sign and the underscore. (In a `LIKE` statement, the percent sign signifies a multiple-character wildcard and the underscore signifies a single-character wildcard.)
+
+This means things should work intuitively, so the abstraction doesn't leak. For example, to retrieve all the entries that contain a percent sign, use the percent sign as any other character:
+```
+>>> Entry.objects.filter(headline__contains='%')
+```
+Django takes care of the quoting for you; the resulting SQL will look something like this:
+```
+SELECT ... WHERE headline LIKE '%\%%';
+```
+Same goes for underscores. Both percentage signs and underscores are handled for you transparently.
+
+### Caching and `QuerySet`s
+
+Each [`QuerySet`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet) contains a cache to minimize database access. Understanding how it works will allow you to write the most efficient code.
+
+In a newly created `QuerySet`, the cache is empty. The first time a `QuerySet` is evaluated -- and, hence, a database query happens -- Django saves the query results in the `QuerySet`'s cache and returns the results that have been explicitly requested (e.g. the next element, if the `QuerySet` is being iterated over). Subsequent evaluations of the `QuerySet` reuse the cached results.
+
+Keep this caching behavior in mind, because it may bite you if you don't use your `QuerySet`s correctly. For example, the following will create two `QuerySet`s, evaluate them, and throw them away:
+```
+>>> print([e.headline for e in Entry.objects.all()])
+>>> print([e.pub_date for e in Entry.objects.all()])
+```
+That means the same database query will be executed twice, effectively doubling your database load. Also, there's a possibility the two lists may not include the same database records, because an `Entry` may have been added or deleted in the split second between the two requests.
+
+To avoid this problem, save the `QuerySet` and reuse it:
+```
+>>> queryset = Entry.objects.all()
+>>> print([p.headline for p in queryset])   # Evaluate the query set.
+>>> print([p.pub_date for p in queryset])   # Reuse the cache from the evaluation.
+```
+
+### When `QuerySet`s are not cached
+
+Querysets do not always cache their results. When evaluating only *part* of the queryset, the cache is checked, but if it is not populated, then the items returned by the subsequent query are not cached. Specifically, this means that [limiting the queryset](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#limiting-querysets) using an array slice or an index will not populate the cache.
+
+For example, repeatedly getting a certain index in a queryset object will query the database each time:
+```
+>>> queryset = Entry.objects.all()
+>>> print(queryset[5])   # Queries the database
+>>> print(queryset[5])   # Queries the database again
+```
+However, if the entire queryset has already been evaluated, the cache will be checked instead:
+```
+>>> queryset = Entry.objects.all()
+>>> [entry for entry in queryset]   # Queries the database
+>>> print(queryset[5])   # Uses cache
+>>> print(queryset[5])   # Uses cache
+```
+Here are some examples of other actions that will result in the entire queryset being evaluated and therefore populate the cache:
+```
+>>> [entry for entry in queryset]
+>>> bool(queryset)
+>>> entry in queryset
+>>> list(queryset)
+```
+
+<hr>
+
+**Note**: Simply printing the queryset will not populate the cache. This is because the call to `__repr__()` only returns a slice of the entire queryset.
+
+<hr>
 
 
 
