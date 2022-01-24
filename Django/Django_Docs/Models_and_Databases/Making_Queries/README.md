@@ -703,6 +703,152 @@ On PostgreSQL, if only one key or index is used, the SQL operator `->` is used. 
 
 ### Containment and key lookups
 
+**`contains`**
+
+The [`contains`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#std:fieldlookup-contains) lookup is overridden on `JSONField`. The returned objects are those where the given `dict` of key-value pairs are all contained in the top-level of the field. For example:
+```
+>>> Dog.objects.create(name='Rufus', data={'breed': 'labrador', 'owner': 'Bob'})
+<Dog: Rufus>
+>>> Dog.objects.create(name='Meg', data={'breed': 'collie', 'owner': 'Bob'})
+<Dog: Meg>
+>>> Dog.objects.create(name='Fred', data={})
+<Dog: Fred>
+>>> Dog.objects.filter(data__contains={'owner': 'Bob'})
+<QuerySet [<Dog: Rufus>, <Dog: Meg>]>
+>>> Dog.objects.filter(data__contains={'breed': 'collie'})
+<QuerySet [<Dog: Meg>]>
+```
+
+<hr>
+
+**Oracle and SQLite**
+
+`contains` is not supported on Oracle and SQLite.
+
+<hr>
+
+**'contained_by`**
+
+This is the inverse of the `contains` lookup -- the objects returned will be those where the key-value pairs on the object are a subset of those in the value passed. For example:
+```
+>>> Dog.objects.create(name='Rufus', data={'breed': 'labrador', 'owner': 'Bob'})
+<Dog: Rufus>
+>>> Dog.objects.create(name='Meg', data={'breed': 'collie', 'owner': 'Bob'})
+<Dog: Meg>
+>>> Dog.objects.create(name='Fred', data={})
+<Dog: Fred>
+>>> Dog.objects.filter(data__contained_by={'breed': 'collie', 'owner': 'Bob'})
+<QuerySet [<Dog: Meg>, <Dog: Fred>]>
+>>> Dog.objects.filter(data__contained_by={'breed': 'collie'})
+<QuerySet [<Dog: Fred>]>
+```
+
+<hr>
+
+**Oracle and SQLite**
+
+`contained_by` is supported on Oracle and SQLite.
+
+<hr>
+
+**`has_key`**
+
+Returns objects where the given key is in the top-level of the data. For example:
+```
+>>> Dog.objects.create(name='Rufus', data={'breed': 'labrador'})
+<Dog: Rufus>
+>>> Dog.objects.create(name='Meg', data={'breed': 'collie', 'owner': 'Bob'})
+<Dog: Meg>
+>>> Dog.objects.filter(data__has_key='owner')
+<QuerySet [<Dog: Meg>]>
+```
+
+**`has_keys`**
+
+Returns objects where all of the given keys are in the top-level of the data. For example:
+```
+>>> Dog.objects.create(name='Rufus', data={'breed': 'labrador'})
+<Dog: Rufus>
+>>> Dog.objects.create(name='Meg', data={'breed': 'collie', 'owner': 'Bob'})
+<Dog: Meg>
+>>> Dog.objects.filter(data__has_keys=['breed', 'owner'])
+<QuerySet [<Dog: Meg>]>
+```
+
+**`has_any_keys`**
+
+Returns objects where any of the given keys are in the top-level of the data. For example:
+```
+>>> Dog.objects.create(name='Rufus', data={'breed': 'labrador'})
+<Dog: Rufus>
+>>> Dog.objects.create(name='Meg', data={'owner': 'Bob'})
+<Dog: Meg>
+>>> Dog.objects.filter(data__has_any_keys=['owner', 'breed'])
+<QuerySet [<Dog: Rufus>, <Dog: Meg>]>
+```
+
+## Complex lookups with `Q` objects
+
+Keyword argument queries -- in [`filter()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.filter), etc. -- are "AND"ed together. If you need to execute more complex queries (for example, queries with `OR` statements), you can use [`Q` objects](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.Q).
+
+A `Q` object (`django.db.models.Q`) is an object used to encapsulate a collection of keyword arguments. These keyword arguments are specified as in "Field lookups" above.
+
+For example, this `Q` object encapsulates a single `LIKE` query:
+```
+from django.db.models import Q
+Q(question__startswith='What')
+```
+`Q` objects can be combined using the `&` and `|` operators. When an operator is used on two `Q` objects, it yields a new `Q` object.
+
+For example, this statement yields a single `Q` object that represents the "OR" of two `"question__startswith"` queries:
+```
+Q(question__startswith='Who') | Q(question__startswith='What')
+```
+This is equivalent to the following SQL `WHERE` clause:
+```
+WHERE question LIKE 'Who%' OR question LIKE 'What%'
+```
+You can compose statements of arbitrary complexity by combining `Q` objects with the `&` and `|` operators and use parenthetical grouping. Also, `Q` objects can be negated using the `~` operator, allowing for combined lookups that combine both a normal query and a negated (`NOT`) query:
+```
+Q(question__startswith='Who') | ~Q(pub_date__year=2005)
+```
+Each lookup function that takes keyword-arguments (e.g. [`filter()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.filter), [`exclude`()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.exclude), [`get()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.get)) can also be passed one or more `Q` objects as positional (not-named) arguments. If you provide multiple `Q` object arguments to a lookup function, the arguments will be "AND"ed together. For example:
+```
+Poll.objects.get(
+    Q(question__startswith='Who'),
+    Q(pub_date=date(2005, 5, 2)) | Q(pub_date=date(2005, 5, 6))
+)
+```
+...roughly translate into the SQL:
+```
+SELECT * from polls WHERE question LIKE 'Who%'
+    AND (pub_date = '2005-05-02' OR pub_date = '2005-05-06')
+```
+Lookup functions can mix the use of `Q` objects and keyword arguments. All arguments provided to a lookup function (be they keyword arguments or `Q` objects) are "AND"ed together. However, if a `Q` object is provided, it must precede the definition of any keyword arguments. For example:
+```
+Poll.objects.get(
+    Q(pub_date=date(2005, 5, 2)) | Q(pub_date=date(2005, 5, 6)),
+    question__startswith='Who',
+)
+```
+...would be a valid query, equivalent to the previous example; but:
+```
+# INVALID QUERY
+Poll.objects.get(
+    question__startswith='Who',
+    Q(pub_date=date(2005, 5, 2)) | Q(pub_date=date(2005, 5, 6))
+)
+```
+...would not be valid.
+
+<hr>
+
+**See also**
+
+The [OR lookups examples](https://github.com/django/django/blob/main/tests/or_lookups/tests.py) in Django's unit tests show some possible uses of `Q`.
+
+<hr>
+
 
 
 
