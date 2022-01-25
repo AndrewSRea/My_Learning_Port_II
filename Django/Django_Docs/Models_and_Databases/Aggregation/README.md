@@ -112,3 +112,67 @@ If you want to generate more than one aggregate, you add another argument to the
 >>> Book.objects.aggregate(Avg('price'), Max('price'), Min('price'))
 {'price__avg': 34.35, 'praice__max': Decimal('81.20'), 'price__min': Decimal('12.99')}
 ```
+
+## Generating aggregates for each item in a `QuerySet`
+
+The second way to generate summary values is to generate an independent summary for each object in a [`QuerySet`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet). For example, if you are retrieving a list of books, you may want to know how many authors contributed to each book. Each Book has a many-to-many relationship with the Author; we want to summarize this relationship for each book in the `QuerySet`.
+
+Per-object summaries can be generated using the [`annotate()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.annotate) clause. When an `annotate()` clause is specified, each object in the `QuerySet` will be annotated with the specified values.
+
+The syntax for these annotations is identical to that used for the `aggregate()` clause. Each argument to `annotate()` describes an aggregate that is to be calculated. For example, to annotate books with the number of authors:
+```
+# Build an annotated queryset
+>>> from django.db.models import Count
+>>> q = Book.objects.annotate(Count('authors'))
+# Interrogate the first object in the queryset
+>>> q[0]
+<Book: The Definitive Guide to Django>
+>>> q[0].authors__count
+2
+# Interrogate the second object in the queryset
+>>> q[1]
+<Book: Practical Django Projects>
+>>> q[1].authors__count
+1
+```
+As with `aggregate()`, the name for the annotation is automatically derived from the name of the aggregate function and the name of the field being aggregated. You can override this default name by providing an alias when you specify the annotation:
+```
+>>> q = Book.objects.annotate(num_authors=Count('authors'))
+>>> q[0].num_authors
+2
+>>> q[1].num_authors
+1
+```
+Unlike `aggregate()`, `annotate()` is *not* a terminal clause. The output of the `annotate()` clause is a `QuerySet`; this `QuerySet` can be modified using any other `QuerySet` operation, including `filter()`, `order_by()`, or even additional calls to `annotate()`.
+
+### Combining multiple aggregations
+
+Combining multiple aggregations with `annotate()` will [yield the wrong results]() because joins are used instead of subqueries:
+```
+>>> book = Book.objects.first()
+>>> book.authors.count()
+2
+>>> book.store_set.count()
+3
+>>> q = Book.objects.annotate(Count('authors'), Count('store'))
+>>> q[0],authors__count
+6
+>>> q[0].store__count
+6
+```
+For most aggregates, there is no way to avoid this problem, however, the [`Count`]() aggregate has a `distinct` parameter that may help:
+```
+>>> q = Book.objects.annotate(Count('authors', distinct=True), Count('store', distinct=True))
+>>> q[0].authors__count
+2
+>>> q[0].store__count
+3
+```
+
+<hr>
+
+**If in doubt, inspect the SQL query!**
+
+In order to understand what happens in your query, consider inspecting the `query` property of your `QuerySet`.
+
+<hr>
