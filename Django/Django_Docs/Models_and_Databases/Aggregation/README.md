@@ -176,3 +176,170 @@ For most aggregates, there is no way to avoid this problem, however, the [`Count
 In order to understand what happens in your query, consider inspecting the `query` property of your `QuerySet`.
 
 <hr>
+
+## Joins and aggregates
+
+So far, we have dealt with aggregates over fields that belong to the model being queried. However, sometimes the value you want to aggregate will belong to a model that is related to the model you are querying.
+
+When specifying the field to be aggregated in an aggregate function, Django will allow you to use the same [double underscore notation](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#field-lookups) that is used when referring to related fields in filters. Django will then handle any table joins that are required to retrieve and aggregate the related value.
+
+For example, to find the price range of books offered in each store, you could use the annotation:
+```
+>>> from django.db.models import Max, Min
+>>> Store.objects.annotate(min_price=Min('books__price'), max_price=Max('books__price'))
+```
+This tells Django to retrieve the `Store` model, join (through the many-to-many relationship) with the `Book` model, and aggregate on the price field of the book model to produce a minimum and maximum value.
+
+The same rules apply to the `aggregate()` clause. If you wanted to know the lowest and highest price of any book that is available for sale in any of the stores, you could use the aggregate:
+```
+>>> Store.objects.aggregate(min_price=Min('books__price'), max_price=Max('books__price'))
+```
+Join chains can be as deep as you require. For example, to extract the age of the youngest author of any book available for sale, you could issue the query:
+```
+>>> Store.objects.aggregate(youngest_age=Min('books__authors__age'))
+```
+
+### Following relationships backwards
+
+In a way similar to [Lookups that span relationships](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#lookups-that-span-relationships), aggregations and annotations on fields of models or models that are related to the one you are querying can include traversing "reverse" relationships. The lowercase name of related models and double-underscores are used here, too.
+
+For example, we can ask for all publishers, annotated with their respective total book stock counters (note how we use `'book'` to specify the `Publisher -> Book` reverse foregin key hop):
+```
+>>> from django.db.models import Avg, Count, Min, Sum
+>>> Publisher.objects.annotate(Count('book'))
+```
+(Every `Publisher` in the resulting `QuerySet` will have an extra attribute called `book__count`.)
+
+We can also ask for the oldest book of any of those managed by every publisher:
+```
+>>> Publisher.objects.aggregate(oldest_pubdate=Min('book__pubdate'))
+```
+(The resulting dictionary will have a key called `'oldest_pubdate'`. If no such alias were specified, it would be the rather long `'book__pubdate__min'`.)
+
+This doesn't apply just to foreign keys. It also works with many-to-many relations. For example, we can ask for every author, annotated with the total number of pages considering all the books the author has (co-)authored (note how we use `'book'` to specify the `Author -> Book` reverse many-to-many hop):
+```
+>>> Author.objects.annotate(total_pages=Sum('book__pages'))
+```
+(Every `Author` in the resulting `QuerySet` will have an extra attribute called `total_pages`. If no such alias were specified, it would be the rather long `book__pages__sum`.)
+
+Or ask for the average rating of all the books written by author(s) we have on file:
+```
+>>> Author.objects.aggregate(average_rating=Avg('book__rating'))
+```
+(The resulting dictionary will have a key called `'average_rating'`. If no such alias were specified, it would be the rather long `'book__rating__avg'`.)
+
+## Aggregations and other `QuerySet` clauses
+
+### `filter()` and `exclude()`
+
+Aggregates can also participate in filters. Any `filter()` (or `exclude()`) applied to normal model fields will have the effect of constraining the objects that are considered for aggregation.
+
+When used with an `annotate()` clause, a filter has the effect of constraining the objects for which an annotation is calculated. For example, you can generate an annotated list of all books that have a title starting with "Django" using the query:
+```
+>>> from django.db.models import Avg, Count
+>>> Book.objects.filter(name__startswith="Django").annotate(num_authors=Count('authors'))
+```
+When used with an `aggregate()` clause, a filter has the effect of constraining the objects over which the aggregate is calculated. For example, you can generate the average price of all books with a title that starts with "Django" using the query:
+```
+>>> Book.objects.filter(name__startswith="Django").aggregate(Avg('price'))
+```
+
+#### Filtering on annotations
+
+Annotated values can also be filtered. The alias for the annotation can be used in `filter()` and `exclude()` clauses in the same way as any other model field.
+
+For example, to generate a list of books that have more than one author, you can issue the query:
+```
+>>> Book.objects.annotate(num_authors=Count('authors')).filter(num_authors__gt=1)
+```
+This query generates an annotated result set, and then generates a filter based upon that annotation.
+
+If you need two annotations with two separate filters, you can use the `filter` argument with any aggregate. For example, to generate a list of authors with a count of highly rated books:
+```
+>>> highly_rated = Count('book', filter=Q(book__rating__gte=7))
+>>> Author.objects.annotate(num_books=Count('book'), highly_rated_books=higly_rated)
+```
+Each `Author` in the result set will have the `num_books` and `highly_rated_books` attributes. See also [Conditional aggregation](). <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/ref/models/conditional-expressions/#conditional-aggregation) -->
+
+<hr>
+
+**Choosing between `filter` and `QuerySet.filter()`**
+
+Avoid using the `filter` argument with a single annotation or aggregation. It's more efficient to use `QuerySet.filter()` to exclude rows. The aggregation `filter` argument is only useful when using two or more aggregations over the same relations with different conditionals.
+
+<hr>
+
+#### Order of `annotate()` and `filter()` clauses
+
+When developing a complex query that involves both `annotate()` and `filter()` clauses, pay particular attention to the order in which the clauses are applied to the `QuerySet`.
+
+When an `annotate()` clause is applied to a query, the annotation is computed over the state of the query up to the point where the annotation is requested. The practical implication of this is that `filter()` and `annotate()` are not commutative operations.
+
+Given:
+
+* Publisher A has two books with ratings 4 and 5.
+* Publisher B has two books with ratings 1 and 4.
+* Publisher C has one book with rating 1.
+
+Here's an example with the `COunt` aggregate:
+```
+>>> a, b = Publisher.objects.annotate(num_books=COunt('book', distinct=True)).filter(book__rating__gt=3.0)
+>>> a, a.num_books
+(<Publisher: A>, 2)
+>>> b, b.num_books
+(<Publisher: B>, 2)
+
+>>> a, b = Publisher.objects.filter(book__rating__gt=3.0).annotate(num_books=Count('book'))
+>>> a, a.num_books
+(<Publisher: A>, 2)
+>>> b, b.num_books
+(<Publisher: B>, 1)
+```
+Both queries return a list of publishers that have at least one book with a rating exceeding 3.0, hence publisher C is excluded.
+
+In the first query, the annotation precedes the filter, so the filter has no effect on the annotation. `distinct=True` is required to avoid a [query bug](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Aggregation#combining-multiple-aggregations).
+
+The second query counts the number of books that have a rating exceeding 3.0 for each publisher. The filter precedes the annotation, so the filter constrains the objects considered when calculating the annotation.
+
+Here's another example with the `Avg` aggregate:
+```
+>>> a, b = Publisher.objects.annotate(avg_rating=Avg('book__rating')).filter(book__rating__gt=3.0)
+>>> a, a.avg_rating
+(<Publisher: A>, 4.5)   # (5+4)/2
+>>> b, b.avg_rating
+(<Publisher: B>, 2.5)   # (1+4)/2
+
+>>> a, b = Publisher.objects.filter(book__rating__gt=3.0).annotate(avg_rating=Avg('book__rating'))
+>>> a, a.avg_rating
+(<Publisher: A>, 4.5)   # (5+4)/2
+>>> b, b.avg_rating
+(<Publisher: B>, 4.0)   # 4/1 (book with rating 1 excluded)
+```
+The first query asks for the average rating of all a publisher's books for publishers that have at least one book with a rating exceeding 3.0. The second query asks for the average of a publisher's book's ratings for only those ratings exceeding 3.0.
+
+It's difficult to intuit how the ORM will translate complex querysets into SQL queries so when in doubt, inspect the SQL with `str(queryset.query)` and write plenty of tests.
+
+### `order_by()`
+
+Annotations can be used as a basis for ordering. When you define an `order_by()` clause, the aggregates you provide can reference any alias defined as part of an `annotate()` clause in the query.
+
+For example, to order a `QuerySet` of books by the number of authors that have contributed to the book, you could use the following query:
+```
+>>> Book.objects.annotate(num_authors=Count('authors')).order_by('num_authors')
+```
+
+### `values()`
+
+Ordinarily, annotations are generated on a per-object basis -- an annotated `QuerySet` will return one result for each object in the original `QuerySet`. However, when a `values()` clause is used to constrain the columns that are returned in the result set, the method for evaluating annotations is slightly different. Instead of returning an annotated result for each result in the original `QuerySet`, the original results are grouped according to the unique combinations of the computed over all members of the group.
+
+For example, consider an author query that attempts to find out the average rating of books written by each author:
+```
+>>> Author.objects.annotate(average_rating=Avg('book__rating'))
+```
+This will return one result for each author in the database, annotated with their average book rating.
+
+However, the result will be slightly different if you use a `values()` clause:
+```
+>>> Author.objects.values('name').annotate(average_rating=Avg('book__rating'))
+```
+In this example, the authors will be grouped by name, so you will only get an annotated result for each *unique* author name. This means if you have two authors with the same name, their results will be merged into a single result in the output of the query; the average will be computed as the average over the books written by both authors.
