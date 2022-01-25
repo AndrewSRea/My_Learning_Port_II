@@ -1067,9 +1067,114 @@ b.entry_set(manager='entries').is_published()
 
 #### Additional methods to handle related objects
 
-In addition to the [`QuerySet`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet) methods defined in [Retrieving objects](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#retrieving-objects) above, the [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey) [`Manager`](https://docs.djangoproject.com/en/4.0/topics/db/managers/#django.db.models.Manager) has additional methods used to handle the set of related objects. A synopsis of each is below, and complete details can be found in the [related objects reference]().
+In addition to the [`QuerySet`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet) methods defined in [Retrieving objects](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#retrieving-objects) above, the [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey) [`Manager`](https://docs.djangoproject.com/en/4.0/topics/db/managers/#django.db.models.Manager) has additional methods used to handle the set of related objects. A synopsis of each is below, and complete details can be found in the [related objects reference](https://docs.djangoproject.com/en/4.0/ref/models/relations/).
 
+**`add(obj1, obj2, ...)`**
+
+Adds the specified model objects to the related object set.
+
+**`create(\*\*kwargs)`**
+
+Creates a new object, saves it and puts it in the related object set. Returns the newly created object.
+
+**`remove(obj1, obj2, ...)`**
+
+Removes the specified model objects from the related object set.
+
+**`clear()`**
+
+Removes all objects from the related object set.
+
+**`set(objs)`**
+
+Replace the set of related objects.
+
+To assign the members of a related set, use the `set()` method with an iterable of object instances. For example, if `e1` and `e2` are `Entry` instances:
+```
+b = Blog.objects.get(id=1)
+b.entry_set([e1, e2])
+```
+If the `clear()` method is available, any pre-existing objects will be removed from the `entry_set` before all objects in the iterable (in this case, a list) are added to the set. If the `clear()` method is *not* available, all objects in the iterable will be added without removing any existing elements.
+
+Each "reverse" operation described in this section has an immediate effect on the database. Every addition, creation, and deletion is immediately and automatically saved to the database.
 
 ### Many-to-many relationships
 
-Both ends...
+Both ends of a many-to-many relationship get automatic API access to the other end. The API works similar to a "backward" one-to-many relationship, above.
+
+One difference is in the attribute naming: The model that defines the [`ManyToManyField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField) uses the attribute name of that field itself, whereas the "reverse" model uses the lowercase model name of the original model, plus `'_set'` (just like reverse one-to-many relationships).
+
+An example makes this easier to understand:
+```
+e = Entry.objects.get(id=3)
+e.authors.all()   # Returns all Author objects for this Entry.
+e.authors.count()
+e.authors.filter(name__contains='John')
+
+a = Author.objects.get(id=5)
+a.entry_set.all()   # Returns all Entry objects for this Author.
+```
+Like [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey), `ManyToManyField` can specify [`related_name`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField.related_name). In the above example, if the `ManyToManyField` in `Entry` has specified `related_name='entries'`, then each `Author` instance would have an `entries` attribute instead of `entry_set`.
+
+Another difference from one-to-many relationships is that in addition to model instances, the `add()`, `set()`, and `remove()` methods on amny-to-many relationships accept primary key values. For example, if `e1` and `e2` are `Entry` instances, then these `set()` calls work identically:
+```
+a = Author.objects.get(id=5)
+a.entry_set.set([e1, e2])
+a.entry_set.set([e1.pk, e2.pk])
+```
+
+### One-to-one relationships
+
+One-to-one relationships are very similar to many-to-one relationships. If you define a [`OneToOneField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.OneToOneField) on your model, instances of that model will have access to the related object via an attribute of the model.
+
+For example:
+```
+class EntryDetail(models.Model):
+    entry = models.OneToOneField(Entry, on_delete=models.CASCADE)
+    details = models.TextField()
+
+ed = EntryDetail.objects.get(id=2)
+ed.entry   # Returns the related Entry object.
+```
+The difference comes in "reverse" queries. The related model in a one-to-one relationship also has access to a [`Manager`]() <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/topics/db/managers/#django.db.models.Manager) --> object, but that `Manager` represents a single object, rather than a collection of objects:
+```
+e = Entry.objects.get(id=2)
+e.entrydetail   # Returns the related EntryDetail object.
+```
+If no object has been assigned to this relationship, Django will raise a `DoesNotExist` exception.
+
+Instances can be assigned to the reverse relationship in the same way as you would assign the forward relationship:
+```
+e.entrydetail = ed
+```
+
+### How are the backward relationships possible?
+
+Other object-relational mappers require you to define relationships on both sides. The Django developers believe this is a violation of the DRY (Don't Repeat Yourself) principle, so Django only requires you to define the relationship on one end.
+
+But how is this possible, given that a model doesn't know which other model classes are related to it until those other model classes are loaded?
+
+The answer lies in the [`apps` registry](https://docs.djangoproject.com/en/4.0/ref/applications/#application-registry). When Django starts, it imports each application listed in [`INSTALLED_APPS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-INSTALLED_APPS), and then the `models` module inside each application.  Whenever a new model class is created, Django adds backward-relationships to any related models. If the related models haven't been imported yet, Django keeps track of the relationships and adds them when the related models eventually are imported.
+
+For this reason, it's particularly important that all the models you're using be defined in applications listed in `INSTALLED_APPS`. Otherwise, backwards relations may not work properly.
+
+### Queries over related objects
+
+Queries involving related objects follow the same rules as queries involving normal value fields. When specifying the value for a query to match, you may use either an object instance itself, or the primary key value for the object.
+
+For example, if you have a Blog object `b` with `id=5`, the following three queries would be identical:
+```
+Entry.objects.filter(blog=b)      # Query using object instance
+Entry.objects.filter(blog=b.id)   # Query using id from instance
+Entry.objects.filter(blog=5)      # Query using id directly
+```
+
+## Falling back to raw SQL
+
+If you find yourself needing to write an SQL query that is too complex for Django's database-mapper to handle, you can fall back on writing SQL by hand. Django has a couple of options for writing raw SQL queries; see [Performing raw SQL queries](). <!-- yes, future file in "Models_and_Databases" -->
+
+Finally, it's important to note that the Django database layer is merely an interface to your database. You can access your database via other tools, programming languages or database frameworks; there's nothing Django-specific about your database.
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#models) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#making-queries) - [[Next page]]()
