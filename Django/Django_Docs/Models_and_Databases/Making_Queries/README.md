@@ -973,7 +973,101 @@ However, unlike `F()` objects in filter and exclude clauses, you can't introduce
 >>> Entry.objects.update(headline=F('blog__name'))
 ```
 
+## Related objects
 
+When you define a relationship in a model (i.e., a [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey), [`OneToOneField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.OneToOneField), or [`ManyToManyField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField)), instances of that model will have a convenient API to access the related object(s).
+
+Using the models at the top of this page, for example, an `Entry` object `e` can get its associated `Blog` object by accessing the `blog` attribute: `e.blog`.
+
+(Behind the scenes, this functionality is implemented by Python [descriptors](https://docs.python.org/3/howto/descriptor.html). This shouldn't really matter to you, but we point it out here for the curious.)
+
+Django also creates API accessors for the "other" side of the relationship -- the link from the related model to the model that defines the relationship. For example, a `Blog` object `b` has access to a list of all related `Entry` objects via the `entry_set` attribute: `b.entry_set.all()`.
+
+All examples in this section use the sample `Blog`, `Author`, and `Entry` models defined at the top of this page.
+
+### One-to-many relationships
+
+#### Forward
+
+If a model has a [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey), instances of that model will have access to the related (foreign) object via an attribute of the model.
+
+Example:
+```
+>>> e = Entry.objects.get(id=2)
+>>> e.blog   # Returns the related Blog object.
+```
+You can get and set via a foreign-key attribute. As you may expect, changes to the foreign key aren't saved to the database until you call [`save()`](https://docs.djangoproject.com/en/4.0/ref/models/instances/#django.db.models.Model.save). Example:
+```
+>>> e = Entry.objects.get(id=2)
+>>> e.blog = some_blog
+>>> e.save()
+```
+If a `ForeignKey` field has `null=True` set (i.e., it allows `NULL` values), you can assign `None` to remove the relation. Example:
+```
+>>> e = Entry.objects.get(id=2)
+>>> e.blog = None
+>>> e.save()   # "UPDATE blog_entry SET blog_id = NULL ...;"
+```
+Forward access to one-to-many relationships is cached the first time the related object is accessed. Subsequent accesses to the foreign key on the same object instance are cached. Example:
+```
+>>> e = Entry.objects.get(id=2)
+>>> print(e.blog)   # Hits the database to retrieve the associated Blog.
+>>> print(e.blog)   # Doesn't hit the database; uses cached version.
+```
+Note that the [`select_related()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.select_related) `QuerySet` method recursively prepopulates the cache of all one-to-many relationships ahead of time. Example:
+```
+>>> e = Entry.objects.select_related().get(id=2)
+>>> print(e.blog)   # Doesn't hit the database; uses cached version.
+>>> print(e.blog)   # Doesn't hit the database; uses cached version.
+```
+
+#### Following relationships "backward"
+
+If a model has a [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey), instances of the foreign-key model will have access to a [`Manager`]() <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/topics/db/managers/#django.db.models.Manager) --> that returns all instances of the first model. By default, this `Manager` is named `FOO_set`, where `FOO` is the source model name, lowercased. This `Manager` returns `QuerySet`s, which can be filtered and manipulated as described in the [Retrieving objects](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#retrieving-objects) section above.
+
+Example:
+```
+>>> b = Blog.objects.get(id=1)
+>>> b.entry_set.all()   # Returns all Entry objects related to Blog.
+
+# b.entry_set is a Manager that returns QuerySets.
+>>> b.entry_set.filter(headline__contains='Lennon')
+>>> b.entry_set.count()
+```
+You can override the `FOO_set` name by setting the [`related_name`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey.related_name) parameter in the `ForeignKey` definition. For example, if the `Entry` model was altered to `blog = ForeignKey(Blog, on_delete=models.CASCADE, related_name='entries')`, the above example code would look like this:
+```
+>>> b = Blog.objects.get(id=1)
+>>> b.entries.all()   # Returns all Entry objects related to Blog.
+
+# b.entries is a Manager that returns QuerySets.
+>>> b.entries.filter(headline__contains='Lennon')
+>>> b.entries.count()
+```
+
+#### Using a custom reverse manager
+
+By default, the [`RelatedManager`](https://docs.djangoproject.com/en/4.0/ref/models/relations/#django.db.models.fields.related.RelatedManager) used for reverse relations is a subclass of the [default manager]() <!-- link to internal file? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/topics/db/managers/#manager-names) --> for that model. If you would like to specify a different manager for a given query, you can use the following syntax:
+```
+from django.db import models
+
+class Entry(models.Model):
+    # ...
+    objects = models.Manager()   # Default Manager
+    objects = EntryManager()     # Custom Manager
+
+b = Blog.objects.get(id=1)
+b.entry_set(manager='entries').all()
+```
+If `EntryManager` performed default filtering in its `get_queryset()` method, that filtering would apply to the `all()` call.
+
+Specifying a custom reverse manager also enables you to call its custom methods:
+```
+b.entry_set(manager='entries').is_published()
+```
+
+#### Additional methods to handle related objects
+
+In addition to the [`QuerySet`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet) methods defined in [Retrieving objects](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#retrieving-objects) above, the [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey) [`Manager`](https://docs.djangoproject.com/en/4.0/topics/db/managers/#django.db.models.Manager) has additional methods used to handle the set of related objects. A synopsis of each is below, and complete details can be found in the [related objects reference]().
 
 
 ### Many-to-many relationships
