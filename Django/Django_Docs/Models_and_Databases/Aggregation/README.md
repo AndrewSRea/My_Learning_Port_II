@@ -343,3 +343,66 @@ However, the result will be slightly different if you use a `values()` clause:
 >>> Author.objects.values('name').annotate(average_rating=Avg('book__rating'))
 ```
 In this example, the authors will be grouped by name, so you will only get an annotated result for each *unique* author name. This means if you have two authors with the same name, their results will be merged into a single result in the output of the query; the average will be computed as the average over the books written by both authors.
+
+#### Order of `annotate()` and `values()` clauses
+
+As with the `filter()` clause, the order in which `annotate()` and `values()` clauses are applied to a query is significant. If the `values()` clause precedes the `annotate()`, the annotation will be computed using the grouping described by the `values()` clause.
+
+However, if the `annotate()` clause precedes the `values()` clause, the annotations will be generated over the entire query set. In this case, the `values()` clause only constrains the fields that are generated on output.
+
+For example, if we reverse the order of the `values()` and `annotate()` clause from our previous example:
+```
+>>> Author.objects.annotate(average_rating=Avg('book__rating')).values('name', 'average_rating')
+```
+This will now yield one unique result for each author; however, only the author's name and the `average_rating` annotation will be returned in the output data.
+
+You should also note that `average_rating` has been explicitly included in the list of values to be returned. This is required because of the ordering of the `values()` and `annotate()` clause.
+
+If the `values()` clause precedes the `annotate()` clause, any annotations will be automatically added to the result set. However, if the `values()` clause is applied after the `annotate()` clause, you need to explicitly include the aggregate column.
+
+#### Interaction with `order_by()`
+
+Fields that are mentioned in the `order_by()` part of a queryset are used when selecting the output data, even if they are not otherwise specified in the `values()` call. These extra fields are used to group "like" results together and they can make otherwise identical result rows appear to be separate. This shows up, particularly, when counting things.
+
+By way of example, suppose you have a model like this:
+```
+from django.db import models
+
+class Item(models.Model):
+    name = models.CharField(max_length=10)
+    data = models.IntegerField()
+```
+If you want to count how many times each distinct `data` value appears in an ordered queryset, you might try this:
+```
+items = Item.objects.order_by('name')
+# Warning: not quite correct!
+items.values('data').annotate(Count('id'))
+```
+...which will group the `Item` objects by their common `data` values and then count the number of `id` values in each group. Except that it won't quite work. The ordering by `name` will also play a part in the grouping, so this query will group by distinct `(data, name)` pairs, which isn't what you want. Instead, you should construct this queryset:
+```
+items.values('data').annotate(Count('id')).order_by()
+```
+...clearing any ordering in the query. You could also order by, say, `data` without any harmful effects, since that is already playing a role in the query.
+
+This behavior is the same as that noted in the queryset documentation for [`distinct()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.distinct) and the general rule is the same: normally you won't want extra columns playing a part in the result, so clear out the ordering, or at least make sure it's restricted only to those fields you also select in a `values()` call.
+
+<hr>
+
+**Note**: You might reasonably ask why Django doesn't remove the extraneous columns for you. The main reason is consistency with `distinct()` and other places: Django **never** removes ordering constraints that you have specified (and we can't change those other methods' behavior, as that would violate our [API stability]() policy). <!-- future folder? (https://docs.djangoproject.com/en/4.0/misc/api-stability/) -->
+
+<hr>
+
+### Aggregating annotations
+
+You can also generate an aggregate on the result of an annotation. When you define an `aggregate()` clause, the aggregates you provide can reference any alias defined as part of an `annotate()` clause in the query.
+
+For example, if you wanted to calculate the average number of authors per book, you first annotate the set of books with the author count, then aggregate that author count, referencing the annotation field:
+```
+>>> from django.db.models import Avg, Count
+>>> Book.objects.annotations(num_authors=Count('authors')).aggregate(Avg('num_authors'))
+{'num_authors__avg': 1.66}
+```
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#making-queries) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Aggregation#aggregation) - [[Next page]]()
