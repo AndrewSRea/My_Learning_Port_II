@@ -120,7 +120,7 @@ If you use custom `Manager` objects, take note that the first `Manager` Django e
 
 You can specify a custom default manager using [`Meta.default_manager_name`](https://docs.djangoproject.com/en/4.0/ref/models/options/#django.db.models.Options.default_manager_name).
 
-If you're writing some code that must handle an unknown model, for example, in a third-party app that implements a generic view, use this manager (or [`_base_manager`]()) rather than assuming the model has an `objects` manager. <!-- below -->
+If you're writing some code that must handle an unknown model, for example, in a third-party app that implements a generic view, use this manager (or [`_base_manager`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Managers#base-managers)) rather than assuming the model has an `objects` manager.
 
 ### Base managers
 
@@ -267,3 +267,43 @@ class ChildB(AbstractBase):
     default_manager = OtherManager()
 ```
 Here, `default_manager` is the default. The `objects` manager is still available, since it's inherited, but isn't used as the default.
+
+Finally for this example, suppose you want to add extra managers to the child class, but still use the default from `AbstractBase`. You can't add the new manager directly in the child class, as that would override the default and you would have to also explicitly include all the managers from the abstract base class. The solution is to put the extra managers in another base class and introduce it into the inheritance hierarchy *after* the defaults:
+```
+class ExtraManager(models.Model):
+    extra_manager = OtherManager()
+
+    class Meta:
+        abstract = True
+
+class ChildC(AbstractBase, ExtraManager):
+    # ...
+    # Default manager is CustomManager, but OtherManager is
+    # also available via the "extra_manager" attribute.
+    pass
+```
+Note that while you can *define* a custom manager on the abstract model, you can't *invoke* any methods using the abstract model. That is:
+```
+ClassA.object.do_something()
+```
+...is legal, but:
+```
+AbstractBase.objects.do_something()
+```
+...will raise an exception. THis is because managers are intended to encapsulate logic for managing collections of objects. Since you can't have a collection of abstract objects, it doesn't make sense to be managing them. If you have functionality that applies to the abstract model, you should put that functionality in a `staticmethod` or `classmethod` on the abstract model.
+
+### Implementation concerns
+
+Whatever features you add to your custom `Manager`, it must be possible to make a shallow copy of a `Manager` instance; i.e., the following code must work:
+```
+>>> import copy
+>>> manager = MyManager()
+>>> my_copy = copy.copy(manager)
+```
+Django makes shallow copies of manager objects during certain queries; if your Manager cannot be copied, those queries will fail.
+
+This won't be an issue for most custom managers. If you are just adding simple methods to your `Manager`, it is unlikely that you will inadvertently make instances of your `Manager` uncopyable. However, if you're overriding `__getattr__` or some other priavte method of your `Manager` object that controls object state, you should ensure that you don't affect the ability of your `Manager` to be copied.
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Search#search) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Managers#managers) - [[Next page]]()
