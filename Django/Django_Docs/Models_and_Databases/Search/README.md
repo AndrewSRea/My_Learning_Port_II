@@ -42,3 +42,39 @@ For example:
 Now we have a different problem -- the longer name of "Helena Bonham Carter" doesn't show up as it is much longer. Trigram searches consider all combinations of three letters, and compares how may appear in both search and source strings. For the longer name, there are more combinations that don't appear in the source string, so it is no longer considered a close match.
 
 The correct choice of comparison functions here depends on your particular data set -- for example, the language(s) used and the type of text being searched. All of the examples we've seen are on short strings where the user is likely to enter something close (by varying definitions) to the source data.
+
+### Document-based search
+
+Standard database operations stop being a useful approach when you start considering large blocks of text. Whereas the examples above can be thought of as operations on a string of characters, full text search looks at the actual words. Depending on the system used, it's likely to use some of the following ideas:
+
+* Ignoring "stop words" such as "a", "the", "and".
+* Stemming words, so that "pony" and "ponies" are considered similar.
+* Weighting words based on different criteria such as how frequently they appear in the text, or the importance of the fields, such as the title or keywords, that they appear in.
+
+There are many alternatives for using searching software, some of the most prominent are [Elastic](https://www.elastic.co/) and [Solr](https://solr.apache.org/). These are full document-based search solutions. To use them with data from Django models, you'll need a layer which translates your data into a textual document, including back-references to the database ids. When a search using the engine returns a certain document, you can then look it up in the database. There are a variety of third-party libraries which are designed to help with this process.
+
+#### PostgreSQL support
+
+PostgreSQL has its own full text search implementation built-in. While not as powerful as some other search engines, it has the advantage of being inside your database and so can easily be combined with other relational queries such as categorization.
+
+The [`django.contrib.postgres`](https://docs.djangoproject.com/en/4.0/ref/contrib/postgres/#module-django.contrib.postgres) module provides some helpers to make these queries. For example, a query might select all the blog entries which mention "cheese":
+```
+>>> Entry.objects.filter(body_text__search='cheese')
+[<Entry: Cheese on Toast recipes>, <Entry: Pizza recipes>]
+```
+You can also filter on a combination of fields and on related models:
+```
+>>> Entry.objects.annotate(
+...     search=SearchVector('blog__tagline', 'body_text'),
+... ).filter(search='cheese')
+[
+    <Entry: Cheese on Toast recipes>,
+    <Entry: Pizza recipes>,
+    <Entry: dairy farming in Argentina>,
+]
+```
+See the `contrib.postgres` [Full text search](https://docs.djangoproject.com/en/4.0/ref/contrib/postgres/search/) document for complete details. 
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Aggregation#aggregation) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Search#search) - [[Next page]]()
