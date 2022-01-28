@@ -18,7 +18,7 @@ A common way to handle transactions on the web is to wrap each request in a tran
 
 It works like this. Before calling a view function, Django starts a transaction. If the response is produced without problems, Django commits the transaction. If the view produces an exception, Django rolls back the transaction.
 
-You may perform subtransactions using savepoints in your view code, typically with the [`atomic()`]() <!-- below --> context manager. However, at the end of the view, either all or none of the changes will be committed.
+You may perform subtransactions using savepoints in your view code, typically with the [`atomic()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#atomicusingnone-savepointtrue-durablefalse) context manager. However, at the end of the view, either all or none of the changes will be committed.
 
 <hr>
 
@@ -36,7 +36,7 @@ Generally speaking, it isn't advisable to write to the database while generating
 
 <hr>
 
-In practice, this feature wraps every view function in the [`atomic()`]() <!-- below --> decorator described below.
+In practice, this feature wraps every view function in the [`atomic()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#atomicusingnone-savepointtrue-durablefalse) decorator described below.
 
 Note that only the execution of your view is enclosed in the transactions. Middleware runs outside of the transaction, and so does the rendering of template responses.
 
@@ -91,3 +91,103 @@ def viewfunc(request):
         # This code executes inside a transaction.
         do_more_stuff()
 ```
+Wrapping `atomic` in a `try`/`except` block allows for natural handling of integrity errors:
+```
+from django.db import IntegrityError, transaction
+
+@transaction.atomic
+def viewfunc(request):
+    create_parent()
+
+    try:
+        with transaction.atomic():
+            generate_relationships()
+    except IntegrityError:
+        handle_exception()
+
+    add children()
+```
+In this example, even if `generate_relationships()` causes a database error by breaking in integrity constraint, you can execute queries in `add_children()`, and the changes from `create_parent()` are still there and bound to the same transaction. Note that any operations attempted in `generate_relationships()` will already have been rolled back safely when `handle_exception()` is called, so the exception handler can also operate on the database if necessary.
+
+<hr>
+
+**Avoid catching exceptions inside `atomic`!**
+
+When exiting an `atomic` block, Django looks at whether it's exited normally or with an exception to determine whether to commit or roll back. If you catch and handle exceptions inside an `atomic` block, you may hide from Django the fact that a problem has happened. This can result in unexpected behavior.
+
+This is mostly a concern for [`DatabaseError`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.db.DatabaseError) and its subclasses such as [`IntegrityError`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.db.IntegrityError). After such an error, the transaction is broken and Django will perform a rollback at the end of the `atomic` block. If you attempt to run database queries before the rollback happens, Django will raise a [`TransactionManagementError`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.db.transaction.TransactionManagementError). You may encounter this behavior when an ORM-related signal handler raises an exception.
+
+The correct way to catch database errors is around an `atomic` block as shown above. If necessary, add an extra `atomic` block for this purpose. This pattern has another advantage: it delimits explicitly which operations will be rolled back if an exception occurs.
+
+If you catch exceptions raised by raw SQL queries, DJango's behavior is unspecified and database-dependent.
+
+<hr>
+
+**You may need to manually revert model state when rolling back a transaction.**
+
+The values of a model's fields won't be reverted when a transaction rollback happens. This could lead to an inconsistent model state unless you manually restore the original field values.
+
+For example, given `MyModel` with an `active` field, this snippet ensures that the `if obj.active` check at the end uses the correct value if updating `active` to `True` falls in the transaction:
+```
+from django.db import DatabaseError, transaction
+
+obj = MyModel(active=False)
+obj.active = True
+try:
+    with transaction.atomic():
+        obj.save()
+except DatabaseError:
+    obj.active = False
+
+if obj.active:
+    ...
+```
+
+<hr>
+
+In order to guarantee atomicity, `atomic` disables some APIs. Attempting to commit, roll back, or change the autocommit state of the database connection within an `atomic` block will raise an exception.
+
+`atomic` takes a `using` argument which should be the name of a database. If this argument isn't provided, Django uses the `"default"` database.
+
+Under the hood, Django's transaction management code:
+
+* opens a transaction when entering the outermost `atomic` block;
+* creates a savepoint when entering an inner `atomic` block;
+* releases or rolls back to the savepoint when exiting an inner block;
+* commits or rolls back the transaction when exiting the outermost block.
+
+You can disable the creation of savepoints for inner blocks by setting the `savepoint` argument to `False`. If an exception occurs, Django will perform the rollback when exiting the first parent block with a savepoint if there is one, and the outermost block otheriwse. Atomicity is still guaranteed by the outer transaction. This option should only be used if the overhead of savepoints is noticeable. It has the drawback of breaking the error handling described above.
+
+You may use `atomic` when autocommit is turned off. It will only use savepoints, even for the outermost block.
+
+<hr>
+
+**Performance considerations**
+
+Open transactions have a performance cost for your database server. To minimize this overhead, keep your transactions as short as possible. This is especially important if you're using [`atomic()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#atomicusingnone-savepointtrue-durablefalse) in long-running processes, outside of Django's request/response cycle.
+
+<hr>
+
+:warning: **Warning**
+
+[`django.test.TestCase`](https://docs.djangoproject.com/en/4.0/topics/testing/tools/#django.test.TestCase) disables the durability check to allow testing durable atomic blocks in a transaction for performance reasons. Use [`django.test.TransactionTestCase`](https://docs.djangoproject.com/en/4.0/topics/testing/tools/#django.test.TransactionTestCase) for testing durability.
+
+<hr>
+
+## Autocommit
+
+### Why Django uses autocommit
+
+In the SQL standards, each SQL query starts a transaction, unless one is already active. Such transactions must them be explicitly committed or rolled back.
+
+This isn't always convenient for application developers. To alleviate this problem, most databases provide an autocommit mode. When autocommit is turned on and no transaction is active, each SQL query gets wrapped in its own transaction. In other words, not only does each such query start a transaction also gets automatically committed or rolled back, depending on whether the query succeeded.
+
+[PEP 249](https://www.python.org/dev/peps/pep-0249/), the Python Datatbase API Specification v2.0, requires autocommit to be initially turned off. Django overrides this default and turns autocommit on.
+
+To avoid this, you can deactivate the transaction management, but it isn't recommended.
+
+### Deactivating transaction management
+
+You can totally disable Django's transaction management for a given database by setting [`AUTOCOMMIT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASE-AUTOCOMMIT) to `False` in its configuration. If you do this, Django won't enable autocommit, and won't perform any commits. You'll get the regular behavior of the underlying database library.
+
+This requires you to commit explicitly every transaction, even those started by Django or by third-party libraries. Thus, this is best used in situtations where you want to run your own transaction-controlling middleware or do something really strange.
