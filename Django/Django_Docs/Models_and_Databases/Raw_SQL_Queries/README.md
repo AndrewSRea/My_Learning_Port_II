@@ -292,4 +292,4 @@ with connection.cursor() as cursor:
 
 <hr>
 
-[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Managers#managers) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Raw_SQL_Queries#performing-raw-sql-queries) - [[Next page]]()
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Managers#managers) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Raw_SQL_Queries#performing-raw-sql-queries) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#database-transactions)
