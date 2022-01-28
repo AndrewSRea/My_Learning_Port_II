@@ -1,6 +1,6 @@
 # Performing raw SQL queries
 
-Django gives you two ways of performing raw SQL queries: you can use [`Manager.raw()`]() <!-- below --> to [perform raw queries and return model instances](), <!-- below --> or you can avoid the model layer entirely and [execute custom SQL directly](). <!-- below -->
+Django gives you two ways of performing raw SQL queries: you can use [`Manager.raw()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Raw_SQL_Queries#managerrawraw_query-params-translationsnone) to [perform raw queries and return model instances](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Raw_SQL_Queries#performing-raw-queries), or you can avoid the model layer entirely and [execute custom SQL directly](). <!-- below -->
 
 <hr>
 
@@ -27,7 +27,7 @@ The `raw()` manager method can be used to perform raw SQL queries that return mo
 
 ##### `Manager.raw(raw_query, params=(), translations=None)`
 
-This method takes a raw SQL query, executes it, and returns a `django.db.models.query.RawQuerySet` instance. This `RawQuerySet` instance can be iterated over like a normal [`QuerySet`]() to provide object instances.
+This method takes a raw SQL query, executes it, and returns a `django.db.models.query.RawQuerySet` instance. This `RawQuerySet` instance can be iterated over like a normal [`QuerySet`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet) to provide object instances.
 
 This is best illustrated with an example. Suppose you have the following model:
 ```
@@ -66,5 +66,108 @@ No checking is done on the SQL statement that is passed in to `.raw()`. Django e
 :warning: **Warning**
 
 If you are performing queries on MySQL, note that MySQL's silent type coercion may cause unexpected results when mixing types. If you query on a string type column, but with an integer value, MySQL will coerce the types of all values in the table to an integer before performing the comparison. For example, if your table contains the value `'abc'`, `'def'`, and you query for `WHERE mycolumn=0`, both rows will match. To prevent this, perform the correct typecasting before using the value in a query.
+
+<hr>
+
+### Mapping query fields to model fields
+
+`raw()` automatically maps fields in the query to fields on the model.
+
+The order of fields in your query doesn't matter. In other words, both of the following queries work identically:
+```
+>>> Person.objects.raw('SELECT id, first_name, last_name, birth_date FROM myapp_person')
+...
+>>> Person.objects.raw('SELECT last_name, birth_date, first_name, id FROM myapp_person')
+...
+```
+Matching is done by name. This means that you can use SQL's `AS` clauses to map fields in the query to model fields. So if you had some other table that had `Person` data in it, you could easily map it into `Person` instances:
+```
+>>> Person.objects.raw('''SELECT first AS first_name,
+...                              last AS last_name,
+...                              bd AS birth_date,
+...                              pk AS id,
+...                       FROM some_other_table''')
+```
+As long as the names match, the model instances will be created correctly.
+
+Alternatively, you can map fields in the query to model fields using the `translations` argument to `raw()`. This is a dictionary mapping names of fields in the query to name of fields on the model. For example, the above query could also be written:
+```
+>>> name_map = {'first': 'first_name', 'last': 'last_name', 'bd': 'birth_date', 'pk': 'id'}
+>>> Person.objects.raw('SELECT * FROM some_other_table', translations=name_map)
+```
+
+### Index lookups
+
+`raw()` supports indexing, so if you need only the first result, you can write:
+```
+>>> first_person = Person.objects.raw('SELECT * FROM myapp_person')[0]
+```
+However, the indexing and slicing are not performed at the database level. If you have a large number of `Person` objects in your database, it is more efficient to limit the query at the SQL level:
+```
+>>> first_person = Person.objects.raw('SELECT * FROM myapp_person LIMIT 1')[0]
+```
+
+### Deferring model fields
+
+Fields may also be left out:
+```
+>>> people = Person.objects.raw('SELECT id, first_name FROM myapp_person')
+```
+The `Person` objects returned by this query will be deferred model instances (see [`defer()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.defer)). This means that the fields that are omitted from the query will be loaded on demand. For example:
+```
+>>> for p in Person.objects.raw('SELECT id, first_name FROM myapp_person'):
+...     print(p.first_name,   # This will be retrieved by the original query
+...           p.last_name)    # This will be retrieved on demand
+...
+John Smith
+Jane Jones
+```
+From outward appearances, this looks like the query has retrieved both the first name and last name. However, this example actually issued 3 queries. Only the first names were retrieved by the `raw()` query -- the last names were both retrieved on demand when they were printed.
+
+There is only one field that you can't leave out -- the primary key field. Django uses the primary key to identify model instances, so it must always be included in a raw query. A [`FieldDoesNotExist`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.FieldDoesNotExist) exception will be raised if you forget to include the primary key.
+
+### Adding annotations
+
+You can also execute queries containing fields that aren't defined on the model. For example, we could use [PostgreSQL's `age()` function](https://www.postgresql.org/docs/current/functions-datetime.html) to get a list of people with their ages calculated by the database:
+```
+>>> people = Person.objects.raw('SELECT *, age(birth_date) AS age FROM myapp_person')
+>>> for p in people:
+...     print("%s is %s." % (p.first_name, p.age))
+John is 37.
+Jane is 42.
+```
+You can often avoid using raw SQL to compute annotations by instead using a [`Func()` expression](https://docs.djangoproject.com/en/4.0/ref/models/expressions/#func-expressions).
+
+### Passing parameters into `raw()`
+
+If you need to perform parameterized queries, you can use the `params` argument to `raw()`:
+```
+>>> lname = 'Doe'
+>>> Person.objects.raw('SELECT * FROM myapp_person WHERE last_name = %s', [lname])
+```
+`params` is a list or dictionary of parameters. You use `%s` placeholders in the query string for a list, or `%(key)s%` placeholders for a dictionary (where `key` is replaced by a dictionary key), regardless of your database engine. Such placeholders will be replaced with parameters from the `params` argument.
+
+<hr>
+
+**Note**: Dictionary params are not supported with the SQLite backend; with this backend, you must pass parameters as a list.
+
+<hr>
+
+:warning: **Warning**
+
+**Do not use string formatting on raw queries or quote placeholders in your SQL strings!**
+
+It's tempting to write the above query as:
+```
+>>> query = 'SELECT * FROM myapp_person WHERE last_name = %s' % lname
+>>> Person.objects.raw(query)
+```
+You might think you should write your query like this (with quotes around `%s`):
+```
+>>> query = "SELECT * FROM myapp_person WHERE last_name = '%s'"
+```
+**Don't make either of these mistakes.**
+
+As discussed in [SQL injection protection](https://docs.djangoproject.com/en/4.0/topics/security/#sql-injection-protection), using the `params` argument and leaving the placeholders unquoted protects you from [SQL injection attacks](https://en.wikipedia.org/wiki/SQL_injection), a common exploit where attackers inject arbitrary SQL into your database. If you use string interpolation or quote the placeholder, you're at risk for SQL injection.
 
 <hr>
