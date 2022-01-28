@@ -221,7 +221,7 @@ If that hypothetical database write is instead rolled back (typically when an un
 
 ### Savepoints
 
-Savepoints (i.e. nested [`atomic()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#atomicusingnone-savepointtrue-durablefalse) blocks) are handled correctly. That is, an [`on_commit()`]() <!-- above --> callable registered after a savepoint (in a nested `atomic()` block) will be called after the outer transaction is committed, but not if a rollback to that savepoint or any previous savepoint occurred during the transaction:
+Savepoints (i.e. nested [`atomic()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#atomicusingnone-savepointtrue-durablefalse) blocks) are handled correctly. That is, an [`on_commit()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#on_commitfunc-usingnone) callable registered after a savepoint (in a nested `atomic()` block) will be called after the outer transaction is committed, but not if a rollback to that savepoint or any previous savepoint occurred during the transaction:
 ```
 with transaction.atomic():   # Outer atomic, start a new transaction
     transaction.on_commit(foo)
@@ -252,7 +252,7 @@ On-commit functions for a given transaction are executed in the order they were 
 
 ### Exception handling
 
-If one on-commit function within a given transaction raises an uncaught exception, no later registered functions in that same transaction will run. This is the same behavior as if you'd executed the functions sequentially yourself without [`on_commit()`]().
+If one on-commit function within a given transaction raises an uncaught exception, no later registered functions in that same transaction will run. This is the same behavior as if you'd executed the functions sequentially yourself without [`on_commit()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#on_commitfunc-usingnone).
 
 ### Timing of execution
 
@@ -262,4 +262,4 @@ Callbacks are not run until autocommit is restored on the connection following t
 
 When in autocommit mode and outside of an [`atomic()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#atomicusingnone-savepointtrue-durablefalse) block, the function will run immediately, not on commit.
 
-On-commit functions only work with [autocommit mode](https://docs.djangoproject.com/en/4.0/topics/db/transactions/#managing-autocommit) and the `atomic()` (or [`ATOMIC_REQUESTS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASE-ATOMIC_REQUESTS)) transaction API. Calling [`on_commit()`]() when autocommit is disabled and you are not within an atomic block will result in an error.
+On-commit functions only work with [autocommit mode](https://docs.djangoproject.com/en/4.0/topics/db/transactions/#managing-autocommit) and the `atomic()` (or [`ATOMIC_REQUESTS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASE-ATOMIC_REQUESTS)) transaction API. Calling [`on_commit()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#on_commitfunc-usingnone) when autocommit is disabled and you are not within an atomic block will result in an error.
