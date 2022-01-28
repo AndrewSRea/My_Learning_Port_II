@@ -171,3 +171,125 @@ You might think you should write your query like this (with quotes around `%s`):
 As discussed in [SQL injection protection](https://docs.djangoproject.com/en/4.0/topics/security/#sql-injection-protection), using the `params` argument and leaving the placeholders unquoted protects you from [SQL injection attacks](https://en.wikipedia.org/wiki/SQL_injection), a common exploit where attackers inject arbitrary SQL into your database. If you use string interpolation or quote the placeholder, you're at risk for SQL injection.
 
 <hr>
+
+## Executing custom SQL directly
+
+Sometimes even [`Manager.raw()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Raw_SQL_Queries#managerrawraw_query-params-translationsnone) isn't quite enough: you might need to perform queries that don't map cleanly to models, or directly execute `UPDATE`, `INSERT`, or `DELETE` queries.
+
+In these cases, you can always access the database directly, routing around the model layer entirely.
+
+The object `django.db.connection` represents the default database connection. To use the database connection, call `connection.cursor()` to get a cursor object. Then, call `cursor.execute(sql, [params])` to execute the SQL and `cursor.fetchone()` or `cursor.fetchall()` to return the resulting rows.
+
+For example:
+```
+from django.db import connection
+
+def my_custom_sql(self):
+    with connection.cursor() as cursor:
+        cursor.execute("UPDATE bar SET foo = 1 WHERE baz = %s", [self.baz])
+        cursor.execute("SELECT foo FROM bar WHERE baz = %s", [self.baz])
+        row = cursor.fetchone()
+
+    return row
+```
+To protect against SQL injection, you must not include quotes around the `%s` placeholders in the SQL string.
+
+Note that if you want to include literal percent signs in the query, you have to double them in the case you are passing parameters:
+```
+cursor.execute("SELECT foo FROM bar WHERE baz = '30%'")
+cursor.execute("SELECT foo FROM bar WHERE baz = '30%%' AND id = %s", [self.id])
+```
+If you are using [more than one database](), <!-- possible future folder? (https://docs.djangoproject.com/en/4.0/topics/db/multi-db/) --> you can use `django.db.connections` to obtain the connection (and cursor) for a specific database. `django.db.connections` is a dictionary-like object that allows you to retrieve a specific connection using its alias:
+```
+from django.db import connections
+with connections['my_db_alias'].cursor() as cursor:
+    # Your code here...
+```
+By default, the Python DB API will return results without their field names, which means you end up with a `list` of values, rather than a `dict`. At a small performance and memory cost, you can return results as a `dict` by using something like this:
+```
+def dictfetchall(cursor):
+    "Return all rows from a cursor as a dict"
+    columns = [col[0] for col in cursor.description]
+    return [
+        dict(zip(columns, row))
+        for row in cursor.fecthall()
+    ]
+```
+Another option is to use [`collections.namedtuple()`](https://docs.python.org/3/library/collections.html#collections.namedtuple) from the Python standard library. A `namedtuple` is a tuple-like object that has fields accessible by attribute lookup; it's also indexable and iterable. Results are immutable and accessible by field names or indices, which might be useful:
+```
+from collections import namedtuple
+
+def namedtuplefetchall(cursor):
+    "Return all row from a cursor as a namedtuple"
+    desc = cursor.description
+    nt_result = namedtuple('Result', [col[0] for col in desc])
+    return [nt_result(*row) for row in cursor.fetchall()]
+```
+Here is an example of the difference between the three:
+```
+>>> cursor.execute("SELECT id, parent_id FROM test LIMIT 2");
+>>> cursor.fetchall()
+((54360982, None), (54360880, None))
+
+>>> cursor.execute("SELECT id, parent_id FROM test LIMIT 2");
+>>> dictfetchall(cursor)
+[{'parent_id': None, 'id': 54360982}, {'parent_id': None, 'id': 54360880}]
+
+>>> cursor.execute("SELECT id, parent_id FROM test LIMIT 2");
+>>> results = namedtuplefetchall(cursor)
+>>> results
+[Result(id=54360982, parent_id=None), Result(id=54360880, parent_id=None)]
+>>> results[0].id
+54360982
+>>> results[0][0]
+54360982
+```
+
+### Connections and cursors
+
+`connection` and `cursor` mostly implement the standard Python DB-API described in [PEP 249](https://www.python.org/dev/peps/pep-0249/) -- except when it comes to [transaction handling](). <!-- possible future folder? (https://docs.djangoproject.com/en/4.0/topics/db/transactions/) -->
+
+If you're not familiar with the Python DB-API, note that the SQL statement in `cursor.execute()` uses placeholders, `"%s"`, rather than adding parameters directly within the SQL. If you use this technique, the underlying database library will automatically escape your parameters as necessary.
+
+Also note that Django expects the `"%s"` placeholder, *not* the `"?"` placeholder, which is used by the SQLite Python bindings. This is for the sake of consistency and sanity.
+
+Using a cursor as a context manager:
+```
+with connection.cursor() as c:
+    c.execute(...)
+```
+...is equivalent to:
+```
+c = connection.cursor()
+try:
+    c.execute(...)
+finally:
+    c.close()
+```
+
+#### Calling stored procedures
+
+##### `CursorWrapper.callproc(procname, params=None, kparams=None)`
+
+Calls a database stored procedure with the given name. A sequence (`params`) or dictionary (`kparams`) of input parameters may be provided. Most database don't support `kparams`. Of Django's built-in backends, only Oracle supports it.
+
+For example, given this stored procedure in an Oracle database:
+```
+CREATE PROCEDURE "TEST_PROCEDURE"(v_i INTEGER, v_text NVARCHAR2(10)) AS
+    p_i INTEGER;
+    p_text NVARCHAR2(10);
+BEGIN
+    p_i := v_i;
+    p_text := v_text;
+    ...
+END;
+```
+This will call it:
+```
+with connection.cursor() as cursor:
+    cursor.callproc('text_procedure', [1, 'test'])
+```
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Managers#managers) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Raw_SQL_Queries#performing-raw-sql-queries) - [[Next page]]()
