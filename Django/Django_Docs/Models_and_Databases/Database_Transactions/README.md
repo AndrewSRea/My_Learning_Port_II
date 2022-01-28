@@ -6,7 +6,7 @@ Django give you a few ways to control how database transactions are managed.
 
 ### Django's default transaction behavior
 
-Django's default behavior is to run in autocommit mode. Each query is immediately committed to the database, unless a transaction is active. [See below for details](). <!-- "Why Django uses autocommit" -->
+Django's default behavior is to run in autocommit mode. Each query is immediately committed to the database, unless a transaction is active. [See below for details](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#why-django-uses-autocommit).
 
 Django uses transactions or savepoints automatically to guarantee the integrity of ORM operations that require multiple queries, especially [`delete()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#deleting-objects) and [`update()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#updating-multiple-objects-at-once) queries.
 
@@ -191,3 +191,75 @@ To avoid this, you can deactivate the transaction management, but it isn't recom
 You can totally disable Django's transaction management for a given database by setting [`AUTOCOMMIT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASE-AUTOCOMMIT) to `False` in its configuration. If you do this, Django won't enable autocommit, and won't perform any commits. You'll get the regular behavior of the underlying database library.
 
 This requires you to commit explicitly every transaction, even those started by Django or by third-party libraries. Thus, this is best used in situtations where you want to run your own transaction-controlling middleware or do something really strange.
+
+## Performing actions after commit
+
+Sometimes you need to perform an action related to the current database transaction, but only if the transaction successfully commits. Examples might include a [Celery](https://pypi.org/project/celery/) task, an email notification, or a cache invalidation.
+
+Django provides the `on_commit()` function to register callback functions that should be executed after a transaction is successfully committed:
+
+##### `on_commit(func, using=None)`
+
+Pass any function (that takes no arguments) to `on_commit()`:
+```
+from django.db import transaction
+
+def do_something():
+    pass   # send a mail, invalidate a cache, fire off a Celery task, etc.
+
+transaction.on_commit(do_something)
+```
+You can also wrap your function in a lambda:
+```
+transaction.on_commit(lambda: some_celery_task.delay('arg1'))
+```
+The function you pass in will be called immediately after a hypothetical database write made where `on_commit()` is called would be successfully committed.
+
+If you call `on_commit()` while there isn't an active transaction, the callback will be executed immediately.
+
+If that hypothetical database write is instead rolled back (typically when an unhandled exception is raised in an [`atomic()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#atomicusingnone-savepointtrue-durablefalse) block), your function will be discarded and never called.
+
+### Savepoints
+
+Savepoints (i.e. nested [`atomic()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#atomicusingnone-savepointtrue-durablefalse) blocks) are handled correctly. That is, an [`on_commit()`]() <!-- above --> callable registered after a savepoint (in a nested `atomic()` block) will be called after the outer transaction is committed, but not if a rollback to that savepoint or any previous savepoint occurred during the transaction:
+```
+with transaction.atomic():   # Outer atomic, start a new transaction
+    transaction.on_commit(foo)
+
+    with transaction.atomic():   # Inner atomic block, create a savepoint
+        transaction.on_commit(bar)
+
+# foo() and then bar() will be called when leaving the outermost block
+```
+On the other hand, when a savepoint is rolled back (due to an exception block being raised), the inner callable will not be called:
+```
+with transaction.atomic():   # Outer atomic, start a new transaction
+    transaction.on_commit(foo)
+
+    try:
+        with transaction.atomic():   # Inner atomic block, create a savepoint
+            transaction.on_commit(bar)
+            raise SomeError()   # Raising an exception - abort the savepoint
+    except SomeError:
+        pass
+
+# foo() will be called, but not bar()
+```
+
+### Order of execution
+
+On-commit functions for a given transaction are executed in the order they were registered.
+
+### Exception handling
+
+If one on-commit function within a given transaction raises an uncaught exception, no later registered functions in that same transaction will run. This is the same behavior as if you'd executed the functions sequentially yourself without [`on_commit()`]().
+
+### Timing of execution
+
+Your callbacks are executed *after* a successful commit, so a failure in a callback will not cause the transaction to roll back. They are executed conditionally upon the success of the transaction, but they are not *part* of the transaction. For the intended use cases (mail notifications, Celery tasks, etc.), this should be fine. If it's not (if your follow-up action is so critical that its failure should mean the failure of the transaction itself), then you don't want to use the [`on_commit()`]() hook. Instead, you may want [two-phase commit](https://en.wikipedia.org/wiki/Two-phase_commit_protocol) such as the [psycopg Two-Phase Commit protocol support](https://www.psycopg.org/docs/usage.html#tpc) and the **[optional Two-Phase Commit Extensions in the Python DB-API specification](https://www.python.org/dev/peps/pep-0249/#optional-two-phase-commit-extensions)**.
+
+Callbacks are not run until autocommit is restored on the connection following the commit (because otherwise any queries done in a callback would open an implicit transaction, preventing the connection from going back into autocommit mode).
+
+When in autocommit mode and outside of an [`atomic()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#atomicusingnone-savepointtrue-durablefalse) block, the function will run immediately, not on commit.
+
+On-commit functions only work with [autocommit mode](https://docs.djangoproject.com/en/4.0/topics/db/transactions/#managing-autocommit) and the `atomic()` (or [`ATOMIC_REQUESTS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASE-ATOMIC_REQUESTS)) transaction API. Calling [`on_commit()`]() when autocommit is disabled and you are not within an atomic block will result in an error.
