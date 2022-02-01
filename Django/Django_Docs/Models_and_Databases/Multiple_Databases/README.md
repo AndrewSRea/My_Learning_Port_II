@@ -181,3 +181,129 @@ DATABASES = {
 }
 ```
 Now we'll need to handle routing. First, we want a router that knows to send queries for the `auth` and `contenttypes` apps to `auth_db` (`auth` models are linked to `ContentType`, so they must be stored in the same database):
+```
+class AuthRouter:
+    """
+    A router to control all database operations on models in the auth and contenttypes applications.
+    """
+    route_app_labels = {'auth', 'contenttypes'}
+
+    def db_for_read(self, model, **hints):
+        """
+        Attempts to read auth and contenttypes models go to auth_db.
+        """
+        if model._meta.app_label in self.route_app_labels:
+            return 'auth_db'
+        return None
+
+    def db_for_write(self, model, **hints):
+        """
+        Attempts to write auth and contenttypes models go to auth_db.
+        """
+        if model._meta.app_label in self.route_app_labels:
+            return 'auth_db'
+        return None
+
+    def allow_relation(self, obj1, obj2, **hints):
+        """
+        Allow relations if a model in the auth or contenttypes apps is involved.
+        """
+        if (
+            obj1._meta.app_label in self.route_app_labels or
+            obj2._meta.app_label in self.route_app_labels
+        ):
+            return True
+        return None
+
+    def allow_migrate(self, db, app_label, model_name=None, **hints):
+        """
+        Make sure the auth and contenttypes apps only appear in the 'auth_db' database.
+        """
+        if app_label in self.route_app_labels:
+            return db == 'auth_db'
+        return None
+```
+And we also want a router that sends all other apps to the primary/replica configuration, and randomly chooses a replica to read from:
+```
+import random
+
+class PrimaryReplicaRouter:
+    def db_for_read(self, model, **hints):
+        """
+        Reads go to a randomly-chosen replica.
+        """
+        return random.choice(['replica1', 'replica2'])
+
+    def db_for_write(self, model, **hints):
+        """
+        Writes always go to primary.
+        """
+        return 'primary'
+
+    def allow_relation(self, obj1, obj2, **hints):
+        """
+        Relations between objects are allowed if both objects are in the primary/replica pool.
+        """
+        db_set = {'primary', 'replica1', 'replica2'}
+        if obj1._state.db in db_set and obj2._state.db in db_set:
+            return True
+        return None
+
+    def allow_migrate(self, db, app_label, model_name=None, **hints):
+        """
+        All non-auth models end up in this pool.
+        """
+        return True
+```
+Finally, in the settings file, we add the following (substituting `path.to.` with the actual Python path to the module(s) where the routers are defined):
+```
+DATABASE_ROUTERS = ['path.to.AuthRouter', 'path.to.PrimaryReplicaRouter']
+```
+The order in which routers are processed is significant. Routers will be queried in the order they are listed in the [`DATABASE_ROUTERS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASE_ROUTERS) setting. In this example, the `AuthRouter` is processed before the `PrimaryReplicaRouter`, and as a result, decisions concerning the models in `auth` are processed before any other decision is made. If the `DATABASE_ROUTERS` setting listed the two routers in the other order, `PrimaryReplicaRouter.allow_migrate()` would be processed first. The catch-all nature of the `PrimaryReplicaRouter` implementation would mean that all models would be available on all databases.
+
+With this setup installed, and all databases migrated as per [Synchronizing your databases](), <!-- below --> lets run some Django code:
+```
+>>> # This retrieval will be performed on the 'auth_db' database
+>>> fred = User.objects.get(username='fred')
+>>> fred.first_name = 'Frederick'
+
+>>> # This save will also be directed to 'auth_db'
+>>> fred.save()
+
+>>> # These retrieval will be randomly allocated to a replica database
+>>> dna = Person.objects.get(name='Douglas Adams')
+
+>>> # A new object has no database allocation when created
+>>> mh = Book(title='Mostly Harmless')
+
+>>> # This assignment will consult the router, and set mh onto
+>>> # the same database as the author object
+>>> mh.author = dna
+
+>>> # This save will force the 'mh' instance onto the primary database...
+>>> mh.save()
+
+>>> # ... but if we re-retrieve the object, it will come back on a replica
+>>> mh = Book.objects.get(title='Mostly Harmless')
+```
+This example defined a router to handle interaction with models from the `auth` app, and other routers to handle interaction with all other apps. If you left your `default` database empty and don't want to define a catch-all database router to handle all apps not otherwise specified, your routers must handle the names of all apps in [`INSTALLED_APPS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-INSTALLED_APPS) before you migrate. See [Behavior of contrib apps]() for information about contrib apps that must be together in one database. <!-- below -->
+
+## Manually selecting a database
+
+Django also provides an API that allows you to maintain complete control over database usage in your code. A manually specified database allocation will take priority over a database allocated by a router.
+
+### Manually selecting a database for a `QuerySet`
+
+You can select the database for a `QuerySet` at any point in the `QuerySet` "chain." Call `using()` on the `QuerySet` to get another `QuerySet` that uses the specified database.
+
+`using()` takes a single argument: the alias of the database on which you want to run the query. For example:
+```
+>>> # This will run on the 'default' database.
+>>> Author.objects.all()
+
+>>> # So will this.
+>>> Author.objects.using('default').all()
+
+>>> # This will run on the 'other' database.
+>>> Author.objects.using('other').all()
+```
