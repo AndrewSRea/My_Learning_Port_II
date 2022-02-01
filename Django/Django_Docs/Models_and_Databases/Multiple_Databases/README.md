@@ -307,3 +307,151 @@ You can select the database for a `QuerySet` at any point in the `QuerySet` "cha
 >>> # This will run on the 'other' database.
 >>> Author.objects.using('other').all()
 ```
+
+### Selecting a database for `save()`
+
+Use the `using` keyword to `Model.save()` to specify to which database the data should be saved.
+
+For example, to save an object to the `legacy_users` database, you'd use this:
+```
+>>> my_object.save(using='legacy_users')
+```
+If you don't specify `using`, the `save()` method will save into the default database allocated by the routers.
+
+#### Moving an object from one database to another
+
+If you've saved an instance to one database, it might be tempting to use `save(using=...)` as a way to migrate the instance to a new database. However, if you don't take appropriate steps, this could have some unexpected consequences.
+
+Consider the following example:
+```
+>>> p = Person(name='Fred')
+>>> p.save(using='first')    # (statement 1)
+>>> p.save(using='second')   # (statement 2)
+```
+In statement 1, a new `Person` object is saved to the `first` database. At this time, `p` doesn't have a primary key, so Django issues an SQL `INSERT` statement. This creates a primary key, and Django assigns that primary key to `p`.
+
+When the save occurs in statement 2, `p` already has a primary key value, and Django will attempt to use that primary key on the new database. If the primary key value isn't in use in the `second` database, then you won't have any problems -- the object will be copied to the new database.
+
+However, if the primary key of `p` is already in use on the `second` database, the existing object in the `second` database will be overridden when `p` is saved.
+
+You can avoid this in two ways. First, you can clear the primary key of the instance. If an object has no primary key, Django will treat it as a new object, avoiding any loss of data on the `second` database:
+```
+>>> p = Person(name='Fred')
+>>> p.save(using='first')
+>>> p.pk = None   # Clear the primary key
+>>> p.save(using='second')   # Write a completely new object.
+```
+The second option is to use the `force_insert` option to `save()` to ensure that Django does an SQL `INSERT`:
+```
+>>> p = Person(name='Fred')
+>>> p.save(using='first')
+>>> p.save(using='second', force_insert=True)
+```
+This will ensure that the person named `Fred` will have the same primary key on both databases. If that primary key is already in use when you try to save onto the `second` database, an error will be raised.
+
+### Selecting a database to delete from
+
+By default, a call to delete an existing object will be executed on the same database that was used to retrieve the object in the first place:
+```
+>>> u = User.objects.using('legacy_users').get(username='fred')
+>>> u.delete()   # will delete from the `legacy_users` database
+```
+To specify the database, from which a model will be deleted, pass a `using` keyword argument to the `Model.delete()` method. This argument works just like the `using` keyword argument to `save()`.
+
+For example, if you're migrating a user from the `legacy_users` database to the `new_users` database, you might use these commands:
+```
+>>> user_obj.save(using='new_users')
+>>> user_obj.delete(using='legacy_users')
+```
+
+### Using managers with multiple databases
+
+Use the `db_manager()` method on managers to give managers access to a non-default database.
+
+For example, say you have a custom manager method that touches the database -- `User.objects.create_user()`. Because `create_user()` is a manager method, not a `QuerySet` method. you can't do `User.objects.using('new_users').create_user()`. (The `create_user()` method is only available on `User.objects`, the manager, not on `QuerySet` objects derived from the manager.) The solution is to use `db_manager()`, like this:
+```
+User.objects.db_manager('new_users').create_user(...)
+```
+`db_manager()` returns a copy of the manager bound to the database you specify.
+
+#### Using `get_queryset()` with multiple databases
+
+If you're overriding `get_queryset()` on your manager, be sure to either call the method on the parent (using `super()`) or do the appropriate handling of the `_db` attribute on the manager (a string containing the name of the database to use).
+
+For example, if you want to return a custom `QuerySet` class from the `get_queryset` method, you could do this:
+```
+class MyManager(models.Manager):
+    def get_queryset(self):
+        qs = CustomQuerySet(self.model)
+        if self._db is not None:
+            qs = qs.using(self.db)
+        return qs
+```
+
+## Exposing multiple databases in Django's admin interface
+
+Django's admin doesn't have any explicit support for multiple databases. If you want to provide an admin interface for a model on a database other than that specified by your router chain, you'll need to write custom [`ModelAdmin`](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#django.contrib.admin.ModelAdmin) classes that will direct the admin to use a specific database for content.
+
+`ModelAdmin` objects have five methods that require customization for multiple-database support:
+```
+class MultiDBModelAdmin(admin.ModelAdmin):
+    # A handy constant for the name of the alternate database.
+    using = 'other'
+
+    def save_model(self, request, obj, form, change):
+        # Tell Django to save objects to the 'other' database.
+        obj.save(using=self.using)
+
+    def delete_model(self, request, obj):
+        # Tell Django to delete objects from the 'other' database.
+        obj.delete(using=self.using)
+
+    def get_queryset(self, request):
+        # Tell Django to look for objects on the 'other' database.
+        return super().get_queryset(request).using(self.using)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        # Tell Django to populate ForeignKey widgets using a query on the 'other' database
+        return super().formfield_for_foreignkey(db_field, request, using=self.using, **kwargs)
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        # Tell Django to populate ManyToMany widgets using a query on the 'other' database
+        return super().formfield_for_manytomany(db_field, request, using=self.using, **kwargs)
+```
+The implementation provided here implements a multi-database strategy where all objects of a given type are stored on a specific database (e.g., all `User` objects are in the `other` database). If your usage of multiple databases is more complex, your `ModelAdmin` will need to reflect that strategy.
+
+[`InlineModelAdmin`](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#django.contrib.admin.InlineModelAdmin) objects can be handled in a similar fashion. They require three customized methods:
+```
+class MultiDBTabularInline(admin.TabularInline):
+    using = 'other'
+
+    def get_queryset(self, request):
+        # Tell Django to look for inline objects on the 'other' database.
+        return super().get_queryset(request).using(self.using)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        # Tell Django to populate ForeignKey widgets using a query on the 'other' database.
+        return super().formfield_for_foreignkey(db_field, request, using=self.using, **kwargs)
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        # Tell Django to populate ManyToMany widgets using a query on the 'other' database.
+        return super()formfield_for_manytomany(db_field, request, using=self.using, **kwargs)
+```
+Once you've written your model admin definitions, they can be registered with any `Admin` instance:
+```
+from django.contrib import admin
+
+# Specialize the multi-db admin objects for use with specific models.
+class BookInline(MultiDBTabularInline):
+    model = Book
+
+class PublisherAdmin(MultiDBModelAdmin):
+    inlines = [BookInline]
+
+admin.site.register(Author, MultiDBModelAdmin)
+admin.site.register(Publisher, PublisherAdmin)
+
+othersite = admin.AdminSite('othersite')
+othersite.register(Publisher, MultiDBModelAdmin)
+```
+This example sets up two admin sites. On the first site, the `Author` and `Publisher` objects are exposed; `Publisher` objects have a tabular inline showing books published by that publisher. The second site exposes just publishers, without the inlines.
