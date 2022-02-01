@@ -256,10 +256,72 @@ If one on-commit function within a given transaction raises an uncaught exceptio
 
 ### Timing of execution
 
-Your callbacks are executed *after* a successful commit, so a failure in a callback will not cause the transaction to roll back. They are executed conditionally upon the success of the transaction, but they are not *part* of the transaction. For the intended use cases (mail notifications, Celery tasks, etc.), this should be fine. If it's not (if your follow-up action is so critical that its failure should mean the failure of the transaction itself), then you don't want to use the [`on_commit()`]() hook. Instead, you may want [two-phase commit](https://en.wikipedia.org/wiki/Two-phase_commit_protocol) such as the [psycopg Two-Phase Commit protocol support](https://www.psycopg.org/docs/usage.html#tpc) and the **[optional Two-Phase Commit Extensions in the Python DB-API specification](https://www.python.org/dev/peps/pep-0249/#optional-two-phase-commit-extensions)**.
+Your callbacks are executed *after* a successful commit, so a failure in a callback will not cause the transaction to roll back. They are executed conditionally upon the success of the transaction, but they are not *part* of the transaction. For the intended use cases (mail notifications, Celery tasks, etc.), this should be fine. If it's not (if your follow-up action is so critical that its failure should mean the failure of the transaction itself), then you don't want to use the [`on_commit()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#on_commitfunc-usingnone) hook. Instead, you may want [two-phase commit](https://en.wikipedia.org/wiki/Two-phase_commit_protocol) such as the [psycopg Two-Phase Commit protocol support](https://www.psycopg.org/docs/usage.html#tpc) and the **[optional Two-Phase Commit Extensions in the Python DB-API specification](https://www.python.org/dev/peps/pep-0249/#optional-two-phase-commit-extensions)**.
 
 Callbacks are not run until autocommit is restored on the connection following the commit (because otherwise any queries done in a callback would open an implicit transaction, preventing the connection from going back into autocommit mode).
 
 When in autocommit mode and outside of an [`atomic()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#atomicusingnone-savepointtrue-durablefalse) block, the function will run immediately, not on commit.
 
 On-commit functions only work with [autocommit mode](https://docs.djangoproject.com/en/4.0/topics/db/transactions/#managing-autocommit) and the `atomic()` (or [`ATOMIC_REQUESTS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASE-ATOMIC_REQUESTS)) transaction API. Calling [`on_commit()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#on_commitfunc-usingnone) when autocommit is disabled and you are not within an atomic block will result in an error.
+
+### Use in tests
+
+Django's [`TestCase`](https://docs.djangoproject.com/en/4.0/topics/testing/tools/#testcase) class wraps each test in a transaction and rolls back that transaction after each test, in order to provide test isolation. This means that no transaction is ever actually committed, thus your [`on_commit()`](https://docs.djangoproject.com/en/4.0/topics/db/transactions/#django.db.transaction.on_commit) callbacks will never be run.
+
+You can overcome this limitation by using [`TestCase.captureOnCommitCallbacks()`](https://docs.djangoproject.com/en/4.0/topics/testing/tools/#django.test.TestCase.captureOnCommitCallbacks). This captures your `on_commit()` callbacks in a list, allowing you to make assertions on them, or emulate the transaction committing by calling them.
+
+Another way to overcome the limitation is to use [`TransactionTestCase`](https://docs.djangoproject.com/en/4.0/topics/testing/tools/#django.test.TransactionTestCase) instead of `TestCase`. This will mean your transactions are committed, and the callbacks will run. However, `TransactionTestCase` flushes the database between tests, which is significantly slower than `TestCase`'s isolation.
+
+### Why no rollback hook?
+
+A rollback hook is harder to implement robustly than a commit hook, since a variety of things can cause an implicit rollback.
+
+For instance, if your database connection is dropped because your process was killed without a chance to shut down gracefully, your rollback hook will never run.
+
+But there is a solution: instead of doing something during the atomic block (transaction) and then  undoing it if the transaction fails, use [`on_commit()`](https://docs.djangoproject.com/en/4.0/topics/db/transactions/#django.db.transaction.on_commit) to delay doing it in the first place until after the transaction succeeds. It's a lot easier to undo something you never did in the first place!
+
+## Low-level APIs
+
+<hr>
+
+:warning: **Warning**
+
+Always prefer [`atomic()`](https://docs.djangoproject.com/en/4.0/topics/db/transactions/#django.db.transaction.atomic) if possible at all. It accounts for the idiosyncracies of each database and prevents invalid operations.
+
+The low level APIs are only useful if you're implementing your own transaction management.
+
+<hr>
+
+### Autocommit
+
+Django provides an API in the [`django.db.transaction`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#database-transactions) module to manage the autocommit state of each database connection.
+
+##### `get_autocommit(using=None)`
+
+##### `set_autocommit(autocommit, using=None)`
+
+These functions take a `using` argument which should be the name of a database. If it isn't provided, Django uses the `"default"` database.
+
+Autocommit is initially turned on. If you turn it off, it's your responsibility to restore it.
+
+Once you turn autocommit off, you get the default behavior of your database adapter, and Django won't help you. Although that behavior is specified in [PEP 249](https://www.python.org/dev/peps/pep-0249/), implementations of adapters aren't always consistent with one another. Review the documentation of the adapter you're using carefully.
+
+You must ensure that no transaction is active, usually by issuing a [`commit()`]() or a [`rollback()`](), <!-- both below --> before turning autocommit back on.
+
+Django will refuse to turn autocommit off when an [`atomic()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#atomicusingnone-savepointtrue-durablefalse) block is active, because that would break atomicity.
+
+### Transactions
+
+A transaction is an atomic set of database queries. Even if your program crashes, the database guarantees that either all the changes will be applied, or none of them.
+
+Django doesn't provide an API to start a transaction. The expected way to start a transaction is to disable autocommit with [`set_autocommit()`](). <!-- above -->
+
+Once you're in a transaction, you can choose either to apply the changes you've performed until this point with `commit()`, or to cancel them with `rollback()`. These functions are defined in [`django.db.transaction`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#database-transactions).
+
+##### `commit(using=None)`
+
+##### `rollback(using=None)`
+
+These functions take a `using` argument which should be the name of a database. If it isn't provided, Django uses the `"default"` database.
+
+Django will refuse to commit or to rollback when an [`atomic()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#atomicusingnone-savepointtrue-durablefalse) block is active, because that would break atomicity.
