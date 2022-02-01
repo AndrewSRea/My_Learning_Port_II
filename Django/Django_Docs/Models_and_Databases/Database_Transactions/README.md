@@ -435,7 +435,7 @@ Calling `transaction.rollback()` rolls back the entire transaction. Any uncommit
 
 #### Savepoint rollback
 
-You can use [savepoints]() to control the extent of a rollback. Before performing a database operation that could fail, you can set or update the savepoint; that way, if the operation fails, you can roll back the single offending operation, rather than the entire transaction. For example:
+You can use [savepoints](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#savepoints-1) to control the extent of a rollback. Before performing a database operation that could fail, you can set or update the savepoint; that way, if the operation fails, you can roll back the single offending operation, rather than the entire transaction. For example:
 ```
 a.save()   # Succeeds, and never undone by savepoint rollback
 sid = transaction.savepoint()
