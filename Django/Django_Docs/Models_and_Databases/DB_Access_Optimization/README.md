@@ -163,3 +163,134 @@ It is optimal because:
 5. The `for` loop iterates over the already filled cache.
 
 In total, this code does either one or zero database queries. The only deliberate optimization performed is using the `emails` variable. Using `QuerySet.exists()` for the `if` or `QuerySet.count()` for the count would each cause additional queries.
+
+### Use `QuerySet.update()` and `delete()`
+
+Rather than retrieve a load of objects, set some values, and save them individually, use a bulk `UPDATE` SQL statement, via [`QuerySet.update`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#updating-multiple-objects-at-once). Similarly, do [bulk deletes](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#deleting-objects) where possible.
+
+Note, however, that these bulk update methods cannot call the `save()` or `delete()` methods of individual instances, which means that any custom behavior you have added for these methods will not be executed, including anything driven from the normal database object [signals](https://docs.djangoproject.com/en/4.0/ref/signals/).
+
+### Use foreign key values directly
+
+If you only need a foreign key value, use the foreign key value that is already on the object you've got, rather than getting the whole related object and taking its primary key. That is, do:
+```
+entry.blog_id
+```
+...instead of:
+```
+entry.blog.id
+```
+
+### Don't order results if you don't care
+
+Ordering is not free; each field to order by is an operation the database must perform. If a model has a default ordering ([`Meta.ordering`](https://docs.djangoproject.com/en/4.0/ref/models/options/#django.db.models.Options.ordering)) and you don't need it, remove it on a `QuerySet` by calling [`order_by()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.order_by) with no parameters.
+
+Adding an index to your database may help to improve ordering performance.
+
+## Use bulk methods
+
+Use bulk methods to reduce the number of SQL statements.
+
+### Create in bulk
+
+When creating objects, where possible, use the [`bulk_create()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.bulk_create) method to reduce the number of SQL queries. For example:
+```
+Entry.objects.bulk_create([
+    Entry(headline='This is a test'),
+    Entry(headline='This is only a test'),
+])
+```
+...is preferable to:
+```
+Entry.objects.create(headline='This is a test')
+Entry.objects.create(headline='This is only a test')
+```
+Note that there are a number of [caveats to this method](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.bulk_create), so make sure it's appropriate for your use case.
+
+### Update in bulk
+
+When updating objects, where possible, use the [`bulk_update()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.bulk_update) method to reduce the number of SQL queries. Given a list or queryset of objects:
+```
+entries = Entry.objects.bulk_create([
+    Entry(headline='This is a test'),
+    Entry(headline='This is only a test'),
+])
+```
+The following example:
+```
+entries[0].headline = 'This is not a test'
+entries[1].headline = 'This is no longer a test'
+Entry.objects.bulk_update(entries, ['headline'])
+```
+...is preferable to:
+```
+entries[0].headline = 'This is not a test'
+entries[0].save()
+entries[1].headline = 'This is no longer a test'
+entries[1].save()
+```
+Note that there are a number of [caveats to this method](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.bulk_update), so make sure it's appropriate for your use case.
+
+### Insert in bulk
+
+When inserting objects into [`ManyToManyFields`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField), use [`add()`](https://docs.djangoproject.com/en/4.0/ref/models/relations/#django.db.models.fields.related.RelatedManager.add) with multiple objects to reduce the number of SQL queries. For example:
+```
+my_band.members.add(me, my_friend)
+```
+...is preferable to:
+```
+my_band.members.add(me)
+my_band.members.add(my_friend)
+```
+...where `Band` and `Artists` have a many-to-many relationship.
+
+When inserting different pairs of objects into [`ManyToManyField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField) or when the custom [`through`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField.through) table is defined, use [`bulk_create()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.bulk_create) method to reduce the number of SQL queries. For example:
+```
+PizzaToppingRelationship = Pizza.toppings.through
+PizzaToppingRelationship.objects.bulk_create([
+    PizzaToppingRelationship(pizza=my_pizza, topping=pepperoni),
+    PizzaToppingRelationship(pizza=your_pizza, topping=pepperoni),
+    PizzaToppingRelationship(pizza=your_pizza, topping=mushroom),
+], ignore_conflicts=True)
+```
+...is preferable to:
+```
+my_pizza.toppings.add(pepperoni)
+your_pizza.toppings.add(pepperoni, mushroom)
+```
+...where `Pizza` and `Topping` have a many-to-many relationship. Note that there are a number of [caveats to this method](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.bulk_create), so make sure it's appropriate for your use case.
+
+### Remove in bulk
+
+When removing objects from [`ManyToManyFields`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField), use [`remove()`](https://docs.djangoproject.com/en/4.0/ref/models/relations/#django.db.models.fields.related.RelatedManager.remove) with multiple objects to reduce the number of SQL queries. For example:
+```
+my_band.members.remove(me, my_friend)
+```
+...is preferable to:
+```
+my_band.members.remove(me)
+my_band.members.remove(my_friend)
+```
+...where `Bands` and `Artists` have a many-to-many relationship.
+
+When removing different pairs of objects from [`ManyToManyFields`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField), use [`delete()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.delete) on a [`Q`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.Q) expression with multiple [`through`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField.through) model instances to reduce the number of SQL queries. For example:
+```
+from django.db.models import Q
+
+PizzaToppingRelationship = Pizza.toppings.through
+PizzaToppingRelationship.objects.filter(
+    Q(pizza=my_pizza, topping=pepperoni) |
+    Q(pizza=your_pizza, topping=pepperoni) |
+    Q(pizza=your_pizza, topping=mushroom)
+).delete()
+```
+...is preferable to:
+```
+my_pizza.toppings.remove(pepperoni)
+your_pizza.toppings.remove(pepperoni, mushroom)
+```
+...where `Pizza` and `Topping` have a many-to-many relationship.
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Tablespaces#tablespaces) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/DB_Access_Optimization#database-access-optimization) - [[Next page]]()
