@@ -455,3 +455,51 @@ othersite = admin.AdminSite('othersite')
 othersite.register(Publisher, MultiDBModelAdmin)
 ```
 This example sets up two admin sites. On the first site, the `Author` and `Publisher` objects are exposed; `Publisher` objects have a tabular inline showing books published by that publisher. The second site exposes just publishers, without the inlines.
+
+## Using raw cursors with multiple databases
+
+If you are using more than one database, you can use `django.db.connections` to obtain the connection (and cursor) for a specific database. `django.db.connections` is a dictionary-like object that allows you to retrieve a specific connection using its alias:
+```
+from django.db import connections
+with connections['my_db_alias'].cursor() as cursor:
+    ...
+```
+
+## Limitations of multiple databases
+
+### Cross-database relations
+
+Django doesn't currently provide any support for foreign key or many-to-many relationships spanning multiple databases. If you have used a router to partition models to different databases, any foreign key and many-to-many relationships defined by those models must be internal to a single database.
+
+This is because of referential integrity. In order to maintain a relationship between two objects, Django needs to know that the primary key of the related object is valid. If the primary key is stored on a separate database, it's not possible to easily evaluate the validity of a primary key.
+
+If you're using Postgres, Oracle, or MySQL with InnoDB, this is enforced at the database integrity level -- database level key constraints prevent the creation of relations that can't be validated.
+
+However, if you're using SQLite or MySQL with MyISAM tables, there is no enforced referential integrity, as a result, you may be able to "fake" cross database foreign keys. However, this configuration is not officially supported by Django.
+
+### Behavior of contrib apps
+
+Several contrib apps include models, and some apps depend on others. Since cross-database relationships are impossible, this creates some restrictions on how you can split these models across databases:
+
+* Each one of `contenttypes.ContentType`, `sessions.Session`, and `sites.Site` can be stored in any database, given a suitable router.
+* `auth` models -- `User`, `Group`, and `Permission` -- are linked together and linked to `ContentType`, so they must be stored in the same database as `ContentType`.
+* `admin` depends on `auth`, so its models must be in the same database as `auth`.
+* `flatpages` and `redirects` depend on `sites`, so their models must be in the same database as `sites`.
+
+In addition, some objects are automatically created just after [`migrate`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-migrate) creates a table to hold them in a database:
+
+* A default `Site`.
+* A `ContentType` for each model (including those not stored in that database).
+* The `Permission`s for each model (including those not stored in that database).
+
+For common setups with multiple databases, it isn't useful to have these objects in more than one database. Common setups include primary/replica and connecting to external databases. Therefore, it's recommended to write a [database router](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Multiple_Databases#automatic-database-routing) that allows synchronizing these three models to only one database. Use the same approach for contrib and third-party apps that don't need their tabels in multiple databases.
+
+<hr>
+
+:warning: **Warning**
+
+If you're synchronizing content types to more than one database, be aware that their primary keys may not match across databases. This may result in data corruption or data loss.
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#database-transactions) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Multiple_Databases#multiple-databases) - [[Next page]]()
