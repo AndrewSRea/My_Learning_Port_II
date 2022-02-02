@@ -60,7 +60,7 @@ The [`migrate`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-a
 $ ./manage.py migrate
 $ ./manage.py migrate --database=users
 ```
-If you don't want every application to be synchronized onto a particular database, you can deinfe a [database router]() <!-- below --> that implements a policy constraining the availability of particular models.
+If you don't want every application to be synchronized onto a particular database, you can deinfe a [database router](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Multiple_Databases#automatic-database-routing) that implements a policy constraining the availability of particular models.
 
 If, as in the second example above, you've left the `default` database empty, you must provide a database name each time you run `migrate`. Omitting the database name would raise an error. For the second example:
 ```
@@ -72,7 +72,7 @@ $ ./manage.py migrate --database=customers
 
 Most other `django-admin` commands that interact with the database operate in the same way as [`migrate`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-migrate) -- they only ever operate on one database at a time, using [`--database`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#cmdoption-migrate-database) to control the database used.
 
-An exception to this rule is the [`makemigrations`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemigrations) command. It validates the migration history in the databases to catch problems with the existing migration files (which could be caused by editing them) before creating new migrations. By default, it checks only the `default` database, but it consults the [`allow_migrate()`]() <!-- below --> method of [routers]() if any are installed.
+An exception to this rule is the [`makemigrations`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemigrations) command. It validates the migration history in the databases to catch problems with the existing migration files (which could be caused by editing them) before creating new migrations. By default, it checks only the `default` database, but it consults the [`allow_migrate()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Multiple_Databases#allow_migratedb-app_label-model_namenone-hints) method of [routers](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Multiple_Databases#automatic-database-routing) if any are installed.
 
 ## Automatic database routing
 
@@ -88,7 +88,7 @@ A database Router is a class that provides up to four methods:
 
 Suggest the database that should be used for read operations for objects of type `Model`.
 
-If a database operation is able to provide any additional information that might assist in selecting a database, it will be provided in the `hints` dictionary. Details on valid hints are provided [below](). <!-- below "Hints" -->
+If a database operation is able to provide any additional information that might assist in selecting a database, it will be provided in the `hints` dictionary. Details on valid hints are provided [below](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Multiple_Databases#hints).
 
 Returns `None` if there is no suggestion.
 
@@ -96,7 +96,7 @@ Returns `None` if there is no suggestion.
 
 Suggest the database that should be used for writes of objects of type `Model`.
 
-If a database operation is able to provide any additional information that might assist in selecting a database, it will be provided in the `hints` dictionary. Details on valid hints are provided [below](). <!-- "Hints" -->
+If a database operation is able to provide any additional information that might assist in selecting a database, it will be provided in the `hints` dictionary. Details on valid hints are provided [below](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Multiple_Databases#hints).
 
 Returns `None` if there is no suggestion.
 
@@ -144,7 +144,7 @@ The master router is used by Django's database operations to allocate database u
 
 This example is intended as a demonstration of how the router infrastructure can be used to alter database usage. It intentionally ignores some complex issues in order to demonstrate how routers are used.
 
-This example won't work if any of the models in `myapp`contain relationships to models outside of the `other` database. [Cross-database relationships]() <!-- below --> introduce referential integrity problems that Django can't currently handle.
+This example won't work if any of the models in `myapp`contain relationships to models outside of the `other` database. [Cross-database relationships](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Multiple_Databases#cross-database-relations) introduce referential integrity problems that Django can't currently handle.
 
 The primary/replica (referred to as master/slave by dome databases) configuration described is also flawed -- it doesn't provide any solution for handling replication lag (i.e., query inconsistencies introduced because of the time taken for a while to propagate to the replicas). It also doesn't consider the interaction of transactions with the database utilization strategy.
 
@@ -261,7 +261,7 @@ DATABASE_ROUTERS = ['path.to.AuthRouter', 'path.to.PrimaryReplicaRouter']
 ```
 The order in which routers are processed is significant. Routers will be queried in the order they are listed in the [`DATABASE_ROUTERS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASE_ROUTERS) setting. In this example, the `AuthRouter` is processed before the `PrimaryReplicaRouter`, and as a result, decisions concerning the models in `auth` are processed before any other decision is made. If the `DATABASE_ROUTERS` setting listed the two routers in the other order, `PrimaryReplicaRouter.allow_migrate()` would be processed first. The catch-all nature of the `PrimaryReplicaRouter` implementation would mean that all models would be available on all databases.
 
-With this setup installed, and all databases migrated as per [Synchronizing your databases](), <!-- below --> lets run some Django code:
+With this setup installed, and all databases migrated as per [Synchronizing your databases](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Multiple_Databases#synchronizing-your-databases), lets run some Django code:
 ```
 >>> # This retrieval will be performed on the 'auth_db' database
 >>> fred = User.objects.get(username='fred')
@@ -286,7 +286,7 @@ With this setup installed, and all databases migrated as per [Synchronizing your
 >>> # ... but if we re-retrieve the object, it will come back on a replica
 >>> mh = Book.objects.get(title='Mostly Harmless')
 ```
-This example defined a router to handle interaction with models from the `auth` app, and other routers to handle interaction with all other apps. If you left your `default` database empty and don't want to define a catch-all database router to handle all apps not otherwise specified, your routers must handle the names of all apps in [`INSTALLED_APPS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-INSTALLED_APPS) before you migrate. See [Behavior of contrib apps]() for information about contrib apps that must be together in one database. <!-- below -->
+This example defined a router to handle interaction with models from the `auth` app, and other routers to handle interaction with all other apps. If you left your `default` database empty and don't want to define a catch-all database router to handle all apps not otherwise specified, your routers must handle the names of all apps in [`INSTALLED_APPS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-INSTALLED_APPS) before you migrate. See [Behavior of contrib apps](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Multiple_Databases#behavior-of-contrib-apps) for information about contrib apps that must be together in one database.
 
 ## Manually selecting a database
 
