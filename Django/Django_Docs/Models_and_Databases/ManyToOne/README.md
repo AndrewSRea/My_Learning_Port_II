@@ -128,3 +128,74 @@ Query twice over the related field. This translates to an AND condition in the W
 ```
 For the related lookup, you can supply a primary key value or pass the related object explicitly:
 ```
+>>> Article.objects.filter(reporter__pk=1)
+<QuerySet [<Article: John's second story>, <Article: This is a test>]>
+>>> Article.objects.filter(reporter=1)
+<QuerySet [<Article: John's second story>, <Article: This is a test>]>
+>>> Article.objects.filter(reporter=r)
+<QuerySet [<Article: John's second story>, <Article: This is a test>]>
+
+>>> Article.objects.filter(reporter__in=[1,2]).distinct()
+<QuerySet [<Article: John's second story>, <Article: Paul's story>, <Article: This is a test>]>
+>>> Article.objects.filter(reporter__in=[r,r2]).distinct()
+<QuerySet [<Article: John's second story>, <Article: Paul's story>, <Article: This is a test>]>
+```
+You can also use a queryset instead of a literal list of instances:
+```
+>>> Article.objects.filter(reporter__in=Reporter.objects.filter(first_name='John')).distinct()
+<QuerySet [<Article: John's second story>, <Article: This is a test>]>
+```
+Querying in the opposite direction:
+```
+>>> Reporter.objects.filter(article__pk=1)
+<QuerySet [<Reporter: John Smith>]>
+>>> Reporter.objects.filter(article=1)
+<QuerySet [<Reporter: John Smith>]>
+>>> Reporter.objects.filter(article=a)
+<QuerySet [<Reporter: John Smith>]>
+
+>>> Reporter.objects.filter(article__headline__startswith='This')
+<QuerySet [<Reporter: John Smith>, <Reporter: John Smith>, <Reporter: John Smith>]>
+>>> Reporter.objects.filter(article__headline__startswith='This').distinct()
+<QuerySet [<Reporter: John Smith>]>
+```
+Counting in the opposite direction works in conjunction with `distinct()`:
+```
+>>> Reporter.objects.filter(article__headline__startswith='This').count()
+3
+>>> Reporter.objects.filter(article__headline__startswith='This').distinct().count()
+1
+```
+Queries can go round in circles:
+```
+>>> Reporter.objects.filter(article__reporter__first_name__startswith='John')
+<QuerySet [<Reporter: John Smith>, <Reporter: John Smith>, <Reporter: John Smith>, <Reporter: John Smith>]>
+>>> Reporter.objects.filter(article__reporter__first_name__startswith='John').distinct()
+<QuerySet [<Reporter: John Smith>]>
+>>> Reporter.objects.filter(article__reporter=r).distinct()
+<QuerySet [<Reporter: John Smith>]>
+```
+If you delete a reporter, their articles will be deleted (assuming that the `ForeignKey` was defined with [`django.db.models.ForeignKey.on_delete`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey.on_delete) set to `CASCADE`, which is the default):
+```
+>>> Article.objects.all()
+<QuerySet [<Article: John's second story>, <Article: Paul's story>, <Article: This is a test>]>
+>>> Reporter.objects.order_by('first_name')
+<QuerySet [<Reporter: John Smith>, <Reporter: Paul Jones>]>
+>>> r2.delete()
+>>> Article.objects.all()
+<QuerySet [<Article: John's second story>, <Article: This is a test>]>
+>>> Reporter.objects.order_by('first_name')
+<QuerySet [<Reporter: John Smith>]>
+```
+You can delete using a JOIN in the query:
+```
+>>> Reporter.objects.filter(article__headline__startswith='This').delete()
+>>> Reporter.objects.all()
+<QuerySet []>
+>>> Article.objects.all()
+<QuerySet []>
+```
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/ManyToMany#examples-of-model-relationship-api-usage) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/ManyToOne#examples-of-model-relationship-api-usage) - [[Next page]]()
