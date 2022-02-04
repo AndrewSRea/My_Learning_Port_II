@@ -268,4 +268,4 @@ After the [`delete()`](https://docs.djangoproject.com/en/4.0/ref/models/queryset
 
 <hr>
 
-[[Previous page]]() - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/ManyToMany#examples-of-model-relationship-api-usage) - [[Next page]]()
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Instrumentation#database-instrumentation) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/ManyToMany#examples-of-model-relationship-api-usage) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/ManyToOne#examples-of-model-relationship-api-usage)
