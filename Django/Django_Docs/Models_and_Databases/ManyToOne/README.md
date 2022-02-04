@@ -198,4 +198,4 @@ You can delete using a JOIN in the query:
 
 <hr>
 
-[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/ManyToMany#examples-of-model-relationship-api-usage) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/ManyToOne#examples-of-model-relationship-api-usage) - [[Next page]]()
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/ManyToMany#examples-of-model-relationship-api-usage) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/ManyToOne#examples-of-model-relationship-api-usage) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/OneToOne#examples-of-model-relationship-api-usage)
