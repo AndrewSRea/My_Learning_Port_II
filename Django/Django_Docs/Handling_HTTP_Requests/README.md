@@ -13,4 +13,4 @@ Information on handling HTTP requests in Django:
 
 <hr>
 
-[[Previous module: Models and databases]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases#models-and-databases) - [[First page: URL dispatcher]]() [Next module: Working with forms]()
+[[Previous module: Models and databases]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases#models-and-databases) - [[First page: URL dispatcher]]() - [[Next module: Working with forms]]()
