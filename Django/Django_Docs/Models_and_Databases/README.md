@@ -17,4 +17,4 @@ A model is the single, definitive source of information about your data. It cont
 
 <hr>
 
-[[Previous module: How to install Django]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Install_Django#how-to-install-django) - [[First page: Models]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#models)
+[[Previous module: How to install Django]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Install_Django#how-to-install-django) - [[First page: Models]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#models) - [[Next module: Handling HTTP requests]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests#handling-http-requests)
