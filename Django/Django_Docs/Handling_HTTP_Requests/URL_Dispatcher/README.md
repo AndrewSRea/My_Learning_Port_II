@@ -152,3 +152,148 @@ The `blog_articles` view needs the outermost captured argument to be reversed, `
 Nested captured arguments create a strong coupling between the view arguments and the URL as illustrated by `blog_articles`: the view receives part of the URL (`page-2/`) instead of only the value the view is interested in. This coupling is even more pronounced when reversing, since to reverse the view we need to pass the piece of URL instead of the page number.
 
 As a rule of thumb, only capture the values the view needs to work with and use non-capturing arguments when the regular expression needs an argument but the view ignores it.
+
+## What the URLconf searches against
+
+THe URLconf searches against the requested URL, as a normal Python string. This does not include `GET` or `POST` parameters, or the domain name.
+
+For example, in a request to `https://www.example.com/myapp/`, the URLconf will look for `myapp/`.
+
+In a request to `https://www.example.com/myapp/?page=3`, the URLconf will look for `myapp/`.
+
+The URLconf doesn't look at the request method. In other words, all request methods -- `POST`, `GET`, `HEAD`, etc. -- will be routed to the same function for the same URL.
+
+## Specifying defaults for view arguments
+
+A convenient trick is to specify default parameters for your views' arguments. Here's an example URLconf and view:
+```
+# URLconf
+from django.urls import path
+
+from . import views
+
+urlpatterns = [
+    path('blog/, views.page),
+    path('blog/pages<int:num>/', views.page),
+]
+
+# View (in blog/views.py)
+def page(request, num=1):
+    # Output the appropriate page of blog entries, according to num.
+    ...
+```
+In the above example, both URL patterns point to the same view -- `views.page` -- but the first pattern doesn't capture anything from the URL. If the first pattern matches, the `page()` function will use its default argument for `num`, `1`. If the second pattern matches, `page()` will use whatever `num` value was captured.
+
+## Performance
+
+Each regular expression in a `urlpatterns` is compiled the first time it's accessed. This makes the system blazingly fast.
+
+## Syntax of the `urlpatterns` variable
+
+`urlpatterns` should be a [sequence](https://docs.python.org/3/glossary.html#term-sequence) of [`path()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) and/or [`re_path()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.re_path) instances.
+
+## Error handling
+
+When Django can't find a match for the requested URL, or when an exception is raised, Django invokes an error-handling view.
+
+The views to use for these cases are specified by four variables. Their default values should suffice for most projects, but further customization is possible by overriding their default values.
+
+See the documentation on [customizing error views]() for the full details. <!-- next page -->
+
+Such values can be set in your root URLconf. Setting these variables in any other URLconf will have no effect.
+
+Values must be callables, or strings representing the full Python import path to the view that should be called to handle the error condition at hand.
+
+The variables are:
+
+* `handler400` - See [`django.conf.urls.handler400](https://docs.djangoproject.com/en/4.0/ref/urls/#handler400).
+* `handler403` - See [`django.conf.urls.handler403](https://docs.djangoproject.com/en/4.0/ref/urls/#handler403).
+* `handler404` - See [`django.conf.urls.handler404](https://docs.djangoproject.com/en/4.0/ref/urls/#handler404).
+* `handler500` - See [`django.conf.urls.handler500](https://docs.djangoproject.com/en/4.0/ref/urls/#handler500).
+
+## Including other URLconfs 
+
+At any point, your `urlpatterns` can "include" other URLconf modules. This essentially "roots" a set of URLs below other ones. 
+
+For example, here's an excerpt of the URLconf for the [Django website](https://www.djangoproject.com/) itself. It includes a number of other URLconfs:
+```
+from django.urls import include, path
+
+urlpatterns = [
+    # ... snip ...
+    path('community/', include('aggregator.urls')),
+    path('contact/', include('contact.urls')),
+    # ... snip ...
+]
+```
+Whenever Django encounters [`include()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include), it chops off whatever part of the URL matched up to that point and sends the remaining string to the included URLconf for further processing.
+
+Another possibility is to include additional URL patterns by using a list of [`path()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) instances. For example, consider this URLconf:
+```
+from django.urls import include, path
+
+from apps.main import views as main_views
+from credit import views as credit_views
+
+extra_patterns = [
+    path('reports/', credit_views.report),
+    path('reports/<int:id>/', credit_views.report),
+    path('charge/', credit_views.charge),
+]
+
+urlpatterns = [
+    path('', main_views.homepage),
+    path('help/', include('apps.help.urls')),
+    path('credit/', include(extra_patterns)),
+]
+```
+In this example, the `/credit/reports/` URL will be handled by the `credit_views.report()` Django view.
+
+This can be used to remove redundancy from URLconfs where a single pattern prefix is used repeatedly. For example, consider this URLconf:
+```
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('<page_slug>-<page_id>/history/', views.history),
+    path('<page_slug>-<page_id>/edit/', views.edit),
+    path('<page_slug>-<page_id>/discuss/', views.discuss),
+    path('<page_slug>-<page_id>/permissions/', views.permissions),
+]
+```
+We can improve this by stating the common path prefix only once and grouping the suffixes that differ:
+```
+from django.urls import include, path
+from . import views
+
+urlpatterns = [
+    path('<page_slug>-<page_id>/', include([
+        path('history/', views.history),
+        path('edit/', views.edit),
+        path('discuss/', views.discuss),
+        path('permissions/', views.permissions),
+    ])),
+]
+```
+
+### Captured permissions
+
+An included URLconf receives any captured parameters from parent URLconfs, so the following example is valid:
+```
+# In settings/urls/main.py
+from django.urls import include, path
+
+urlpatterns = [
+    path('<username>/blog/', include('foo.urls.blog')),
+]
+
+# In foo/urls/blog.py
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.blog.index),
+    path('archive/', views.blog.archive),
+]
+```
+In the above example, the captured `"username"` variable is passed to the included URLconf, as expected.
