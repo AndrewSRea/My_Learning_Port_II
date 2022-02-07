@@ -23,7 +23,7 @@ When a user requests a page from your Django-powered site, this is the algorithm
     - An instance of [`HttpRequest`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest).
     - If the matched URL pattern contained no named groups, then the matches from the regular expression are provided as positional arguments.
     - The keyword arguments are made up of any named parts matched by the path expression that are provided, overridden by any arguments specified in the optional `kwargs` argument to `django.urls.path()` or `django.urls.re_path()`.
-5. If no URL pattern matches, or if an exception is raised during any point in this process, Django invokes an appropriate error-handling view. See [Error handling]() below. <!-- below -->
+5. If no URL pattern matches, or if an exception is raised during any point in this process, Django invokes an appropriate error-handling view. See [Error handling](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/URL_Dispatcher#error-handling) below.
 
 ## Example
 
@@ -297,3 +297,97 @@ urlpatterns = [
 ]
 ```
 In the above example, the captured `"username"` variable is passed to the included URLconf, as expected.
+
+## Passing extra options to view functions
+
+URLconfs have a hook that lets you pass extra arguments to your view functions, as a Python dictionary.
+
+The [`path()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) function can take an optional third argument which should be a dictionary of extra keyword arguments to pass to the view function.
+
+For example:
+```
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('blog/<int:year>/', views.year_archive, {'foo': 'bar'}),
+]
+```
+In this example, for a request to `/blog/2005/`, Django will call `views.year_archive(request, year=2005), foo='bar')`.
+
+This technique is used in the [syndication framework](https://docs.djangoproject.com/en/4.0/ref/contrib/syndication/) to pass metadata and options to views.
+
+<hr>
+
+**Dealing with conflicts**
+
+It's possible to have a URL pattern which captures named keyword arguments, and also passes arguments with the same names in its dictionary of extra arguments. When this happens, the arguments in the dictionary will be used instead of the arguments captured in the URL.
+
+<hr>
+
+### Passing extra options to `include()`
+
+Similarly, you can pass extra options to [`include()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include) and each line in the included URLconf will be passed the extra options.
+
+For example, these two URLconf sets are functionally identical:
+
+Set one:
+```
+# main.py
+from django.urls import include, path
+
+urlpatterns = [
+    path('blog/', include('inner'), {'blog_id': 3}),
+]
+
+# inner.py
+from django.urls import path
+from mysite import views
+
+urlpatterns = [
+    path('archive/', views.archive),
+    path('about/', views.about),
+]
+```
+Set two:
+```
+# main.py
+from django.urls import include, path
+from mysite import views
+
+urlpatterns = [
+    path('blog/', include('inner')),
+]
+
+# inner.py
+from django.urls import path
+
+urlpatterns = [
+    path('archive/', views.archive, {'blog_id': 3}),
+    path('about/', views.about, {'blog_id': 3}),
+]
+```
+Note that extra options will *always* be passed to *every* line in the included URLconf, regardless of whether the line's view accepts those options as valid. For this reason, this technique is only useful if you're certain that every view in the included URLconf accepts the extra options you're passing.
+
+## Reverse resolution of URLs
+
+A common need when working on a Django project is the possiblity to obtain URLs in their final forms either for embedding in generated content (views and assets URLs, URLs shown to the user, etc.) or for handling of the navigation flow on the server side (redirections, etc.)
+
+It is strongly desirable to avoid hard-coding these URLs (a laborious, non-scalable and error-prone strategy). Equally dangerous is devising ad-hoc mechanisms to generate URLs that are parallel to the design described by the URLconf, which can result in the production of URLs that become stale over time.
+
+In other words, what's needed is a DRY mechanism. Among other advantages, it would allow evolution of the URL design without having to go over all the project source code to search and replace outdated URLs.
+
+The primary piece of information we have available to get a URL is an identification (e.g. the name) of the view in charge of handling it. Other pieces of information that necessarily must participate in the lookup of the right URL are the types (positional, keyword) and values of the view arguments.
+
+Django provides a solution such that the URL mapper is the only repository of the URL design. You feed it with your URLconf and then it can be used in both directions:
+
+* Starting with a URL requested by the user/browser, it calls the right Django view providing any arguments it might need with their values as extracted from the URL.
+* Starting with the identification of the corresponding Django view plus the values of arguments that would be passed to it, obtain the associated URL.
+
+The fist one is the usage we've been discussing in the previous sections. The second one is what is known as *reverse resolution of URLs*, *reverse URL matching*, *reverse URL lookup*, or simply *URL reversing*.
+
+Django provides tools for performing URL reversing that match the different layers where URLs are needed:
+
+* In templates: Using the [`url`](https://docs.djangoproject.com/en/4.0/ref/templates/builtins/#std:templatetag-url) template tag.
+* In Python code: Using the [`reverse()`](https://docs.djangoproject.com/en/4.0/ref/urlresolvers/#django.urls.reverse) function.
+* In higher level code related to handling of URLs of Django model instances: The [`get_absolute_url()`](https://docs.djangoproject.com/en/4.0/ref/models/instances/#django.db.models.Model.get_absolute_url) method.
