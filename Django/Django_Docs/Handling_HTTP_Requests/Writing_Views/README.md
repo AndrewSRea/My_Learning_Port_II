@@ -86,3 +86,85 @@ def detail(request, poll_id):
 In order to show customized HTML when Django returns a 404, you can create an HTML template named `404.html` and place  it in the top level of your template tree. This template will then be served when [`DEBUG`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DEBUG) is set to `False`.
 
 When `DEBUG` is `True`, you can provide a message to `Http404` and it will appear in the standard 404 debug template. Use these messages for debugging purposes; they generally aren't suitable for use in a production 404 template.
+
+## Customizing error views
+
+The default error views in Django should suffice for most web applications, but can easily be overridden if you need any custom behavior. Specify the handlers as seen below in your URLconf (setting them anywhere else will have no effect).
+
+The [`page_not_found()`](https://docs.djangoproject.com/en/4.0/ref/views/#django.views.defaults.page_not_found) view is overridden by [`handler404`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.conf.urls.handler404):
+```
+handler404 = 'mysite.view.my_custom_page_not_found_view'
+```
+The [`server_error()`](https://docs.djangoproject.com/en/4.0/ref/views/#django.views.defaults.server_error) view is overridden by [`handler500`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.conf.urls.handler500):
+```
+handler500 = 'mysite.views.my_custom_error_view'
+```
+The [`permission_denied()`](https://docs.djangoproject.com/en/4.0/ref/views/#django.views.defaults.permission_denied) view is overridden by [`handler403`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.conf.urls.handler403):
+```
+handler403 = 'mysite.view.my_custom_permission_denied_view'
+```
+The  [`bad_request()`](https://docs.djangoproject.com/en/4.0/ref/views/#django.views.defaults.bad_request) view is overridden by [`handler400`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.conf.urls.handler400):
+```
+handler400 = 'mysite.view.my_custom_bad_request_view'
+```
+
+<hr>
+
+**See also**
+
+Use the [`CSRF_FAILURE_VIEW`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CSRF_FAILURE_VIEW) setting to override the CSRF error view.
+
+<hr>
+
+### Testing custom error views
+
+To test the response of a custom error handler, raise the appropriate exception in a test view. For example:
+```
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse
+from django.test import SimpleTestCase, override_settings
+from django.urls import path
+
+def response_error_handler(request, exception=None):
+    return HttpResponse('Error handler content', status=403)
+
+def permission_denied_view(request):
+    raise PermissionDenied
+
+
+urlpatterns = [
+    path('403/', permission_denied_view),
+]
+
+handler403 = response_error_handler
+
+
+# ROOT_URLCONF must specify the module that contains handler403 = ...
+@override_settings(ROOT_URLCONF=__name__)
+class CustomErrorHandlerTests(SimpleTestCase):
+
+    def test_handler_renders_template_response(self):
+        response = self.client.get('/403/')
+        # Make assertions on the reponse here. For example:
+        self.assertContains(response, 'Error handler content', status_code=403)
+```
+
+## Async views
+
+As well as being synchronous functions, views can also by asynchronous ("async") functions, normally defined using Python's `async def` syntax. Django will automatically detect these and run them in an async context. However, you will need to use an async server based on ASGI to get their performance benefits.
+
+Here's an example of an async view:
+```
+import datetime
+from django.http import HttpResponse
+
+async def current_datetime(request):
+    now = datetime.datetime.now()
+    html = '<html><body>It is now %s.</body></html>' % now
+    return HttpResponse(html)
+```
+You can read more about Django's async support, and how to best use async views, in [Asynchronous support](). <!-- possible future folder? -->
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/URL_Dispatcher#url-dispatcher) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Writing_Views#writing-views) - [[Next page]]()
