@@ -449,17 +449,17 @@ You may also use the same name for multiple URL patterns if they differ in their
 
 ### Introduction
 
-URL namespaces allow you to uniquely reverse [named URL patterns]() <!-- just above --> even if different applications use the same URL names. It's a good practice for third-party apps to always use namespaced URLs (as we did in the tutorial). Similarly, it also allows you to reverse URLs if multiple instances of an application are deployed. In other words, since multiple instances of a single application will share named URLs, namespaces provide a way to tell these named URLs apart.
+URL namespaces allow you to uniquely reverse [named URL patterns](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/URL_Dispatcher#naming-url-patterns) even if different applications use the same URL names. It's a good practice for third-party apps to always use namespaced URLs (as we did in the tutorial). Similarly, it also allows you to reverse URLs if multiple instances of an application are deployed. In other words, since multiple instances of a single application will share named URLs, namespaces provide a way to tell these named URLs apart.
 
 Django applications that make proper use of URL namespacing can be deployed more than once for a particular site. For example, [`django.contrib.admin`](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#module-django.contrib.admin) has an [`AdminSite`](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#django.contrib.admin.AdminSite) class which allows you to [deploy more than one instance of the admin](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#multiple-admin-sites). In a later example, we'll discuss the idea of deploying the polls application from the tutorial in two different locations so we can serve the same functionality to two different audiences (authors and publishers).
 
 A URL namespace comes in two parts, both of which are strings:
 
-##### application namespace
+#### application namespace
 
 This describes the name of the application that is being deployed. Every instance of a single application will have the same application namespace. For example, Django's admin application has the somewhat predictable application namespace of `'admin'`.
 
-##### instance namespace
+#### instance namespace
 
 This identifies a specific instance of an application. Instance namespaces should be unique across your entire project. However, an instance namespace can be the same as the application namespace. This is used to specify a default instance of an application. For example, the default Django admin instance has an instance namespace of `'admin'`.
 
@@ -471,14 +471,121 @@ Namespaces can also be nested. The named URL `'sports:polls:index'` would look f
 
 When given a namespaced URL (e.g. `'polls:index'`) to resolve, Django splits the fully qualified name into parts and then tries the following lookup:
 
-1. First, Django looks for a matching [application namespace]() <!-- just above --> (in this example, `'polls'`). This will yield a list of instances of that application.
+1. First, Django looks for a matching [application namespace](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/URL_Dispatcher#application-namespace) (in this example, `'polls'`). This will yield a list of instances of that application.
 
 2. If there is a current application defined, Django finds and returns the URL resolver for that instance. The current application can be specified with the `current_app` argument to the [`reverse()`](https://docs.djangoproject.com/en/4.0/ref/urlresolvers/#django.urls.reverse) function.
 
-    The [`url`]() template tag uses the namespace of the currently resolved view as the current application in a [`RequestContext`](). You can override this default by setting the current application on the [`request.current_app`]() attribute.
+    The [`url`](https://docs.djangoproject.com/en/4.0/ref/templates/builtins/#std:templatetag-url) template tag uses the namespace of the currently resolved view as the current application in a [`RequestContext`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.RequestContext). You can override this default by setting the current application on the [`request.current_app`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest.current_app) attribute.
 
-3. If there is no current application, Django looks for a default application instance. The default application instance is the instance that has an [instance namespace]() <!-- just above --> matching the [application namespace]() <!-- just above --> (in this example, an instance of `polls` called `'polls'`).
+3. If there is no current application, Django looks for a default application instance. The default application instance is the instance that has an [instance namespace](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/URL_Dispatcher#instance-namespace) matching the [application namespace](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/URL_Dispatcher#application-namespace) (in this example, an instance of `polls` called `'polls'`).
 
 4. If there is no default application instance, Django will pick the last deployed instance of the application, whatever its instance name may be.
 
-5. If the provided namespace doesn't match an [application namespace]() <!-- above --> in step 1, Django will attempt a direct lookup of the namespace as an [instance namespace](). <!-- above -->
+5. If the provided namespace doesn't match an [application namespace](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/URL_Dispatcher#application-namespace) in step 1, Django will attempt a direct lookup of the namespace as an [instance namespace](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/URL_Dispatcher#instance-namespace).
+
+If there are nested namespaces, these steps are repeated for each part of the namespace until only the view name is unresolved. The view name will then be resolved into a URL in the namespace that has been found.
+
+#### Example
+
+To show this resolution strategy in action, consider an example of two instances of the `polls` application from the tutorial: one  called `'author-polls'` and one called `'publisher-polls'`. Assume we have enhanced that application so that it takes the instance namespace into consideration when creating and displaying polls.
+
+`urls.py`
+```
+from django.urls import include, path
+
+urlpatterns = [
+    path('author-polls/', include('polls.urls', namespace='author-polls')),
+    path('publisher-polls/', include('polls.urls', namespace='publisher-polls')),
+]
+```
+
+`polls/urls.py`
+```
+from django.urls import path
+
+from . import views
+
+app_name = 'polls'
+urlpatterns = [
+    path('', views.IndexView.as_view(), name='index'),
+    path('<int:pk>/', view.DetailView.as_view(), name='detail'),
+    ...
+]
+```
+
+Using this setup, the following lookups are possible:
+
+* If one of the instances is current -- say, if we were rendering the detail page in the instance `'author-polls'` -- `'polls:index'` will resolve to the index page of the `'author-polls'` instance; i.e. both of the following will result in `"/author-polls/"`.
+
+    In the method of a class-based view:
+    ```
+    reverse('polls:index', current_app=self.request.resolver_match.namespace)
+    ```
+    ...and in the template:
+    ```
+    {% url 'polls:index' %}
+    ```
+
+* If there is no current instance -- say, if we were rendering a page somewhere else on the site -- `'polls:index'` will resolve to the last registered instance of `polls`. Since there is no default instance (instance namespace of `'polls'`), the last instance of `polls` that is registered will be used. This would be `'publisher-polls'` since it's declared last in the `urlpatterns`.
+
+* `'author-polls:index'` will always resolve to the index page of the instance `'author-polls'` (and likewise for `'publisher-polls'`).
+
+If there were also a default instance -- i.e., an instance named `'polls'` -- the only change from above would be in the case where there is no current instance (the second item in the list above). In this case, `'polls:index'` would resolve to the index page of the default instance instead of the instance declared last in `urlpatterns`.
+
+### URL namespaces and included URLconfs
+
+Application namespaces of included URLconfs can be specified in two ways.
+
+Firstly, you can set an `app_name` attribute in the included URLconf module, at the same level as the `urlpatterns` attribute. You have to pass the actual module, or a string reference to the module, to [`include()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.include), not the list of `urlpatterns` itself.
+
+`polls/urls.py`
+```
+from django.urls import path
+
+from . import views
+
+app_name = 'polls'
+urlpatterns = [
+    path('', views.IndexView.as_view(), name='index'),
+    path('<int:pk>/', views.DetailView.as_view(), name='detail'),
+    ...
+]
+```
+
+`urls.py`
+```
+from django.urls import include, path
+
+urlpatterns = [
+    path('polls/', include('polls.urls')),
+]
+```
+
+The URLs defined in `polls.urls` will have an application namespace `polls`.
+
+Secondly, you can include an object that contains embedded namespace data. If you `include()` a list of [`path()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.path) or [`re_path()`](https://docs.djangoproject.com/en/4.0/ref/urls/#django.urls.re_path) instances, the URLs contained in that object will be added to the global namespace. However, you can also `include()` a 2-tuple containing:
+```
+(<list of path()/re_path() instances>, <application namespace>)
+```
+For example:
+```
+from django.urls import include, path
+
+from . import views
+
+polls_patterns = ([
+    path('', views.IndexView.as_view(), name='index'),
+    path('<int:pk>/', views.DEtailView.as_view(), name='detail'),
+], 'polls')
+
+urlpatterns = [
+    path('polls/', include(polls_patterns)),
+]
+```
+This will include the nominated URL patterns into the given application namespace.
+
+The instance namespace can be specified using the `namespace` argument to `include()`. If the instance namespace is not specified, it will default to the included URLconf's application namespace. This means it will also be the default instance for that namespace.
+
+<hr>
+
+[[Back to the **Handling HTTP Requests** Guide links]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests#handling-http-requests) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/URL_Dispatcher#url-dispatcher) - [[Next page]]()
