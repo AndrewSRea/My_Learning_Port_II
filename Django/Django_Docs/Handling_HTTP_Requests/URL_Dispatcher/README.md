@@ -391,3 +391,94 @@ Django provides tools for performing URL reversing that match the different laye
 * In templates: Using the [`url`](https://docs.djangoproject.com/en/4.0/ref/templates/builtins/#std:templatetag-url) template tag.
 * In Python code: Using the [`reverse()`](https://docs.djangoproject.com/en/4.0/ref/urlresolvers/#django.urls.reverse) function.
 * In higher level code related to handling of URLs of Django model instances: The [`get_absolute_url()`](https://docs.djangoproject.com/en/4.0/ref/models/instances/#django.db.models.Model.get_absolute_url) method.
+
+### Examples
+
+Consider again this URLconf entry:
+```
+from django.urls import path
+
+from . import views
+
+urlpatterns = [
+    # ...
+    path('articles/<int:year>/', views.year_archive, name='news-year-archive'),
+    # ...
+]
+```
+According to this design, the URL for the archive corresponding to year *nnnn* is `/articles/<nnnn>/`.
+
+You can obtain these in template code by using:
+```
+<a href="{% url 'news-year-archive' 2012 %}">2012 Archive</a>
+{# Or with the year in a template context variable: #}
+<ul>
+{% for yearvar in year_list %}
+<li><a href="{% url 'news-year-archive' yearvar %}">{{ yearvar }} Archive</a></li>
+{% endfor %}
+</ul>
+```
+Or in Python code:
+```
+from django.http import HttpResponseRedirect
+from django.urls import reverse
+
+def redirect_to_year(request):
+    # ...
+    year = 2006
+    # ...
+    return HttpResponseRedirect(reverse('news-year-archive', args=(year,)))
+```
+If, for some reason, it was decided that the URLs where content for yearly article archives are published should be changed, then you would only need to change the entry in the URLconf.
+
+In some scenarios where views are of a generic nature, a many-to-one relationship might exist between URLs and views. For these cases, the view name isn't a good enough identifier for it when it comes time to reverse URLs. Read the next section to know about the solution Django provides for this.
+
+## Naming URL patterns
+
+In order to perform URL reversing, you'll need to use **named URL patterns** as done in the examples above. The string used for the URL name can contain any characters you like. You are not restricted to valid Python names.
+
+When naming URL patterns, choose names that are unlikely to clash with other applications' choice of names. If you call your URL pattern `comment` and another application does the same thing, the URL that [`reverse()`](https://docs.djangoproject.com/en/4.0/ref/urlresolvers/#django.urls.reverse) finds depends on whichever pattern is last in your project's `urlpatterns` list.
+
+Putting a prefix on your URL names, perhaps derived from the application name (such as `myapp-comment` instead of `comment`), decreases the chance of collision.
+
+You can deliberately choose the *same URL name* as another application if you want to override a view. For example, a common use case is to override the [`LoginView`](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.views.LoginView). Parts of Django and most third-party apps assume that this view has a URL pattern with the name `login`. If you have a custom login view and give its URL the name `login`, `reverse()` will find your custom view as long as it's in `urlpatterns` after `django.contrib.auth.urls` is included (if that's included at all).
+
+You may also use the same name for multiple URL patterns if they differ in their arguments. In addition to the URL name, `reverse()` matches the number of arguments and the names of the keyword arguments. Path converters can also raise `ValueError` to indicate no match. See [Registering custom path converters](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/URL_Dispatcher#registering-custom-path-converters) for details.
+
+## URL namespaces
+
+### Introduction
+
+URL namespaces allow you to uniquely reverse [named URL patterns]() <!-- just above --> even if different applications use the same URL names. It's a good practice for third-party apps to always use namespaced URLs (as we did in the tutorial). Similarly, it also allows you to reverse URLs if multiple instances of an application are deployed. In other words, since multiple instances of a single application will share named URLs, namespaces provide a way to tell these named URLs apart.
+
+Django applications that make proper use of URL namespacing can be deployed more than once for a particular site. For example, [`django.contrib.admin`](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#module-django.contrib.admin) has an [`AdminSite`](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#django.contrib.admin.AdminSite) class which allows you to [deploy more than one instance of the admin](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#multiple-admin-sites). In a later example, we'll discuss the idea of deploying the polls application from the tutorial in two different locations so we can serve the same functionality to two different audiences (authors and publishers).
+
+A URL namespace comes in two parts, both of which are strings:
+
+##### application namespace
+
+This describes the name of the application that is being deployed. Every instance of a single application will have the same application namespace. For example, Django's admin application has the somewhat predictable application namespace of `'admin'`.
+
+##### instance namespace
+
+This identifies a specific instance of an application. Instance namespaces should be unique across your entire project. However, an instance namespace can be the same as the application namespace. This is used to specify a default instance of an application. For example, the default Django admin instance has an instance namespace of `'admin'`.
+
+Namespaced URLs are specified using the `':'` operator. For example, the main index page of the admin application is referenced using `'admin:index'`. This indicates a namespace of `'admin'`, and a named URL of `'index'`.
+
+Namespaces can also be nested. The named URL `'sports:polls:index'` would look for a pattern named `'index'` in the namespace `'polls'` that is itself defined within the top-level namespace `'sports'`.
+
+### Reversing namespaced URLs
+
+When given a namespaced URL (e.g. `'polls:index'`) to resolve, Django splits the fully qualified name into parts and then tries the following lookup:
+
+1. First, Django looks for a matching [application namespace]() <!-- just above --> (in this example, `'polls'`). This will yield a list of instances of that application.
+
+2. If there is a current application defined, Django finds and returns the URL resolver for that instance. The current application can be specified with the `current_app` argument to the [`reverse()`](https://docs.djangoproject.com/en/4.0/ref/urlresolvers/#django.urls.reverse) function.
+
+    The [`url`]() template tag uses the namespace of the currently resolved view as the current application in a [`RequestContext`](). You can override this default by setting the current application on the [`request.current_app`]() attribute.
+
+3. If there is no current application, Django looks for a default application instance. The default application instance is the instance that has an [instance namespace]() <!-- just above --> matching the [application namespace]() <!-- just above --> (in this example, an instance of `polls` called `'polls'`).
+
+4. If there is no default application instance, Django will pick the last deployed instance of the application, whatever its instance name may be.
+
+5. If the provided namespace doesn't match an [application namespace]() <!-- above --> in step 1, Django will attempt a direct lookup of the namespace as an [instance namespace](). <!-- above -->
