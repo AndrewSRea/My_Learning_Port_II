@@ -1,0 +1,3 @@
+# File uploads
+
+When Django handles a file upload, the file data ends up placed in [`request.FILES`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest.FILES) (for more on the `request` object, see the documentation for [request and response objects](https://docs.djangoproject.com/en/4.0/ref/request-response/)). This document explains how files are stored on disk and in memory, and how to customize the default behavior. 
