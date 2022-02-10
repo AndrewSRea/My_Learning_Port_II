@@ -143,3 +143,84 @@ class FileFieldFormView(FormView):
         else:
             return self.form_invalid(form)
 ```
+
+## Upload handlers
+
+When a user uploads a file, Django passes off the file data to an *upload handler* -- a small class that handles file data as it gets uploaded. Upload handlers are initially defined in the [`FILE_UPLOAD_HANDLERS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-FILE_UPLOAD_HANDLERS) setting, which defaults to:
+```
+["django.core.files.uploadhandler.MemoryFileUploadHandler",
+ "django.core.files.uploadhandler.TemporaryFielUploadHandler"]
+```
+Together, [`MemoryFileUploadHandler`](https://docs.djangoproject.com/en/4.0/ref/files/uploads/#django.core.files.uploadhandler.MemoryFileUploadHandler) and [`TemporaryFileUploadHandler`](https://docs.djangoproject.com/en/4.0/ref/files/uploads/#django.core.files.uploadhandler.TemporaryFileUploadHandler) provide Django's default file upload behavior of reading small files into memory and large ones onto disk.
+
+You can write custom handlers that customize how Django handles files. You could, for example, use custom handlers to enforce user-level quotas, compress data on the fly, render progress bars, and even send data to another storage location directly without storing it locally. See [Writing custom upload handlers](https://docs.djangoproject.com/en/4.0/ref/files/uploads/#custom-upload-handlers) for details on how you can customize or completely replace upload behavior.
+
+### Where uploaded data is stored
+
+Before you save uploaded files, the data needs to be stored somewhere.
+
+By default, if an uploaded file is smaller than 2.5 megabytes, Django will hold the entire contents of the upload in memory. This means that saving the file involves only a read from memory and a write to disk and thus is very fast.
+
+However, if an uploaded file is too large, Django will write the uploaded file to a temporary file stored in your system's temporary directory. On a Unix-like platform, this means you can expect Django to generate a file called something like `/tmp/tmpzfp6I6.upload`. If an upload is large enough, you can watch this file grow in size as Django streams the data onto disk.
+
+These specifics -- 2.5 megabytes; `/tmp`; etc. -- are "reasonable defaults" which can be customized as described in the next section.
+
+### Changing upload handler behavior
+
+There are a few settings which control Django's file upload behavior. See [File Upload Settings](https://docs.djangoproject.com/en/4.0/ref/settings/#file-upload-settings) for details.
+
+### Modifying upload handlers on the fly
+
+Sometimes particular views require different upload behavior. In these cases, you can override upload handlers on a per-request basis by modifying `request.upload_handlers`. By default, this list will contain the upload handlers given by [`FILE_UPLOAD_HANDLERS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-FILE_UPLOAD_HANDLERS), but you can modify the list as you would any other list.
+
+For instance, suppose you've written a `ProgressBarUploadHandler` that provides feedback on upload progress to some sort of AJAX widget. You'd add this handler to your upload handlers like this:
+```
+request.upload_handlers.insert(0, ProgressBarUploadHandler(request))
+```
+You'd probably want to use `list.insert()` in this case (instead of `append()`) because a progress bar handler would need to run *before* any other handlers. Remember, the upload handlers are processed in order.
+
+If you want to replace the upload handlers completely, you can assign a new list:
+```
+request.upload_handlers = [ProgressBarUploadHandler(request)]
+```
+
+<hr>
+
+**Note**: You can only modify upload handlers *before* accessing `request.POST` or `request.FILES` -- it doesn't make sense to change upload handlers after upload handling has already started. If you try to modify `request.upload_handlers` after reading from `request.POST` or `request.FILES`, Django will throw an error.
+
+Thus, you should always modify uploading handlers as early in your view as possible.
+
+Also, `request.POST` is accessed by [`CsrfViewMiddleware`](https://docs.djangoproject.com/en/4.0/ref/middleware/#django.middleware.csrf.CsrfViewMiddleware), which is enabled by default. This means you will need to use [`csrf_exempt()`](https://docs.djangoproject.com/en/4.0/ref/csrf/#django.views.decorators.csrf.csrf_exempt) on your view to allow you to change the upload handlers. You will then need to use [`csrf_protect()`](https://docs.djangoproject.com/en/4.0/ref/csrf/#django.views.decorators.csrf.csrf_protect) on the function that actually processes the request. Note that this means that the handlers may start receiving the file upload before the CSRF checks have been done. Example code:
+```
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
+
+@csrf_exempt
+def upload_file_view(request):
+    request.upload_handlers.insert(0, ProgressBarUploadHandler(request))
+    return _upload_file_view(request)
+
+@csrf_protect
+def _upload_file_view(request):
+    ... # Process request
+```
+If you are using a class-based view, you will need to use `csrf_exempt()` on its [`dispatch()`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/base/#django.views.generic.base.View.dispatch) method and `csrf_protect` on the method that actually processes the request. Example code:
+```
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
+
+@method_decorator(csrf_exempt, name='dispatch')
+class UploadFileView(View):
+
+    def setup(self, request, *args, **kwargs):
+        request.upload_handlers.insert(0, ProgressBarUploadHandler(request))
+        super().setup(request, *args, **kwargs)
+
+    @method_decorator(csrf_protect)
+    def post(self, request, *args, **kwargs):
+        ... # Process request
+```
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/View_Decorators#view-decorators) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/File_Uploads#file-uploads) - [[Next page]]()
