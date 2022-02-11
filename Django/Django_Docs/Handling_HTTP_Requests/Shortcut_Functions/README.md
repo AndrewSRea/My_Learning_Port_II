@@ -215,4 +215,8 @@ def my_view(request):
 
 <hr>
 
-[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/File_Uploads#file-uploads) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Shortcut_Functions#django-shortcut-functions) - [[Next page]]()
+:exclamation: **Attention**: The next page in Django's **Handling_HTTP_Requests** module is [Generic views](https://docs.djangoproject.com/en/4.0/topics/http/generic-views/), which just has a link to see the [Built-in class-based views API](https://docs.djangoproject.com/en/4.0/ref/class-based-views/) module. The **Built-in class-based views API** module is quite lengthy so you should just follow the link provided here as the module is too lengthy to add to this **My_Learning_Port_II** repository.
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/File_Uploads#file-uploads) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Shortcut_Functions#django-shortcut-functions) - [[Next page: Middleware]]()
