@@ -48,9 +48,9 @@ class SimpleMiddleware:
 ```
 The `get_reponse` callable provided by Django might be the actual view (if this is the last listed middleware) or it might be the next middleware in the chain. The current middleware doesn't need to know or care what exactly it is, just that it represents whatever comes next.
 
-The above is a slight simplification -- the `get_response` callable for the last middleware in the chain won't be the actual view but rather a wrapper method from the handler which takes care of applying [view middleware](), <!-- below --> calling the view with appropriate URL arguments, and applying [template-response]() <!-- below --> and [exception]() <!-- below --> middleware.
+The above is a slight simplification -- the `get_response` callable for the last middleware in the chain won't be the actual view but rather a wrapper method from the handler which takes care of applying [view middleware](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Middleware#process_view), calling the view with appropriate URL arguments, and applying [template-response](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Middleware#process_template_response) and [exception](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Middleware#process_exception) middleware.
 
-Middleware can either support only synchronous Python (the default), only asynchronous Python, or both. See [Asynchronous support]() for details of how to advertise what you support, and know what kind of request you are getting. <!-- below -->
+Middleware can either support only synchronous Python (the default), only asynchronous Python, or both. See [Asynchronous support](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Middleware#asynchronous-support) for details of how to advertise what you support, and know what kind of request you are getting.
 
 Middleware can live anywhere on your Python path.
 
