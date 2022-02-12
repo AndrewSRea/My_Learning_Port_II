@@ -61,7 +61,7 @@ To use cookies-based sessions, set the [`SESSION_ENGINE`](https://docs.djangopro
 
 <hr>
 
-:warning: **Warning**: **If the `SECRET_KEY` is not kept secret and you are using the [`PickleSerializer`](), this can lead to arbitrary remote code execution.** <!-- below -->
+:warning: **Warning**: **If the `SECRET_KEY` is not kept secret and you are using the [`PickleSerializer`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#class-serializerspickleserializer), this can lead to arbitrary remote code execution.** <!-- below -->
 
 An attacker in possession of the [`SECRET_KEY`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SECRET_KEY) can not only generate falsified session data, which your site will trust, but also remotely execute arbitrary code, as the data is serialized using pickle.
 
@@ -89,76 +89,76 @@ When `SessionMiddleware` is activated , each [`HttpResponse`](https://docs.djang
 
 You can read it and write to `request.session` at any point in your view. You can edit it multiple times.
 
-#### `*class* backends.base.SessionBase`
+##### `*class* backends.base.SessionBase`
 
 This is the base class for all session objects. It has the following standard dictionary methods:
 
-#### `__getitem__(key)`
+##### `__getitem__(key)`
 
 Example: `fav_color = request.session['fav_color']`
 
-#### `__setitem__(key, value)`
+##### `__setitem__(key, value)`
 
 Example: `request.session['fav_color'] = 'blue'`
 
-#### `__delitem__(key)`
+##### `__delitem__(key)`
 
 Example: `del request.session['fav_color']`. This raises `KeyError` if the given `key` isn't already in the session.
 
-#### `__contains__(key)`
+##### `__contains__(key)`
 
 Example: `'fav_color' in request.session`
 
-#### `get(key, default=None)`
+##### `get(key, default=None)`
 
 Example: `fav_color = request.session.get('fav_color', 'red')`
 
-#### `pop(key, default=None)`
+##### `pop(key, default=None)`
 
 Example: `fav_color = request.session.pop('fav_color', 'blue')`
 
-#### `keys()`
+##### `keys()`
 
-#### `items()`
+##### `items()`
 
-#### `setdefault()`
+##### `setdefault()`
 
-#### `clear()`
+##### `clear()`
 
 It also has these methods:
 
-#### `flush()`
+##### `flush()`
 
 Deletes the current session data from the session and deletes the session cookie. This is used if you want to ensure that the previous session data can't be accessed again from the user's browser (for example, the [`django.contrib.auth.logout()`](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.logout) function calls it).
 
-#### `set_test_cookie()`
+##### `set_test_cookie()`
 
 Sets a test cookie to determine whether the user's browser supports cookies. Due to the way cookies work, you won't be able to test this until the user's next page request. See [Setting test cookies]() below for more information.
 
-#### `test_cookie_worked()`
+##### `test_cookie_worked()`
 
 Returns either `True` or `False`, depending on whether the user's browser accepted the test cookie. Due to the way cookies work, you'll have to call `set_test_cookie()` on a previous, separate page request. See [Setting test cookies]() below for more information.
 
-#### `delete_test_cookie()`
+##### `delete_test_cookie()`
 
 Deletes the test cookie. Use this to clean up after yourself.
 
-#### `get_session_cookie_age()`
+##### `get_session_cookie_age()`
 
 Returns the age of session cookies, in seconds. Defaults to [`SESSION_COOKIE_AGE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_COOKIE_AGE).
 
-#### `set_expiry(value)`
+##### `set_expiry(value)`
 
 Sets the expiration time for the session. You can pass a number of different values:
 
 * If `value` is an integer, the session will expire after the expressed `value` of seconds of inactivity. For example, calling `request.session.set_expiry(300)` would make the session expire in 5 minutes.
-* If `value` is a `datetime` or `timedelta` object, the session will expire at that specific date/time. Note that `datetime` and `timedelta` values are only serializable if you are using the [`PickleSerializer`](). <!-- below -->
+* If `value` is a `datetime` or `timedelta` object, the session will expire at that specific date/time. Note that `datetime` and `timedelta` values are only serializable if you are using the [`PickleSerializer`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#class-serializerspickleserializer).
 * If `value` is `0`, the user's session cookie will expire when the user's web browser is closed.
 * If `value` is `None`, the session reverts to using the global session expiry policy.
 
 Reading a session is not considered activity for expiration purposes. Session expiration is computed from the last time the session was *modified*.
 
-#### `get_expiry_age()`
+##### `get_expiry_age()`
 
 Returns the number of seconds until this session expires. For sessions with no custom expiration (or those set to expire at browser close), this will equal [`SESSION_COOKIE_AGE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_COOKIE_AGE).
 
@@ -167,27 +167,27 @@ This function accepts two optional keyword arguments:
 * `modification`: last modification of the session, as a [`datetime`](https://docs.python.org/3/library/datetime.html#datetime.datetime) object. Defaults to the current time.
 * `expiry`: expiry information for the session, as a `datatime` object, an [`int`](https://docs.python.org/3/library/functions.html#int) (in seconds), or `None`. Defaults to the value stored in the session by [`set_expiry()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#set_expiryvalue), <!-- above --> if there is one, or `None`.
 
-#### `get_expiry_date()`
+##### `get_expiry_date()`
 
 Returns the date this session will expire. For sessions with no custom expiration (or those set to expire at browser close), this will equal the date [`SESSION_COOKIE_AGE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_COOKIE_AGE) seconds from now.
 
 This function accepts the same keyword arguments as [`get_expiry_age()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#get_expiry_age).
 
-#### `get_expire_at_browser_close()`
+##### `get_expire_at_browser_close()`
 
 Returns either `True` or `False`, depending on whether the user's session cookie will expire when the user's web browser is closed.
 
-#### `clear_expired()`
+##### `clear_expired()`
 
 Removes expired sessions from the session store. This class method is called by [`clearsessions`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-clearsessions).
 
-#### `cycle_key()`
+##### `cycle_key()`
 
 Creates a new session key while retaining the current session data. [`django.contrib.auth.login()`](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.login) calls this method to mitigate against session fixation.
 
 ### Session serialization
 
-By default, Django serializes session data using JSON. You can use the [`SESSION_SERIALIZER`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_SERIALIZER) setting to customize the session serialization format. Even with the caveats described in [Write your own serializer](),<!-- below --> we highly recommend sticking with JSON serialization *especially if you are using the cookie backend*.
+By default, Django serializes session data using JSON. You can use the [`SESSION_SERIALIZER`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_SERIALIZER) setting to customize the session serialization format. Even with the caveats described in [Write your own serializer](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#write-your-own-serializer), we highly recommend sticking with JSON serialization *especially if you are using the cookie backend*.
 
 For example, here's an attack scenario if you use [`pickle`](https://docs.python.org/3/library/pickle.html#module-pickle) to serialize session data. If you're using the [signed cookie session backend](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#using-cookie-based-sessions) and [`SECRET_KEY`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SECRET_KEY) is known by an attacker (there isn't an inherent vulnerability in Django that would cause it to leak), the attacker could insert a string into their session which, when unpicked, executes arbitrary code on the server. The technique for doing so is simple and easily available on the internet. Although the cookie session storage signs the cookie-stored data to prevent tampering, a `SECRET_KEY` leak immediately escalates to a remote code execution vulnerability.
 
@@ -209,10 +209,138 @@ In addition, as JSON supports only string keys, note that using non-string keys 
 ```
 Similarly, data that can't be encoded in JSON, such as non-UTF8 bytes like `'\xd9'` (which raises [`UnicodeDecodeError`](https://docs.python.org/3/library/exceptions.html#UnicodeDecodeError)), can't be stored.
 
-See the [Write your own serializer]() section for more details on limitations of JSON serialization. <!-- just below -->
+See the [Write your own serializer](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#write-your-own-serializer) section for more details on limitations of JSON serialization.
 
 ##### `*class* serializers.PickleSerializer`
 
 Supports arbitrary Python objects, but, as described above, can lead to a remote code execution vulnerability if [`SECRET_KEY`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SECRET_KEY) becomes known by an attacker.
 
 #### Write your own serializer
+
+Note that unlike [`PickleSerializer`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#class-serializerspickleserializer), the [`JSONSerializer`](https://docs.djangoproject.com/en/4.0/topics/http/sessions/#django.contrib.sessions.serializers.JSONSerializer) <!-- possible future folder? () --> cannot handle arbitrary Python data types. As is often the case, there is a trade-off between convenience and security. If you wish to store more advanced data types including `datetime` and `Decimal` in JSON backed sessions, you will need to write a custom serializer (or convert such values to a JSON serializable object before storing them in `request.session`). While serializing these values is often straightforward ([`DjangoJSONEncoder`]() <!-- possible future folder? (https://docs.djangoproject.com/en/4.0/topics/serialization/#django.core.serializers.json.DjangoJSONEncoder) --> may be helpful), writing a decoder that can reliably get back the same thing that you put in is more fragile. For example, you run the risk of returning a `datetime` that was actually a string that just happened to be in the same format chosen for `datetime`s.
+
+Your serializer class must implement two methods, `dumps(self, obj)` and `loads(self, data)`, to serialize and deserialize the dictionary of session data, respectively.
+
+### Session object guidelines
+
+* Use normal Python strings as dictionary keys on `request.session`. This is more of a convention than a hard-and-fast rule.
+* Session dictionary keys that begin with an underscore are reserved for internal use by Django.
+* Don't override `request.session` with a new object, and don't access or set its attributes. Use it like a Python dictionary.
+
+### Examples
+
+This simplistic view sets a `has_commented` variable to `True` after a user posts a comment. It doesn't let a user post a comment more than once:
+```
+def post_comment(request, new_comment):
+    if request.session.get('has_commented', False):
+        return HttpResponse("You've already commented.")
+    c = comments.Comment(comment=new_comment)
+    c.save()
+    request.session['has_commented'] = True
+    return HttpResponse('Thanks for your comment!')
+```
+This simplistic view logs in a "member" of the site:
+```
+def login(request):
+    m = Member.objects.get(username=request.POST['username'])
+    if m.check_password(request.POST['password']):
+        request.session['member_id'] = m.id
+        return HttpResponse("You're logged in.")
+    else:
+        return HttpResponse("Your username and password didn't match.")
+```
+...and this one logs a member out, according to `login()` above:
+```
+def logout(request):
+    try:
+        del request.session['member_id']
+    except KeyError:
+        pass
+    return HttpResponse("You're logged out.")
+```
+The standard [`django.contrib.auth.logout()`](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.logout) function actually does a bit more than this to prevent inadvertent data leakage. It calls the [`flush()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#flush) method of `request.session`. We are using this example as a demonstration of how to work with session objects, not as a full `logout()` implementation.
+
+## Setting test cookies
+
+As a convenience, Django provides a way to test whether the user's browser accepts cookies. Call the [`set_test_cookies()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#set_test_cookie) method of `request.session` in a view, and call [`test_cookie_worked()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#test_cookie_worked) in a subsequent view -- not in the same view call.
+
+This awkward split between `set_test_cookie()` and `test_cookie_worked()` is necessary due to the way cookies work. When you set a cookie, you can't actually tell whether a browser accepted it until the browser's next request.
+
+It's good practice to use [`delete_test_cookie()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#delete_test_cookie) to clean up after yourself. Do this after you've verified that the test cookie worked.
+
+Here's a typical usage example:
+```
+from django.http import HttpResponse
+from django.shortcuts import render
+
+def login(request):
+    if request.method == 'POST':
+        if request.session.test_cookie_worked():
+            request.session.delete_test_cookie()
+            return HttpResponse("You're logged in.")
+        else:
+            return HttpResponse("Please enable cookies and try again.")
+    request.sesion.set_test_cookie()
+    return render(request, 'foo/login_form.html')
+```
+
+## Using sessions out of views
+
+<hr>
+
+**Note**: The examples in this section import the `SessionsStore` object directly from the `django.contrib.sessions.backends.db` backend. In your own code, you should consider importing `SessionStore` from the session engine designated by [`SESSION_ENGINE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_ENGINE), as below:
+```
+>>> from importlib import import_module
+>>> from django.conf import settings
+>>> SessionStore = import_module(settings.SESSION_ENGINE).SessionStore
+```
+
+<hr>
+
+An API is available to manipulate session data outside of a view:
+```
+>>> from django.contrib.sessions.backends.db import SessionStore
+>>> s = SessionStore()
+>>> # stored as seconds since epoch since datetimes are not serializable in JSON.
+>>> s['last_login'] = 1376587691
+>>> s.create()
+>>> s.session_key
+'2b1189a188b44ad18c35e113ac6ceead'
+>>> s = SessionStore(session_key='2b1189a188b44ad18c35e113ac6ceead')
+>>> s['last_login']
+1376587691
+```
+`SessionStore.create()` is designed to create a new session (i.e. one not loaded from the session store and with `session_key=None`). `save()` is designed to save an existing session (i.e. one loaded from the session store). Calling `save()` on a new session may also work but has a small chance of generating a `session_key` that collides with an existing one. `create()` calls `save()` and loops until an unused `session_key` is generated.
+
+If you're using the `django.contrib.sessions.backends.db` backend, each session is a normal Django model. The `Session` model is defined in `django/contrib/sessions/models.py`. Because it's a normal model, you can access sessions using the normal Django database API:
+```
+>>> from django.contrib.sessions.models import Session
+>>> s = Session.objects.get(pk='2b1189a188b44ad18c35e113ac6ceead')
+>>> s.expire_date
+datetime.datetime(2005, 8, 20, 13, 35, 12)
+```
+Note that you'll need to call [`get_decoded()`](https://docs.djangoproject.com/en/4.0/topics/http/sessions/#django.contrib.sessions.base_session.AbstractBaseSession.get_decoded) to get the session dictionary. This is necessary because the dictionary is stored in an encoded format:
+```
+>>> s.session_data
+'KGRwMQpTJ19hdXRoX3VzZXJfaWQnCnAyCkkxCnMuMTExY2ZjODI2Yj...'
+>>> s.get_decoded()
+{'user_id': 42}
+```
+
+## When sessions are saved
+
+By default, Django only saves to the session database when the session has been modified -- that is if any of its dictionary values have been assigned or deleted:
+```
+# Session is modified.
+request.session['foo'] = 'bar'
+
+# Session is modified.
+del request.session['foo']
+
+# Session is modified.
+request.session['foo'] = {}
+
+# Gotcha: Session is NOT modified, because this alters
+# request.session['foo'] instead of request.session.
+request.sesion['foo']['bar'] = 'baz'
+```
