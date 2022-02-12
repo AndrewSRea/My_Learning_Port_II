@@ -1,6 +1,6 @@
 # How to use sessions
 
-Django provides full support for anonymous sessions. The session framework lets you store and retrieve arbitrary data on a per-site-visitor basis. It stores data on the server side and abstracts the sending and receiving of cookies. Cookies contain a session ID -- not the data itself (unless you're using the [cookie based backend]()). <!-- below -->
+Django provides full support for anonymous sessions. The session framework lets you store and retrieve arbitrary data on a per-site-visitor basis. It stores data on the server side and abstracts the sending and receiving of cookies. Cookies contain a session ID -- not the data itself (unless you're using the [cookie based backend](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#using-cookie-based-sessions)).
 
 ## Enabling sessions
 
@@ -43,7 +43,7 @@ Once your cache is configured, you've got two choices for how to store data in t
 
 Both session stores are quite fast, but the simple cache is faster because it disregards persistence. In most cases, the `cached_db` backend will be fast enough, but if you need that last bit of performance, and are willing to let session data be expunged from time to time, the `cache` backend is for you.
 
-If you use the `cached_db` session backend, you also need to follow the configuration instructions for the [using database-backed sessions](). <!-- above -->
+If you use the `cached_db` session backend, you also need to follow the configuration instructions for the [using database-backed sessions](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#using-database-backed-sessions).
 
 ### Using file-based sessions
 
@@ -165,13 +165,13 @@ Returns the number of seconds until this session expires. For sessions with no c
 This function accepts two optional keyword arguments:
 
 * `modification`: last modification of the session, as a [`datetime`](https://docs.python.org/3/library/datetime.html#datetime.datetime) object. Defaults to the current time.
-* `expiry`: expiry information for the session, as a `datatime` object, an [`int`](https://docs.python.org/3/library/functions.html#int) (in seconds), or `None`. Defaults to the value stored in the session by [`set_expiry()`](), <!-- above --> if there is one, or `None`.
+* `expiry`: expiry information for the session, as a `datatime` object, an [`int`](https://docs.python.org/3/library/functions.html#int) (in seconds), or `None`. Defaults to the value stored in the session by [`set_expiry()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#set_expiryvalue), <!-- above --> if there is one, or `None`.
 
 #### `get_expiry_date()`
 
 Returns the date this session will expire. For sessions with no custom expiration (or those set to expire at browser close), this will equal the date [`SESSION_COOKIE_AGE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_COOKIE_AGE) seconds from now.
 
-This function accepts the same keyword arguments as [`get_expiry_age()`](). <!-- above -->
+This function accepts the same keyword arguments as [`get_expiry_age()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#get_expiry_age).
 
 #### `get_expire_at_browser_close()`
 
@@ -184,3 +184,35 @@ Removes expired sessions from the session store. This class method is called by 
 #### `cycle_key()`
 
 Creates a new session key while retaining the current session data. [`django.contrib.auth.login()`](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.login) calls this method to mitigate against session fixation.
+
+### Session serialization
+
+By default, Django serializes session data using JSON. You can use the [`SESSION_SERIALIZER`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_SERIALIZER) setting to customize the session serialization format. Even with the caveats described in [Write your own serializer](),<!-- below --> we highly recommend sticking with JSON serialization *especially if you are using the cookie backend*.
+
+For example, here's an attack scenario if you use [`pickle`](https://docs.python.org/3/library/pickle.html#module-pickle) to serialize session data. If you're using the [signed cookie session backend](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#using-cookie-based-sessions) and [`SECRET_KEY`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SECRET_KEY) is known by an attacker (there isn't an inherent vulnerability in Django that would cause it to leak), the attacker could insert a string into their session which, when unpicked, executes arbitrary code on the server. The technique for doing so is simple and easily available on the internet. Although the cookie session storage signs the cookie-stored data to prevent tampering, a `SECRET_KEY` leak immediately escalates to a remote code execution vulnerability.
+
+#### Bundled serializers
+
+##### `*class* serializers.JSONSerializer`
+
+A wrapper around the JSON serializer from [`django.core.signing`](). Can only serialize basic data types. <!-- possible future folder? (https://docs.djangoproject.com/en/4.0/topics/signing/#module-django.core.signing) -->
+
+In addition, as JSON supports only string keys, note that using non-string keys in `request.session` won't work as expected:
+```
+>>> # initial assignment
+>>> request.session[0] = 'bar'
+>>> # subsequent requests following serialization & deserialization
+>>> # of session data
+>>> request.session[0]   # KeyError
+>>> request.session['0']
+'bar'
+```
+Similarly, data that can't be encoded in JSON, such as non-UTF8 bytes like `'\xd9'` (which raises [`UnicodeDecodeError`](https://docs.python.org/3/library/exceptions.html#UnicodeDecodeError)), can't be stored.
+
+See the [Write your own serializer]() section for more details on limitations of JSON serialization. <!-- just below -->
+
+##### `*class* serializers.PickleSerializer`
+
+Supports arbitrary Python objects, but, as described above, can lead to a remote code execution vulnerability if [`SECRET_KEY`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SECRET_KEY) becomes known by an attacker.
+
+#### Write your own serializer
