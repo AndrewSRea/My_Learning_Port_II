@@ -89,7 +89,7 @@ When `SessionMiddleware` is activated , each [`HttpResponse`](https://docs.djang
 
 You can read it and write to `request.session` at any point in your view. You can edit it multiple times.
 
-##### `*class* backends.base.SessionBase`
+##### `class backends.base.SessionBase`
 
 This is the base class for all session objects. It has the following standard dictionary methods:
 
@@ -193,7 +193,7 @@ For example, here's an attack scenario if you use [`pickle`](https://docs.python
 
 #### Bundled serializers
 
-##### `*class* serializers.JSONSerializer`
+##### `class serializers.JSONSerializer`
 
 A wrapper around the JSON serializer from [`django.core.signing`](). Can only serialize basic data types. <!-- possible future folder? (https://docs.djangoproject.com/en/4.0/topics/signing/#module-django.core.signing) -->
 
@@ -211,7 +211,7 @@ Similarly, data that can't be encoded in JSON, such as non-UTF8 bytes like `'\xd
 
 See the [Write your own serializer](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#write-your-own-serializer) section for more details on limitations of JSON serialization.
 
-##### `*class* serializers.PickleSerializer`
+##### `class serializers.PickleSerializer`
 
 Supports arbitrary Python objects, but, as described above, can lead to a remote code execution vulnerability if [`SECRET_KEY`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SECRET_KEY) becomes known by an attacker.
 
@@ -280,7 +280,7 @@ def login(request):
             return HttpResponse("You're logged in.")
         else:
             return HttpResponse("Please enable cookies and try again.")
-    request.sesion.set_test_cookie()
+    request.session.set_test_cookie()
     return render(request, 'foo/login_form.html')
 ```
 
@@ -342,5 +342,192 @@ request.session['foo'] = {}
 
 # Gotcha: Session is NOT modified, because this alters
 # request.session['foo'] instead of request.session.
-request.sesion['foo']['bar'] = 'baz'
+request.session['foo']['bar'] = 'baz'
+```
+In the last case of the above example, we can tell the session object explicitly that it has been modified by setting the `modified` attribute on the session object:
+```
+request.session.modified = True
+```
+To change this default behavior, set the [`SESSION_SAVE_EVERY_REQUEST`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_SAVE_EVERY_REQUEST) setting to `True`. When set to `True`, Django will save the session to the database on every single request.
+
+Note that the session cookie is only sent when a session has been created or modified. If `SESSION_SAVE_EVERY_REQUEST` is `True`, the session cookie will be sent on every request.
+
+Similarly, the `expires` part of a session cookie is updated each time the session cookie is sent.
+The session is not saved if the response's status code is 500.
+
+## Browser-length sessions vs. persistent sessions
+
+You can control whether the session framework uses browser-length sessions vs. persistent session with the [`SESSION_EXPIRE_AT_BROWSER_CLOSE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_EXPIRE_AT_BROWSER_CLOSE) setting.
+
+By default, `SESSION_EXPIRE_AT_BROWSER_CLOSE` is set to `False`, which means session cookies will be stored in users' browsers for as long as [`SESSION_COOKIE_AGE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_COOKIE_AGE). Use this if you don't want people to have to log in every time they open a browser.
+
+If `SESSION_EXPIRE_AT_BROWSER_CLOSE` is set to `True`, Django will use browser-length cookies -- cookies that expire as soon as the user closes their browser. Use this if you want people to have to log in every time they open a browser.
+
+This setting is a global default and can be overwritten at a per-session level by explicitly calling the [`set_expiry()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#set_expiryvalue) method of `request.session` as described above in [using sessions in views](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#using-sessions-in-views).
+
+<hr>
+
+**Note**: Some browsers (Chrome, for example) provide settings that allow users to continue browsing sessions after closing and reopening the browser. In some cases, this can interfere with the [`SESSION_EXPIRE_AT_BROWSER_CLOSE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_EXPIRE_AT_BROWSER_CLOSE) setting and prevent sessions from expiring on browser close. Please be aware of this while testing Django applications which have the `SESSION_EXPIRE_AT_BROWSER_CLOSE` setting enabled.
+
+<hr>
+
+## Clearing the session store
+
+As users create new sessions on your website, session data can accumulate in your session store. If you're using the database backend, the `django_session` database table will grow. If you're using the file backend, your temporary directory will contain an increasing number of files.
+
+To understand this problem, consider what happens with the database backend. When a user logs in, Django adds a row to the `django_session` database table. Django updates this row each time the session data changes. If the user logs out manually, Django deletes the row. But if the user does *not* log out, the row neve gets deleted. A similar process happens with the file backend.
+
+Django does *not* provide automatic purging of expired sessions. Therefore, it's your job to purge expired sessions on a regular basis. Django provides a clean-up management command for this purpose: [`clearsessions`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-clearsessions). It's recommended to call this command on a regular basis, for example, as a daily cron job.
+
+Note that the cache backend isn't vulnerable to this problem, because caches automatically delete stale data. Neither is then cookie backend, because the session data is stored by then users' browsers.
+
+## Settings
+
+A few [Django settings](https://docs.djangoproject.com/en/4.0/ref/settings/#settings-sessions) give you control over session behavior:
+
+* [`SESSION_CACHE_ALIAS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_CACHE_ALIAS)
+* [`SESSION_COOKIE_AGE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_COOKIE_AGE)
+* [`SESSION_COOKIE_DOMAIN`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_COOKIE_DOMAIN)
+* [`SESSION_COOKIE_HTTPONLY`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_COOKIE_HTTPONLY)
+* [`SESSION_COOKIE_NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_COOKIE_NAME)
+* [`SESSION_COOKIE_PATH`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_COOKIE_PATH)
+* [`SESSION_COOKIE_SAMESITE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_COOKIE_SAMESITE)
+* [`SESSION_COOKIE_SECURE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_COOKIE_SECURE)
+* [`SESSION_ENGINE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_ENGINE)
+* [`SESSION_EXPIRE_AT_BROWSER_CLOSE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_EXPIRE_AT_BROWSER_CLOSE)
+* [`SESSION_FILE_PATH`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_FILE_PATH)
+* [`SESSION_SAVE_EVERY_REQUEST`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_SAVE_EVERY_REQUEST)
+* [`SESSION_SERIALIZER`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_SERIALIZER)
+
+## Session security
+
+Subdomains within a site are able to set cookies on the client for the whole domain. This makes session fixation possible if cookies are permitted from subdomains not controllled by trusted users.
+
+For example, an attacker could log into `good.example.com` and get a valid session for their account. If the attacker has control over `bad.example.com`, they can use it to send their session key to you since a subdomain is permitted to set cookies on `*.example.com`. When you visit `good.example.com`, you'll be logged in as the attacker and might inadvertently enter your sensitive personal data (e.g. creadit card info) into the attacker's account.
+
+Another possible attack would be if `good.example.com` sets its [`SESSION_COOKIE_DOMAIN`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_COOKIE_DOMAIN) to `"example.com"` which would cause session cookies from that site to be sent to `bad.example.com`.
+
+## Technical details
+
+* The session dictionary accepts any [`json`](https://docs.python.org/3/library/json.html#module-json) serializable value when using [`JSONSerializer`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#class-serializersjsonserializer) or any picklable Python object when using [`PickleSerializer`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#class-serializerspickleserializer). See the [`pickle`](https://docs.python.org/3/library/pickle.html#module-pickle) module for more information.
+* Session data is stored in a database table named `django_session`.
+* Django only sends a cookie if it needs to. If you don't set any session data, it won't send a session cookie.
+
+### The `SessionStore` object
+
+When working with sesions internally, Django uses a session store object from the corresponding session engine. By convention, the session store object class is named `SessionStore` and is located in the module designated by [`SESSION_ENGINE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SESSION_ENGINE).
+
+All `SessionStore` classes available in Django inherit from [`SessionBase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#class-backendsbasesessionbase) and implement data manipulation methods, namely:
+
+* `exists()`
+* `create()`
+* `save()`
+* `delete()`
+* `load()`
+* [`clear_expired()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#clear_expired)
+
+In order to build a custom session engine or to customize an existing one, you may create a new class inheriting from `SessionBase` or any other existing `SessionStore` class.
+
+You can extend the session engines, but doing so with database-backed engines generally requires some extra effort (see the next section for details).
+
+## Extending database-backed session engines
+
+Creating a custom database-backed session engine built upon those included in Django (namely `db` and `cached_db`) may be done by inheriting `AbstractBaseSession` and either `SessionStore` class.
+
+`AbstractBaseSession` and `BaseSessionManager` are importable from `django.contrib.sessions.base_session` so that they can be imported without including `django.contrib.sessions` in [`INSTALLED_APPS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-INSTALLED_APPS).
+
+##### `class base_session.AbstractBaseSession`
+
+The abstract base session model.
+
+##### `session_key`
+
+Primary key. The field itself may contain up to 40 characters. The current implementation generates a 32-character string (a random sequence of digits and lowercase ASCII letters).
+
+##### `session_data`
+
+A string containing an encoded and serialized session dictionary.
+
+##### `expire_date`
+
+A datetime designating when the session expires.
+
+Expired sessions are not available to a user, however, they may still be stored in the database until the [`clearsessions`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-clearsessions) management command is run.
+
+##### `classmethod get_session_store_class()`
+
+Returns a session store class to be used with this session model.
+
+##### `get_decoded()`
+
+Returns decoded session data.
+
+Decoding is performed by the session store class.
+
+You can also customize the model manager by subclassing `BaseSessionManager`:
+
+##### `class base_session.BaseSessionManager`
+
+##### `encode(session_dict)`
+
+Returns the given session dictionary serialized and encoded as a string.
+
+Encoding is performed by the session store class tied to a model class.
+
+##### `save(session_key, session_dict, expire_date)`
+
+Saves session data for a provided session key, or deletes the session in case the data is empty.
+
+Customization of `SessionStore` classes is achieved by overriding methods and properties described below:
+
+##### `class backends.db.SessionStore`
+
+Implements database-backed session store.
+
+##### `classmethod get_model_class()`
+
+Override this method to return a custom sesion model if you need one.
+
+##### `create_model_instance(data)`
+
+Returns a new instance of the session model object, which represents the current session state.
+
+Overriding this method provides the ability to modify session model data before it's saved to database.
+
+##### `class backends.cached_db.SessionStore`
+
+Implements cached database-backed session store.
+
+##### `cache_key_prefix`
+
+A prefix added to a session key to build a cache key string.
+
+### Example
+
+The example below shows a custom database-backed session engine that includes an additional database column to store an account ID (thus providing an option to query the database for all active sessions for an account):
+```
+from django.contrib.sessions.backends.db import SessionStore as DBStore
+from django.contrib.sesion.base_session import AbstractBaseSession
+from django.db import models
+
+class CustomSession(AbstractBaseSession):
+    account_id = models.IntegerField(null=True, db_index=True)
+
+    @classmethod
+    def get_session_store_class(cls):
+        return SessionStore
+
+class SessionStore(DBStore):
+    @classmethod
+    def get_model_class(cls):
+        return CustomSession
+
+    def create_model_instance(self, data):
+        obj = super().create_model_instance(data)
+        try:
+            account_id = int(data.get('_auth_user_id'))
+        except (ValueError, TypeError):
+            account_id = None
+        obj.account_id = account_id
+        return obj
 ```
