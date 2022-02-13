@@ -531,3 +531,18 @@ class SessionStore(DBStore):
         obj.account_id = account_id
         return obj
 ```
+If you are migrating from Django's built-in `cached_db` session store to a custom one based on `cached_db`, you should override the cache key prefix in order to prevent a namespace clash:
+```
+class SessionStore(CachedDBStore):
+    cache_key_prefix = 'mysessions.custom_cached_db_backend'
+
+    # ...
+```
+
+## Session IDs in URLs
+
+The Django sessions framework is entirely, and solely, cookie-based. It does not fall back to putting session IDs in URLs as a last resort, as PHP does. This is an intentional design decision. Not only does that behavior make URLs ugly, it makes your site vulnerable to session-ID theft via the "Referer" header.
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Middleware#middleware) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#how-to-use-sessions) - [[Back to the Handling HTTP Requests opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests#handling-http-requests) - [[Next module: Working with forms]]()
