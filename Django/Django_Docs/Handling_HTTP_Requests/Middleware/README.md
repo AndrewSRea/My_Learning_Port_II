@@ -233,4 +233,4 @@ These are the behavioral differences between using [`MIDDLEWARE`](https://docs.d
 
 <hr>
 
-[[Previous page: Django shortcut functions]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Shortcut_Functions#django-shortcut-functions) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Middleware#middleware) - [[Next page]]()
+[[Previous page: Django shortcut functions]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Shortcut_Functions#django-shortcut-functions) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Middleware#middleware) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#how-to-use-sessions)
