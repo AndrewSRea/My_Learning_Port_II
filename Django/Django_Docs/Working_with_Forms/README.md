@@ -497,3 +497,47 @@ Django provides two methods on a form that allow you to loop over the hidden and
 {% endfor %}
 ```
 This example does not handle any errors in the hidden fields. Usually, an error in a hidden field is a sign of form tampering, since normal form interaction won't alter them. However, you could easily insert some error displays for those form errors as well.
+
+### Reusable form templates
+
+If your site uses the same rendering logic for forms in multiple places, you can reduce duplication by saving the form's loop in a standalone template and overriding the forms [`template_name`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.template_name) attribute to render the form using the custom template. The below example will result in `{{ form }}` being rendered as the output of the `form_snippet.html` template.
+
+In your templates:
+```
+# In your template:
+{{ form }}
+
+# In form_snippet.html:
+{% for field in form %}
+    <div class="fieldWrapper">
+        {{ field.errors }}
+        {{ field.label_tag }} {{ field }}
+    </div>
+{% endfor %}
+```
+In your form:
+```
+class MyForm(forms.Form):
+    template_name = 'form_snippet.html'
+    ...
+```
+
+## Further topics
+
+This covers the basic, but forms can do a whole lot more:
+
+* [Formsets]()
+* [Creating forms from models]()
+* [Form Assets (the `Media` class)]()
+
+<hr>
+
+**See also**
+
+[The Forms Reference](https://docs.djangoproject.com/en/4.0/ref/forms/)
+
+Covers the full API reference, including form fields, form widgets, and form and field validation.
+
+<hr>
+
+[[Previous module: Handling HTTP Requests]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests#handling-http-requests) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms#working-with-forms) - [[First page: Formsets]]() - [[Next module: Templates]]()
