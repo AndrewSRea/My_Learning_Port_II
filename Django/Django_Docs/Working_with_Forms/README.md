@@ -96,3 +96,117 @@ When we instantiate a form, we can opt to leave it empty or prepopulate it, for 
 * data received from a previous HTML form submission.
 
 The last of these cases is the most interesting, because it's what makes it possible for users not just to read a website, but to send information back to it, too.
+
+## Building a form
+
+### The work that needs to be done
+
+Suppose you want to create a simple form on your website, in order to obtain the user's name. You'd need something like this in your template:
+```
+<form action="/your-name/" method="post">
+    <label for="your_name">Your name: </label>
+    <input id="your_name" type="text" name="your_name" value="{{ current_name }}">
+    <input type="submit" value="OK">
+</form>
+```
+This tells the browser to return the form data to the URL `/your-name/`, using the `POST` method. It will display a text field, labeled "Your name:", and a button marked "OK". If the template context contains a `current_name` variable, that will be used to pre-fill the `your_name` field.
+
+You'll need a view that renders the tempalte containing the HTML form, and that can supply the `current_name` field as appropriate.
+
+When the form is submitted, the `POST` request which is sent to the server will contain the form data.
+
+Now you'll also need a view corresponding to that `/your-name/` URL which will find the appropriate key/value pairs in the request, and then process them.
+
+This is a very simple form. In practice, a form might contain dozens or hundreds of fields, many of which might need to be prepopulated, and we might expect the user to work through the edit-submit cycle several times before concluding the operation.
+
+We might require some validation to occur in the browser, even before the form is submitted; we might want to use much more complex fields, that allow the user to do things like pick dates from a calendar and so on.
+
+At this point, it's much easier to get Django to do most of this work for us.
+
+### Building a form in Django
+
+#### The `Form` class
+
+We already know what we want our HTML form to look like. Our starting point for it in Django is this:
+
+`forms.py`
+```
+from django import forms
+
+class NameForm(forms.Form):
+    your_name = forms.CharField(label='Your name', max_length=100)
+```
+This defines a [`Form`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form) class with a single field (`your_name`). We've applied a human-friendly label to the field, which will appear in the `<label>` when it's rendered (although in this case, the [`label`])(https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.Field.label) we specified is actually the same one that would be generated automatically if we had omitted it).
+
+The field's maximum allowable length is defined by [`max_length`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.CharField.max_length). This does two things. It puts a `maxlength="100"` on the HTML `<input>` (so the browser should prevent the user from entering more than that number of characters in the first place). It also means that when Django receives the form back from the browser, it will validate the length of the data.
+
+A `Form` instance has an [`is_valid()`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.is_valid) method, which runs validation routines for all its fields. When this method is called, if all fields contain valid data, it will:
+
+* return `True`.
+* place the form's data in its [`cleaned_data`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.cleaned_data) attribute.
+
+The whole form, when rendered for the first time, will look like:
+```
+<label for="your_name">Your name: </label>
+<input id="your_name" type="text" name="your_name" maxlength="100" required>
+```
+Note that it **does not** include the `<form>` tags, or a submit button. We'll have to provide those ourselves in the template.
+
+#### The view
+
+Form data sent back to a Django website is processed by a view, generally the same view which published the form. This allows us to reuse some of the same logic.
+
+To handle the form, we need to instantiate it in the view for the URL where we want to be published:
+
+`views.py`
+```
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+
+from .forms import NameForm
+
+def get_name(request):
+    # if this is a POST request, we need to process the form data
+    if request.method == 'POST':
+        # create a form instance and populate it with data from the request:
+        form = NameForm(request.POST)
+        # check whether it's valid:
+        if form.is_valid():
+            # process the data in form.cleaned_data as required
+            # ...
+            # redirect to a new URL:
+            return HttpResponseRedirect('/thanks/')
+
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        form = NameForm()
+
+    return render(request, 'name.html', {'form': form})
+```
+If we arrive at this view with a `GET` request, it will create an empty form instance and place it in the template context to be rendered. This is what we can expect to happen the first time we visit the URL.
+
+If the form is submitted using a `POST` request, the view will once again create a form instance and populate it with data from the request: `form = NameForm(request.POST)`. This is called "binding data to the form" (it is now a *bound* form).
+
+We call the form's `is_valid()` method; if it's not `True`, we go back to the template with the form. This time the form is no longer empty (*unbound*) so the HTML form will be populated with the data previously submitted, where it can be edited and corrected as required.
+
+If `is_valid()` is `True`, we'll now be able to find all the validated form data in its `cleaned_data` attribute. We can use this data to update the database or do other processing before sending an HTTP redirect to the browser telling it where to go next.
+
+#### The template
+
+We don't need to do much in our `name.html` template:
+```
+<form action="/your-name/" method="post">
+    {% csrf_token %}
+    {{ form }}
+    <input type="submit" value="Submit">
+</form>
+```
+All the form's fields and their attributes will be unpacked into HTML markup from that `{{ form }}` by Django's template language.
+
+<hr>
+
+**Forms and Cross Site Request Forgery protection**
+
+Django ships with an easy-to-use [protection against Corss Site Request Forgeries](https://docs.djangoproject.com/en/4.0/ref/csrf/). When submitting a form via `POST` with CSRF protection enabled, you must use the [`csrf_token`](https://docs.djangoproject.com/en/4.0/ref/templates/builtins/#std:templatetag-csrf_token) template tag as in the preceding example. However, since CSRF protection is not directly tied to forms in templates, this tag is omitted from the following examples in this document.
+
+<hr>
