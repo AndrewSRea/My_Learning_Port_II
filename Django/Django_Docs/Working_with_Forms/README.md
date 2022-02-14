@@ -349,3 +349,151 @@ See [Outputting forms as HTML](https://docs.djangoproject.com/en/4.0/ref/forms/a
 
 ### Rendering fields manually
 
+We don't have to let Django unpack the form's fields; we can do it manually if we like (allowing us to reorder the fields, for example). Each field is available as an attribute of the form using `{{ form.name_of_field }}`, and in a Django template, will be rendered appropriately. For example:
+```
+{{ form.non_field_errors }}
+<div class="fieldWrapper">
+    {{ form.subject.errors }}
+    <label for="{{ form.subject.id_for_label }}">Email subject:</label>
+    {{ form.subject }}
+</div>
+<div class="fieldWrapper">
+    {{ form.message.errors }}
+    <label for="{{ form.message.id_for_label }}">Your message:</label>
+    {{ form.message }}
+</div>
+<div class="fieldWrapper">
+    {{ form.sender.errors }}
+    <label for="{{ form.sender.id_for_label }}">Your email address:</label>
+    {{ form.sender }}
+</div>
+<div class="fieldWrapper">
+    {{ form.cc_myself.errors }}
+    <label for="{{ form.cc_myself.id_for_label }}">CC yourself?</label>
+    {{ form.cc_myself }}
+</div>
+```
+Complete `<label>` elements can also be generated using the [`label_tag()`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.BoundField.label_tag). For example:
+```
+<div class="fieldWrapper">
+    {{ form.subject.errors }}
+    {{ form.subject.label_tag }}
+    {{ form.subject }}
+</div>
+```
+
+#### Rendering form error messages
+
+The price of this flexibility is a bit more work. Until now, we haven't had to worry about how to display form errors, because that's taken care of for us. In this example, we have had to make sure we take care of any errors for each field and any errors for the form as a whole. Note `{{ form.non_field_errors }}` at the top of the form and the template lookup for errors on each field.
+
+Using `{{ form.name_of_field_errors }}` displays a list of form errors, rendered as an unordered list. This might look like:
+```
+<ul class="errorlist">
+    <li>Sender is required.</li>
+</ul>
+```
+The list has a CSS class of `errorlist` to allow you to style its appearance. If you wish to further customize the display of errors, you can do so by looping over them:
+```
+{% if form.subject.errors %}
+    <ol>
+    {% for error in form.subject.errors %}
+        <li><strong>{{ error|escape }}</strong></li>
+    {% endfor %}
+    </ol>
+{% endif %}
+```
+Non-field errors (and/or hidden field errors that are rendered at the top of the form when using helpers like `form.as_p()`) will be rendered with an additional class of `nonfield` to help distinguish them from field-specific errors. For example, `{{ form.non_field_errors }}` would look like:
+```
+<ul class="errorlist nonfield">
+    <li>Generic validation error</li>
+</ul>
+```
+See [The Forms API](https://docs.djangoproject.com/en/4.0/ref/forms/api/) for more on errors, styling, and working with form attributes in templates.
+
+### Looping over the form's fields
+
+If you're using the same HTML for each of your form fields, you can reduce duplicate code by looping through each field in turn using a `{% for %}` loop:
+```
+{% for field in form %}
+    <div class="fieldWrapper">
+        {{ field.errors }}
+        {{ field.label_tag }} {{ field }}
+        {% if field.help_text %}
+        <p class="help">{{ field.help_text|safe }}</p>
+        {% endif %}
+    </div>
+{% endfor %}
+```
+Useful attributes on `{{ field }}` include:
+
+**`{{ field.label }}`**
+
+The label of the field, e.g. `Email address`.
+
+**`{{ field.label_tag }}`**
+
+The field's label wrapped in the appropriate HTML `<label>` tag. This includes the form's [`label_suffix`](). For example, the default `label_suffix` is a colon:
+```
+<label for="id_email">Email address:</label>
+```
+
+**`{{ field.id_for_label }}`**
+
+The ID that will be used for this field (`id_email` in the example above). If you are constructing the label manually, you may want to use this in lieu of `label_tag`. It's also useful, for example, if you have some inline JavaScript and want to avoid hardcoding the field's ID.
+
+**`{{ field.value }}`**
+
+The value of the field, e.g. `someone@example.com`.
+
+**`{{ field.html_name }}`**
+
+The name of the field that will be used in the input element's name field. This takes the form prefix into account, if it has been set.
+
+**`{{ field.help_text }}`**
+
+Any help text that has been associated with the field.
+
+**`{{ field.errors }}`**
+
+Outputs a `<ul class="errorlist">` containing any validation errors corresponding to this field. You can customize the presentation of the errors with a `{% for error in field.errors %}` loop. In this case, each object in the loop is a string containing the error message.
+
+**`{{ field.is_hidden }}`**
+
+This attribute is `True` if the form field is a hidden field and `False` otherwise. It's not particularly useful as a template variable, but could be useful in conditional tests such as:
+```
+{% if field.is_hidden %}
+    {# Do something special #}
+{% endif %}
+```
+
+**`{{ field.field }}`**
+
+The [`Field`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.Field) instance from the form class that this [`BoundField`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.BoundField) wraps. You can use it to access `Field` attributes, e.g. `{{ char_field.field.max_length }}`.
+
+<hr>
+
+**See also**
+
+For a complete list of attributes and methods, see [`BoundField`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.BoundField).
+
+<hr>
+
+#### Looping over hidden and visible fields
+
+If you're manually laying out a form in a template, as opposed to relying on Django's default form layout, you might want to treat `<input type="hidden">` fields differently from non-hidden fields. For example, because hidden fields don't display anything, putting error messages "next to" the field could cause confusion for your users -- so errors for those fields should be handled differently.
+
+Django provides two methods on a form that allow you to loop over the hidden and visible fields independently: `hidden_fields()` and `visible_fields()`. Here's a modification of an earlier example that uses these two methods:
+```
+{# Include the hidden fields #}
+{% for hidden in form.hidden_fields %}
+{{ hidden }}
+{% endfor %}
+{# Include the visible fields #}
+{% for field in form.visible_fields %}
+    <div class="fieldWrapper">
+        {{ field.errors }}
+        {{ field.label_tag }} {{ field }}
+    </div>
+{% endfor %}
+```
+This example does not handle any errors in the hidden fields. Usually, an error in a hidden field is a sign of form tampering, since normal form interaction won't alter them. However, you could easily insert some error displays for those form errors as well.
