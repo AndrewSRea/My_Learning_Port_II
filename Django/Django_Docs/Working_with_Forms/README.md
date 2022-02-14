@@ -210,3 +210,142 @@ All the form's fields and their attributes will be unpacked into HTML markup fro
 Django ships with an easy-to-use [protection against Corss Site Request Forgeries](https://docs.djangoproject.com/en/4.0/ref/csrf/). When submitting a form via `POST` with CSRF protection enabled, you must use the [`csrf_token`](https://docs.djangoproject.com/en/4.0/ref/templates/builtins/#std:templatetag-csrf_token) template tag as in the preceding example. However, since CSRF protection is not directly tied to forms in templates, this tag is omitted from the following examples in this document.
 
 <hr>
+
+**HTML5 input types and browser validation**
+
+If your form includes a [`URLField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.URLField), an [`EmailField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.EmailField) or any integer field type, Django will use the `url`, `email` and `number` HTML5 input types. By default, browsers may apply their own validation on these fields, which may be stricter than Django's validation. if you would like to disable this behavior, set the `novalidate` attribute on the `form` tag, or specify a different widget on the field, like [`TextInput`](https://docs.djangoproject.com/en/4.0/ref/forms/widgets/#django.forms.TextInput).
+
+<hr>
+
+We now have a working web form, described by a Django [`Form`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form), processed by a view, and rendered as an HTML `<form>`.
+
+That's all you need to get started, but the forms framework puts a lot more at your fingertips. Once you understand the basics of the process described above, you should be prepared to understand other features of the forms system and ready to learn a bit more about the underlying machinery.
+
+## More about Django `Form` classes
+
+All form classes are created as subclasses of either [`django.forms.Form`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form) or [`django.forms.ModelForm`](https://docs.djangoproject.com/en/4.0/topics/forms/modelforms/#django.forms.ModelForm). You can think of `ModelForm` as a subclass of `Form`. `Form` and `ModelForm` actually inherit common functionality from a (private) `BaseForm` class, but this implementation detail is rarely important.
+
+<hr>
+
+**Models and Forms**
+
+In fact, if your form is going to be used to directly add or edit a Django model, a [`ModelForm`](https://docs.djangoproject.com/en/4.0/topics/forms/modelforms/) can save you a great deal of time, effort, and code, because it will build a form, along with the appropriate fields and their attributes, from a `Model` class.
+
+<hr>
+
+### Bound and unbound form instances
+
+The distinction between [Bound and unbound forms](https://docs.djangoproject.com/en/4.0/ref/forms/api/#ref-forms-api-bound-unbound) is important:
+
+* An unbound form has no data associated with it. When rendered to the user, it will be empty or will contain default values.
+* A bound form has submitted data, and hence can be used to tell if that data is valid. If an invalid bound form is rendered, it can include inline error messages telling the user what data to correct.
+
+The form's [`is_bound`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.is_bound) attribute will tell you whether a form has data bound to it or not.
+
+### More on fields
+
+Consider a more useful form than our minimal example above, which we could use to implement "contact me" functionality on a personal website:
+
+`forms.py`
+```
+from django import forms
+
+class ContactForm(forms.Form):
+    subject = forms.CharField(max_length=100)
+    message = forms.CharField(widget=forms.Textarea)
+    sender = forms.EmailField()
+    cc_myself = forms.BooleanField(required=False)
+```
+Our eariler form used a single field, `your_name`, a [`CharField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.CharField). In this case, our form has four fields: `subject`, `message`, `sender`, and `cc_myself`. `CharField`, [`EmailField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.EmailField), and [`BooleanField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.BooleanField) are just three of the available field types; a full list can be found in [Form fields](https://docs.djangoproject.com/en/4.0/ref/forms/fields/).
+
+#### Widgets
+
+Each form field has a corresponding [Widget class](https://docs.djangoproject.com/en/4.0/ref/forms/widgets/), which in turn corresponds to an HTML form widget such as `<input type="text">`.
+
+In most cases, the field will have a sensible default widget. For example, by default, a [`CharField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.CharField) will have a [`TextInput`](https://docs.djangoproject.com/en/4.0/ref/forms/widgets/#django.forms.TextInput) widget, that produces an `<input type="text">` in the HTML. If you needed `<textarea>` instead, you'd specify the appropriate widget when defining your form field, as we have done for the `message` field.
+
+#### Field data
+
+Whatever the data submitted with a form, once it has been successfully validated by calling `is_valid()` (and `is_valid()` has returned `True`), the validated form data will be in the `form.cleaned_data` dictionary. This data  will nave been nicely converted into Python types for you.
+
+<hr>
+
+**Note**: You can still access the unvalidated data directly from `request.POST` at this point, but the validated data is better.
+
+<hr>
+
+In the contact form example above, `cc_myself` will be a Boolean value. Likewise, fields such as [`IntegerField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.IntegerField) and [`FloatField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.FloatField) convert values to a Python `int` and `float` respectively.
+
+Here's how the form data could be processed in the view that handles this form:
+
+`views.py`
+```
+from django.core.mail import send_mail
+
+if form.is_valid():
+    subject = form.cleaned_data['subject']
+    message = form.cleaned_data['message']
+    sender = form.cleaned_data['sender']
+    cc_myself = form.cleaned_data['cc_myself']
+
+    recipients = ['info@example.com']
+    if cc_myself:
+        recipients.append(sender)
+
+    send_mail(subject, message, sender, recipients)
+    return HttpResponseRedirect('/thanks/')
+```
+
+<hr>
+
+**Tip**
+
+For more on sending email from Django, see [Sending email](https://docs.djangoproject.com/en/4.0/topics/email/).
+
+<hr>
+
+Some field types need some extra handling. For example, files that are uploaded using a form need to be handled differently (they can be retrieved from `request.FILES`, rather than `request.POST`). For details of how to handle file uploads with your form, see [Binding uploaded files to a form](https://docs.djangoproject.com/en/4.0/ref/forms/api/#binding-uploaded-files).
+
+## Working with form templates
+
+All you need to do to get your form into a template is to place the form instance into the template context. So if your form is called `form` in the context, `{{ form }}` will render its `<label>` and `<input>` elements appropriately.
+
+### Form rendering options
+
+<hr>
+
+**Additional form template furniture**
+
+Don't forget that a form's output does *not* include the surrounding `<form>` tags, or the form's `submit` control. You will have to provide these yourself.
+
+<hr>
+
+There are other output options, though, for the `<label>`/`<input>` pairs:
+
+* `{{ form.as_table }}` will render them as table cells wrapped in `<tr>` tags.
+* `{{ form.as_p }}` will render then wrapped in `<p>` tags.
+* `{{ form.as_ul }}` will render them wrapped in `<li>` tags.
+
+Note that you'll have to provide the surrounding `<table>` or `<ul>` elements yourself.
+
+Here's the output of `{{ form.as_p }}` for our `ContactForm` instance:
+```
+<p><label for="id_subject">Subject:</label>
+    <input id="id_subject" type="text" name="subject" maxlength="100 required>
+</p>
+<p><label for="id_message">Message:</label>
+    <textarea name="message" id="id_message" required></textarea>
+</p>
+<p><label for="id_sender">Sender:</label>
+    <input type="email" name="sender" id="id_sender" required>
+</p>
+<p><label for="id_cc_myself">Cc myself:</label>
+    <input type="checkbox" name="cc_myself" id="id_cc_myself">
+</p>
+```
+Note that each form has an ID attribute set to `id_<field-name>`, which is referenced by the accompanying label tag. This is important in ensuring that forms are accessible to assistive technology such as screen reader software. You can also [customize the way in which labels and ids are generated](https://docs.djangoproject.com/en/4.0/ref/forms/api/#ref-forms-api-configuring-label).
+
+See [Outputting forms as HTML](https://docs.djangoproject.com/en/4.0/ref/forms/api/#ref-forms-api-outputting-html) for more on this.
+
+### Rendering fields manually
+
