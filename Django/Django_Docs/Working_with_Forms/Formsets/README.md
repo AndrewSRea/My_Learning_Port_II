@@ -390,9 +390,9 @@ True
 ...     print(form.cleaned_data)
 {'pub_date': datetime.date(2008, 5, 1), 'ORDER': 0, 'title': 'Article #3'}
 {'pub_date': datetime.date(2008, 5, 11), 'ORDER': 1, 'title': 'Article #2'}
-{'pub_date': datetime.date(2008, 5, 10), 'ORDER': 2, 'title': 'Article #3'}
+{'pub_date': datetime.date(2008, 5, 10), 'ORDER': 2, 'title': 'Article #1'}
 ```
-[`BaseFormSet`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#class-baseformset) also provides an `ordering_widget` attribute and `get_ordering_widget` method that control the widget used with [`can_order`](): <!-- above -->
+[`BaseFormSet`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#class-baseformset) also provides an `ordering_widget` attribute and `get_ordering_widget` method that control the widget used with [`can_order`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#can_order):
 
 #### `ordering_widget`
 
@@ -401,3 +401,86 @@ True
 Default: [`NumberInput`](https://docs.djangoproject.com/en/4.0/ref/forms/widgets/#django.forms.NumberInput)
 
 Set `ordering_widget` to specify the widget class to be used with `can_order`:
+```
+>>> from django.forms import BaseFormSet, formset_factory
+>>> from myapp.forms import ArticleForm
+>>> class BaseArticleFormSet(BaseFormSet):
+...     ordering_widget = HiddenInput
+
+>>> ArticleFormSet = formset_factory(ArticleForm, formset=BaseArticleFormSet, can_order=True)
+```
+
+#### `get_ordering_widget`
+
+##### `BaseFormSet.get_ordering_widget()`
+
+Override `get_ordering_widget()` if you need to provide a widget instance for use with `can_order`:
+```
+>>> from django.forms import BaseFormSet, formset_factory
+>>> from myapp.forms import ArticleForm
+>>> class BaseArticleFormSet(BaseFormSet):
+...     def get_ordering_widget(self):
+...         return HiddenInput(attrs={'class': 'ordering'})
+
+>>> ArticleFormSet = formset_factory(ArticleForm, formset=BaseArticleFormSet, can_order=True)
+```
+
+### `can_delete`
+
+##### `BaseFormSet.can_delete`
+
+Default: `False`
+
+Lets you create a formset with the ability to select forms for deletion:
+```
+>>> from django.forms import formset_factory
+>>> from myapp.forms import ArticleForm
+>>> ArticleFormSet = formset_factory(ArticleForm, can_delete=True)
+>>> formset = ArticleFormSet(initial=[
+...     {'title': 'Article #1', 'pub_date': datetime.date(2008, 5, 10)},
+...     {'title': 'Article #2', 'pub_date': datetime.date(2008, 5, 11)},
+... ])
+>>> for form in formset:
+...     print(form.as_table())
+<tr><th><label for="id_form-0-title">Title:</label></th><td><input type="text" name="form-0-title" value="Article #1" id="id_form-0-title"></td></tr>
+<tr><th><label for="id_form-0-pub_date">Pub date:</label></th><td><input type="text" name="form-0-pub_date" value="2008-05-10" id="id_form-0-pub_date"></td></tr>
+<tr><th><label for="id_form-0-DELETE">Delete:</label></th><td><input type="checkbox" name="form-0-DELETE" id="id_form-0-ORDER"></td></tr>
+<tr><th><label for="id_form-1-title">Title:</label></th><td><input type="text" name="form-1-title" value="Article #2" id="id_form-1-title"></td></tr>
+<tr><th><label for="id_form-1-pub_date">Pub date:</label></th><td><input type="text" name="form-1-pub_date" value="2008-05-11" id="id_form-1-pub_date"></td></tr>
+<tr><th><label for="id_form-1-DELETE">Delete:</label></th><td><input type="checkbox" name="form-1-DELETE" id="id_form-1-DELETE"></td></tr>
+<tr><th><label for="id_form-2-title">Title:</label></th><td><input type="text" name="form-2-title" id="id_form-2-title"></td></tr>
+<tr><th><label for="id_form-2-pub_date">Pub date:</label></th><td><input type="text" name="form-2-pub_date" id="id_form-2-pub_date"></td></tr>
+<tr><th><label for="id_form-2-DELETE">Delete:</label></th><td><input type="checkbox" name="form-2-DELETE" id="id_form-2-DELETE"></td></tr>
+```
+Similar to `can_order`, this adds a new field to each form named `DELETE` and is a `forms.BooleanField`. When data comes through marking any of the delete fields, you can access them with `deleted_forms`:
+```
+>>> data = {
+...     'form-TOTAL_FORMS': '3',
+...     'form-INITIAL_FORMS': '2',
+...     'form-0-title': 'Article #1',
+...     'form-0-pub_date': '2008-05-10',
+...     'form-0-DELETE': 'on',
+...     'form-1-title': 'Article #2',
+...     'form-1-pub_date': '2008-05-11',
+...     'form-1-DELETE': '',
+...     'form-2-title': '',
+...     'form-2-pub_date': '',
+...     'form-2-DELETE': '',
+... }
+
+>>> formset = ArticleFormSet(data, initial=[
+...     {'title': 'Article #1', 'pub_date': datetime.date(2008, 5, 10)},
+...     {'title': 'Article #2', 'pub_date': datetime.date(2008, 5, 11)},
+... ])
+>>> [form.cleaned_data for form in formset.deleted_forms]
+[{'DELETE': True, 'pub_date': datetime.date(2008, 5, 10), 'title': 'Article #1'}]
+```
+If you are using a [`ModelFormSet`](), model instances for deleted forms will be deleted when you call `formset.save()`. <!-- next page -->
+
+If you call `formset.save(commit=False)`, objects will not be deleted automatically. You'll need to call `delete()` on each of the [`formset.deleted_objects`]() to actually delete them: <!-- next page -->
+```
+>>> instances = formset.save(commit=False)
+>>> for obj in formset.deleted_objects:
+...     obj.delete()
+```
+On the other hand, if you are using a plain `FormSet`, it's up to you to handle `formset.deleted_forms`, perhaps in your formset's `save()` method, as there's no general notion of what it means to delete a form.
