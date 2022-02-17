@@ -35,37 +35,37 @@ Each model field has a corresponding default form field. For example, a `CharFie
 
 | Model field | Form field |
 | --- | --- |
-| [`AutoField`]() | Not represented in the form |
-| [`BigAutoField`]() | Not represented in the form |
-| [`BigIntegerField`]() | [`IntegerField`]() with `min_value` set to -9223372036854775808 and `max_value` set to 9223372036854775807. |
-| [`BinaryField`]() | [`CharField`](), if [`editable`]() is set to `True` on the model field, otherwise not represented in the form. |
-| [`BooleanField`]() | [`BooleanField`](), or [`NullBooleanField`]() if `null=True`. |
-| [`CharField`]() | [`CharField`]() with `max_length` set to the model field's `max_length` and [`empty_value`]() set to `None` if `null=True`. |
-| [`DateField`]() | [`DateField`]() |
-| [`DateTimeField`]() | [`DateTimeField`]() |
-| [`DecimalField`]() [`DecimalField`]() |
-| [`DurationField`]() | [`DurationField`]() |
-| [`EamilField`]() | [`EmailField`]() |
-| [`FileField`]() | [`FileField`]() |
-| [`FilePathField`]() | [`FilePathField`]() |
-| [`FloatField`]() | [`FloatField`]() |
-| [`ForeignKey`]() | [`ModelChoiceField`]() (see below) |
-| [`ImageField`]() | [`ImageField`]() |
-| [`IntegerField`]() | [`IntegerField`]() |
+| [`AutoField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.AutoField) | Not represented in the form |
+| [`BigAutoField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.BigAutoField) | Not represented in the form |
+| [`BigIntegerField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.BigIntegerField) | [`IntegerField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.IntegerField) with `min_value` set to -9223372036854775808 and `max_value` set to 9223372036854775807. |
+| [`BinaryField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.BinaryField) | [`CharField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.CharField), if [`editable`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.editable) is set to `True` on the model field, otherwise not represented in the form. |
+| [`BooleanField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.BooleanField) | [`BooleanField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.BooleanField), or [`NullBooleanField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.NullBooleanField) if `null=True`. |
+| [`CharField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.CharField) | [`CharField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.CharField) with `max_length` set to the model field's `max_length` and [`empty_value`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.CharField.empty_value) set to `None` if `null=True`. |
+| [`DateField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.DateField) | [`DateField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.DateField) |
+| [`DateTimeField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.DateTimeField) | [`DateTimeField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.DateTimeField) |
+| [`DecimalField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.DecimalField)| [`DecimalField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.DecimalField) |
+| [`DurationField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.DurationField) | [`DurationField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.DurationField) |
+| [`EmailField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.EmailField) | [`EmailField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.EmailField) |
+| [`FileField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.FileField) | [`FileField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.FileField) |
+| [`FilePathField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.FilePathField) | [`FilePathField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.FilePathField) |
+| [`FloatField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.FloatField) | [`FloatField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.FloatField) |
+| [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey) | [`ModelChoiceField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.ModelChoiceField) (see below) |
+| [`ImageField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ImageField) | [`ImageField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.ImageField) |
+| [`IntegerField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.IntegerField) | [`IntegerField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.IntegerField) |
 | `IPAddressField` | `IPAddressField` |
-| [`GenericIPAddressField`]() | [`GenericIPAddressField`]() |
-| [`JSONField`]() | [`JSONField`]() |
-| [`ManyToManyField`]() | [`ModelMultipleChoiceField`]() (see below) |
-| [`PositiveBigIntegerField`]() | [`IntegerField`]() |
-| [`PositiveIntegerField`]() | [`IntegerField`]() |
-| [`PositiveSmallIntegerField`]() | [`IntegerField`]() |
-| [`SlugField`]() | [`SlugField`]() |
-| [`SmallAutoField`]() | Not represented in the form |
-| [`SmallIntegerField`]() | [`IntegerField`]() |
-| [`TextField`]() | [`CharField`]() with `widget=forms.Textarea` |
-| [`TimeField`]() | [`TimeField`]() |
-| [`URLField`]() | [`URLField`]() |
-| [`UUIDField`]() | [`UUIDField`]() |
+| [`GenericIPAddressField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.GenericIPAddressField) | [`GenericIPAddressField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.GenericIPAddressField) |
+| [`JSONField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.JSONField) | [`JSONField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.JSONField) |
+| [`ManyToManyField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField) | [`ModelMultipleChoiceField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.ModelMultipleChoiceField) (see below) |
+| [`PositiveBigIntegerField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.PositiveBigIntegerField) | [`IntegerField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.IntegerField) |
+| [`PositiveIntegerField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.PositiveIntegerField) | [`IntegerField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.IntegerField) |
+| [`PositiveSmallIntegerField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.PositiveSmallIntegerField) | [`IntegerField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.IntegerField) |
+| [`SlugField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.SlugField) | [`SlugField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.SlugField) |
+| [`SmallAutoField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.SmallAutoField) | Not represented in the form |
+| [`SmallIntegerField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.SmallIntegerField) | [`IntegerField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.IntegerField) |
+| [`TextField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.TextField) | [`CharField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.CharField) with `widget=forms.Textarea` |
+| [`TimeField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.TimeField) | [`TimeField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.TimeField) |
+| [`URLField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.URLField) | [`URLField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.URLField) |
+| [`UUIDField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.UUIDField) | [`UUIDField`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.UUIDField) |
 
 As you might expect, the `ForeignKey` and `ManyToManyField` model field types are special cases:
 
