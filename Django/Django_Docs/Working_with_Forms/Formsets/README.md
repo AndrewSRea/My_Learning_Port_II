@@ -484,3 +484,161 @@ If you call `formset.save(commit=False)`, objects will not be deleted automatica
 ...     obj.delete()
 ```
 On the other hand, if you are using a plain `FormSet`, it's up to you to handle `formset.deleted_forms`, perhaps in your formset's `save()` method, as there's no general notion of what it means to delete a form.
+
+[`BaseFormSet`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#class-baseformset) also provides a `deletion_widget` attribute and `get_delete_widget()` method that control the widget used with [`can_delete`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#can_delete).
+
+#### `deletion_widget`
+
+##### `BaseFormSet.deletion_widget`
+
+Default: [`CheckboxInput`](https://docs.djangoproject.com/en/4.0/ref/forms/widgets/#django.forms.CheckboxInput)
+
+Set `deletion_widget` to specify the widget class to be used with `can_delete`:
+```
+>>> from django.forms import BaseFormSet, formset_factory
+>>> from myapp.forms import ArticleForm
+>>> class BaseArticleFormSet(BaseFormSet):
+...     deletion_widget = HiddenInput
+
+>>> ArticleFormSet = formset_factory(ArticleForm, formset=BaseArticleFormSet, can_delete=True)
+```
+
+#### `get_deletion_widget`
+
+##### `BaseFormSet.get_deletion_widget()`
+
+Override `get_deletion_widget()` if you need to provide a widget instance for use with `can_delete`:
+```
+>>> from django.forms import BaseFormSet, formset_factory
+>>> from myapp.forms import ArticleForm
+>>> class BaseArticleFormSet(BaseFormSet):
+...     def get_deletion_widget(self):
+...         return HiddenInput(attrs={'class': 'deletion'})
+
+>>> ArticleFormSet = formset_factory(ArticleForm, formset=BaseArticleFormSet, can_delete=True)
+```
+
+### `can_delete_extra`
+
+##### `BaseFormSet.can_delete_extra`
+
+Default: `True`
+
+While setting `can_delete=True`, specifying `can_delete_extra=False` will remove the option to delete extra forms.
+
+## Adding additional fields to a formset
+
+If you need to add additional fields to the formset, this can be easily accomplished. The formset base class provides an `add_fields` method. You can override this method to add your own fields or even redefine the default fields/attributes of the order and deletion fields:
+```
+>>> from django.forms import BaseFormSet
+>>> from django.forms import formset_factory
+>>> from myapp.forms import ArticleForm
+>>> class BaseArticleFormSet(BaseFormSet):
+...     def add_fields(self, form, index):
+...         super().add_fields(form, index)
+...         form.fields["my_field"] = forms.CharField()
+
+>>> ArticleFormSet = formset_factory(ArticleForm, formset=BaseArticleFormSet)
+>>> formset = ArticleFormSet()
+>>> for form in formset:
+...     print(form.as_table())
+<tr><th><label for="id_form-0-title">Title:</label></th><td><input type="text" name="form-0-title" id="id_form-0-title"></td></tr>
+<tr><th><label for="id_form-0-pub_date">Pub date:</label></th><td><input type="text" name="form-0-pub_date" id="id_form-0-pub_date"></td></tr>
+<tr><th><label for="id_form-0-my_field">My field:</label></th><td><input type="text" name="form-0-my_field" id="id_form-0-my_field"></td></tr>
+```
+
+## Passing custom parameters to formset forms
+
+Sometimes your form class takes custom parameters, like `MyArticleForm`. You can pass this parameter when instantiating the formset:
+```
+>>> from django.forms import BaseFormSet
+>>> from django.forms import formset_factory
+>>> from myapp.forms import ArticleForm
+
+>>> class MyArticleForm(ArticleForm):
+...     def __init__(self, *args, user, **kwargs):
+...         self.user = user
+...         super().__init__(*args, **kwargs)
+
+>>> ArticleFormSet = formset_factory(MyArticleForm)
+>>> formset = ArticleFormSet(form_kwargs={'user': request.user})
+```
+The `form_kwargs` may also depend on the specific form instance. The formset base class provides a `get_form_kwargs` method. The method takes a single argument -- the index of the form in the formset. The index is `None` for the [`empty_form`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#empty_form):
+```
+>>> from django.forms import BaseFormSet
+>>> from django.forms import formset_factory
+
+>>> class BaseArticleFormSet(BaseFormSet):
+...     def get_form_kwargs(self, index):
+...         kwargs = super().get_form_kwargs(index)
+...         kwargs['custom_kwarg'] = index
+...         return kwargs
+```
+
+## Customizing a formset's prefix
+
+In the rendered HTML, formsets include a prefix on each field's name. By default, the prefix is `'form'`, but it can be customized using the formset's `prefix` argument.
+
+For example, in the default case, you might see:
+```
+<label for="id_form-0-title">Title:</label>
+<input type="text" name="form-0-title" id="id_form-0-title">
+```
+Bu with `ArticleFormset(prefix='article')` that becomes:
+```
+<label for="id_article-0-title">Title:</label>
+<input type="text" name="article-0-title" id="id_article-0-title">
+```
+This is useful if you want to [use more than one formset in a view](). <!-- below -->
+
+## Using a formset in views and templates
+
+Formsets have five attributes and five methods associated with rendering.
+
+##### `BaseFormSet.renderer`
+
+Specifies the [renderer](https://docs.djangoproject.com/en/4.0/ref/forms/renderers/) to use the formset. Defaults to the renderer specified by the [`FORM_RENDERER`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-FORM_RENDERER) setting.
+
+##### `BaseFormSet.template_name`
+
+The name of the template used when calling `__str__` or [`render()`](). <!-- below --> This template renders the formset's management form and then each form in the formset as per the template defined by the form's [`template_name`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.template_name). This is a proxy of `as_table` by default.
+
+##### `BaseFormSet.template_name_p`
+
+The name of the template used when calling [`as_p()`](). <!-- below --> By default, this is `'django/forms/formsets/p.html'`. This template renders the formset's management form and then each form in the formset as per the form's [`as_p()`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.as_p) method.
+
+##### `BaseFormSet.template_name_table`
+
+The name of the template used when calling [`as_table()`](). <!-- below --> By default, this is `'django/forms/formsets/table.html'`. This template renders the formset's management form and then each form in the form's [`as_table()`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.as_table) method.
+
+##### `BaseFormSet.template_name_ul`
+
+The name of the template used when calling [`as_ul()`](). <!-- below --> By default, this is `'django/forms/formsets/ul.html'`. This template renders the formset's management form and then each form in the formset as per the form's [`as_ul()`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.as_ul) method.
+
+##### `BaseFormSet.get_context()`
+
+Returns the context for rendering a formset in a template.
+
+The available context is:
+
+* `formset`: The instance of the formset.
+
+##### `BaseFormSet.render(template_name=None, context=None, renderer=None)`
+
+The render method is called by `__str__` as well as the [`as_p()`](), [`as_ul()`](), and [`as_table()`]() methods. All arguments are optional and will default to: <!-- all below -->
+
+* `template_name`: [`template_name`]()
+* `context`: Value returned by [`get_context()`]()
+* `renderer`: Value returned by [`renderer`]() <!-- all above -->
+
+##### `BaseFormSet.as_p()`
+
+Renders the formset with the [`template_name_p`]() template.
+
+##### `BaseFormSet.as_table()`
+
+Renders the formset with the [`template_name_table`]() template.
+
+##### `BaseFormSet.as_ul()`
+
+Renders the formset with the [`template_name_ul`]() template.
