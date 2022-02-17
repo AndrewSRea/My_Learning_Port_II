@@ -601,19 +601,19 @@ Specifies the [renderer](https://docs.djangoproject.com/en/4.0/ref/forms/rendere
 
 ##### `BaseFormSet.template_name`
 
-The name of the template used when calling `__str__` or [`render()`](). <!-- below --> This template renders the formset's management form and then each form in the formset as per the template defined by the form's [`template_name`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.template_name). This is a proxy of `as_table` by default.
+The name of the template used when calling `__str__` or [`render()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#baseformsetrendertemplate_namenone-contextnone-renderernone). This template renders the formset's management form and then each form in the formset as per the template defined by the form's [`template_name`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.template_name). This is a proxy of `as_table` by default.
 
 ##### `BaseFormSet.template_name_p`
 
-The name of the template used when calling [`as_p()`](). <!-- below --> By default, this is `'django/forms/formsets/p.html'`. This template renders the formset's management form and then each form in the formset as per the form's [`as_p()`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.as_p) method.
+The name of the template used when calling [`as_p()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#baseformsetas_p). By default, this is `'django/forms/formsets/p.html'`. This template renders the formset's management form and then each form in the formset as per the form's [`as_p()`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.as_p) method.
 
 ##### `BaseFormSet.template_name_table`
 
-The name of the template used when calling [`as_table()`](). <!-- below --> By default, this is `'django/forms/formsets/table.html'`. This template renders the formset's management form and then each form in the form's [`as_table()`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.as_table) method.
+The name of the template used when calling [`as_table()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#baseformsetas_table). By default, this is `'django/forms/formsets/table.html'`. This template renders the formset's management form and then each form in the form's [`as_table()`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.as_table) method.
 
 ##### `BaseFormSet.template_name_ul`
 
-The name of the template used when calling [`as_ul()`](). <!-- below --> By default, this is `'django/forms/formsets/ul.html'`. This template renders the formset's management form and then each form in the formset as per the form's [`as_ul()`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.as_ul) method.
+The name of the template used when calling [`as_ul()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#baseformsetas_ul). By default, this is `'django/forms/formsets/ul.html'`. This template renders the formset's management form and then each form in the formset as per the form's [`as_ul()`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.as_ul) method.
 
 ##### `BaseFormSet.get_context()`
 
@@ -625,20 +625,110 @@ The available context is:
 
 ##### `BaseFormSet.render(template_name=None, context=None, renderer=None)`
 
-The render method is called by `__str__` as well as the [`as_p()`](), [`as_ul()`](), and [`as_table()`]() methods. All arguments are optional and will default to: <!-- all below -->
+The render method is called by `__str__` as well as the [`as_p()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#baseformsetas_p), [`as_ul()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#baseformsetas_ul), and [`as_table()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#baseformsetas_table) methods. All arguments are optional and will default to:
 
-* `template_name`: [`template_name`]()
-* `context`: Value returned by [`get_context()`]()
-* `renderer`: Value returned by [`renderer`]() <!-- all above -->
+* `template_name`: [`template_name`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#baseformsettemplate_name)
+* `context`: Value returned by [`get_context()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#baseformsetget_context)
+* `renderer`: Value returned by [`renderer`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#baseformsetrenderer)
 
 ##### `BaseFormSet.as_p()`
 
-Renders the formset with the [`template_name_p`]() template.
+Renders the formset with the [`template_name_p`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#baseformsettemplate_name_p) template.
 
 ##### `BaseFormSet.as_table()`
 
-Renders the formset with the [`template_name_table`]() template.
+Renders the formset with the [`template_name_table`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#baseformsettemplate_name_table) template.
 
 ##### `BaseFormSet.as_ul()`
 
-Renders the formset with the [`template_name_ul`]() template.
+Renders the formset with the [`template_name_ul`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#baseformsettemplate_name_ul) template.
+
+Using a formset inside a view is not very different from using a regular `Form` class. The only thing you will want to be aware of is making sure to use the management form inside the template. Let's look at a sample view:
+```
+from django.forms import formset_factory
+from django.shortcuts import render
+from myapp.forms import ArticleForm
+
+def manage_articles(request):
+    ArticleFormSet = formset_factory(ArticleForm)
+    if request.method == 'POST':
+        formset = ArticleFormSet(request.POST, request.FILES)
+        if formset.is_valid():
+            # do something with the formset.cleaned_data
+            pass
+    else:
+        formset = ArticleFormSet()
+    return render(request, 'manage_articles.html', {'formset': formset})
+```
+The `manage_articles.html` template might look like this:
+```
+<form method="post">
+    {{ formset.management_form }}
+    <table>
+        {% for form in formset %}
+        {{ form }}
+        {% endfor %}
+    </table>
+</form>
+```
+However, there's a slight shortcut for the above by letting the formset itself deal with the management form:
+```
+<form method="post">
+    <table>
+        {{ formset }}
+    </table>
+</form>
+```
+The above ends up calling the [`BaseFormSet.render()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#baseformsetrendertemplate_namenone-contextnone-renderernone) method on the formset class. This renders the formset using the template specified by the [`template_name`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#baseformsettemplate_name) attribute. Similar to forms, by default the formset will be rendered `as_table`, with other helper methods of `as_p` and `as_ul` being available. The rendering of the formset can be customized by specifying the `template_name` attribute, or more generally by [overriding the default template](https://docs.djangoproject.com/en/4.0/ref/forms/renderers/#overriding-built-in-formset-templates).
+
+### Manually rendered `can_delete` and `can_order`
+
+If you manually render fields in the template, you can render the `can_delete` parameter with `{{ form.DELETE }}`:
+```
+<form method="post">
+    {{ formset.management_form }}
+    {% for form in formset %}
+        <ul>
+            <li>{{ form.title }}</li>
+            <li>{{ form.pub_date }}</li>
+            {% if formset.can_delete %}
+                <li>{{ form.DELETE }}</li>
+            {% endif %}
+        </ul>
+    {% endfor %}
+</form>
+```
+Similarly, if the formset has the ability to order (`can_order=True`), it is possible to render it with `{{ form.ORDER }}`.
+
+### Using more than one formset in a view
+
+You are able to use more than one formset in a view if you like. Formsets borrow much of their behavior from forms. With that said, you are able to use `prefix` to prefix formset form field names with a given value to allow more than one formset to be sent to a view without name clashing. Let's take a look at how this might be accomplished:
+```
+from django.forms import formset_factory
+from django.shortcuts import render
+from myapp.forms import ArticleForm, BookForm
+
+def manage_articles(request):
+    ArticleFormSet = formset_factory(ArticleForm)
+    BookFormSet = formset_factory(BookForm)
+    if request.method == 'POST':
+        article_formset = ArticleFormSet(request.POST, request.FILES, prefix='article')
+        book_formset = BookFormSet(request.POST, request.FILES, prefix='books')
+        if article_formset.is_valid() and book_formset.is_valid():
+            # do something with the cleaned_data on the formsets.
+            pass
+    else:
+        article_formset = ArticleFormSet(prefix='articles')
+        book_formset = BookFormSet(prefix='books')
+    return render(request, 'manage_articles.html', {
+        'article_formset': article_formset,
+        'book_formset': book_formset,
+    })
+```
+You would then render the formsets as normal. It is important to point out that you need to pass `prefix` on both the POST and non-POST cases so that it is rendered and processed correctly.
+
+Each formset's [prefix](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#customizing-a-formsets-prefix) replaces the default `form` prefix that's added to each field's `name` and `id` HTML attributes.
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms#working-with-forms) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#formsets) -[[Next page]]()
