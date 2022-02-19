@@ -298,3 +298,114 @@ author.save()
 See the [section on saving forms](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Creating_Forms_from_Models#the-save-method) for more details on using `save(commit=False)`.
 
 <hr>
+
+### Overriding the default fields
+
+The default field types, as described in the [Field types](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Creating_Forms_from_Models#field-types) table above, are sensible defaults. If you have a `DateField` in your model, chances are you'd want that to be represented as a `DateField` in your form. But `ModelForm` gives you the flexibility of changing the form field for a given model.
+
+To specify a custom widget for a field, use the `widgets` attribute of the inner `Meta` class. This should be a dictionary mapping field names to widget classes or instances.
+
+For example, if you want the `CharField` for the `name` attribute of `Author` to be represented by a `<textarea>` instead of its default `<input type="text">`, you can override the field's widget:
+```
+from django.forms import ModelForm, Textarea
+from myapp.models import Author
+
+class AuthorForm(ModelForm):
+    class Meta:
+        model = Author
+        fields = ('name', 'title', 'birth_date')
+        widgets = {
+            'name': Textarea(attrs={'cols': 80, 'rows': 20}),
+        }
+```
+The `widgets` dictionary accepts either widget instances (e.g., `Textarea(...)`) or classes (e.g., `Textarea`). Note that the `widgets` dictionary is ignored for a model field with a non-empty `choices` attribute. In this case, you must override the form field to use a different widget.
+
+Similarly, you can specify the `labels.help_texts` and `error_messages` attributes of the inner `Meta` class if you want to further customize a field.
+
+For example, if you wanted to customize the wording of all user facing strings for the `name` field:
+```
+from django.utils.translation import gettext_lazy as _
+
+class AuthorForm(ModelForm):
+    class Meta:
+        model = Author
+        fields = ('name', 'title', 'birth_date')
+        labels = {
+            'name': _('Writer'),
+        }
+        help_texts = {
+            'name': _('Some useful help text.'),
+        }
+        error_messages = {
+            'name': {
+                'max_length': _("This writer's name is too long."),
+            },
+        }
+```
+You can also specify `field_classes` to customize the type of fields instantiated by the form.
+
+For example, if you wanted to use `MySlugFormField` for the `slug` field, you could do the following:
+```
+from django.forms import ModelForm
+from myapp.models import Article
+
+class ArticleForm(ModelForm):
+    class Meta:
+        model = Article
+        fields = ['pub_date', 'headline', 'content', 'reporter', 'slug']
+        field_classes = [
+            'slug': MySlugFormField,
+        ]
+```
+Finally, if you want complete control over a field -- including its type, validators, required, etc. -- you can do this by declaratively specifying fields like you would in a regular `Form`.
+
+If you want to specify a field's validators, you can do so by defining the field declaratively and setting its `validators` parameter:
+```
+from django.forms import CharField, ModelForm
+from myapp.models import Article
+
+class ArticleForm(ModelForm):
+    slug = CharField(validators=[validate_slug])
+
+    class Meta:
+        model = Article
+        fields = ['pub_date', 'headline', 'content', 'reporter', 'slug']
+```
+
+<hr>
+
+**Note**: When you explicitly instantiate a form field like this, it is important to understand how `ModelForm` and regular `Form` are related.
+
+`ModelForm` is a regular `Form` which can automatically generate certain fields. The fields that are automatically generated depend on the content of the `Meta` class and on which fields have already been defined declaratively. Basically, `ModelForm` will **only** generate fields that are **missing** from the form, or in other words, fields that weren't defined declaratively.
+
+Fields defined declaratively are left as-is, therefore any customizations made to `Meta` attributes such as `widgets`, `labels`, `help_texts`, or `error_messages` are ignored; these only apply to fields that are generated automatically.
+
+Similarly, fields defined declaratively do not draw their attributes like `max_length` or `required` from the corresponding model. If you want to maintain the behavior specified in the model, you must set the relevant arguments explicitly when declaring the form field.
+
+For example, if the `Article` model looks like this:
+```
+class Article(models.Model):
+    headline = models.Charfield(
+        max_length=200,
+        null=True,
+        blank=True,
+        help_text='Use puns liberally',
+    )
+    content = models.TextField()
+```
+...and you want to do some custom validation for `headline`, while keeping the `blank` and `help_text` values as specified, you might define `ArticleForm` like this:
+```
+class ArticleForm(ModelForm):
+    headline = MyFormField(
+        max_length=200,
+        required=False,
+        help_text='Use puns liberally',
+    )
+
+    class Meta:
+        model = Article
+        fields = ['headline', 'content']
+```
+You must ensure that the type of the form field can be used to set the contents of the corresponding model field. When they are not compatible, you will get a  `ValueError` as no implicit conversion takes place.
+
+See the [form field documentation](https://docs.djangoproject.com/en/4.0/ref/forms/fields/) for more information on fields and their arguments.
