@@ -213,3 +213,88 @@ Note that if the form [hasn't been validated](https://docs.djangoproject.com/en/
 If an optional field doesn't appear in the form's data, the resulting model instance uses the model field [`default`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.default), if there is one, for that field. This behavior doesn't apply to fields that use [`CheckboxInput`](https://docs.djangoproject.com/en/4.0/ref/forms/widgets/#django.forms.CheckboxInput), [`CheckboxSelectMultiple`](https://docs.djangoproject.com/en/4.0/ref/forms/widgets/#django.forms.CheckboxSelectMultiple), or [`SelectMultiple`](https://docs.djangoproject.com/en/4.0/ref/forms/widgets/#django.forms.SelectMultiple) (or any custom widget whose [`value_omitted_from_data()`](https://docs.djangoproject.com/en/4.0/ref/forms/widgets/#django.forms.Widget.value_omitted_from_data) method always returns `False`) since an unchecked checkbox and unselected `<select multiple>` don't appear in the data of an HTML form submission. Use a custom form field or widget if you're designing an API and want the default fallback behavior for a field that uses one of these widgets.
 
 This `save()` method accepts an optional `commit` keyword argument, which accepts either `True` or `False`. If you call `save()` with `commit=False`, then it will return an object that hasn't yet been saved to the database. In this case, it's up to you to call `save()` on the resulting model instance. This is useful if you want to do custom processing on the object before saving it, or if you want to use one of the specialized [model saving options](https://docs.djangoproject.com/en/4.0/ref/models/instances/#ref-models-force-insert). `commit` is `True` by default.
+
+Another side effect of using `commit=False` is seen when your model has a many-to-many relation with another model. If your model has a many-to-many relation and you specify `commit=False` when you save a form, Django cannot immediately save the form data for the many-to-many relation. This is because it isn't possible to save many-to-many data for an instance until the instance exists in the database.
+
+To work around this problem, every time you save a form using `commit=False`, Django adds a `save_m2m()` method to your `ModelForm` subclass. After you've manually saved the instance produced by the form, you can invoke `save_m2m()` to save the many-to-many form data. For example:
+```
+# Create a form instance with POST data.
+>>> f = AuthorForm(request.POST)
+
+# Create, but don't save the new author instance.
+>>> new_author = f.save(commit=False)
+
+# Modify the author in some way.
+>>> new_author.some_field = 'some_value'
+
+# Save the new instance.
+>>> new_author.save()
+
+# Now, save the many-to-many data for the form.
+>>> f.save_m2m()
+```
+Calling `save_m2m()` is only required if you use `save(commit=False)`. When you use a `save()` on a form, all data -- including many-to-many data -- is saved without the need for any additional method calls. For example:
+```
+# Create a form instance with POST data.
+>>> a = Author()
+>>> f = AuthorForm(request.POST, instance=a)
+
+# Create and save the new author instance. There's no need to do anything else.
+>>> new_author = f.save()
+```
+Other than the `save()` and `save_m2m()` methods, a `ModelForm` works exactly the same way as any other `forms` form. For example, the `is_valid()` method is used to check for validity, the `is_multipart()` method is used to determine whether a form requires multipart file upload (and hence whether `request.FILES` must be passed to the form), etc. See [Binding uploaded files to a form](https://docs.djangoproject.com/en/4.0/ref/forms/api/#binding-uploaded-files) for more information.
+
+### Selecting the fields to use
+
+It is strongly recommended that you explicitly set all fields that should be edited in the form using the `fields` attribute. Failure to do so can easily lead to security problems when a form unexpectedly allows a user to set certain fields, especially when new fields are added to a model. Depending on how the form is rendered, the problem may not even be visible on the web page.
+
+The alternative approach would be to include all fields automatically, or remove only some. This fundamental approach is known to be much less secure and has led to serious exploits on major websites (e.g. [GitHub](https://github.blog/2012-03-04-public-key-security-vulnerability-and-mitigation/)).
+
+There are, however, two shortcuts available for cases where you can guarantee these security concerns do not apply to you:
+
+1. Set the `fields` attribute to the special value `'__all__'` to indicate that all fields in the model should be used. For example:
+
+    ```
+    from django.forms import ModelForm
+
+    class AuthorForm(ModelForm):
+        class Meta:
+            model = Author
+            fields = '__all__'
+    ```
+
+2. Set the `exclude` attribute of the `ModelForm`'s inner `Meta` class to a list of fields to be excluded from the form. For example:
+
+    ```
+    class PartialAuthorForm(ModelForm):
+        class Meta:
+            model = Author
+            exclude = ['title']
+    ```
+
+    Since the `Author` model has the 3 fields `name`, `title`, and `birth_date`, this will result in the fields `name` and `birth_date` being present on the form.
+
+If either of these are used, the order the fields appear in the form will be the order the fields are defined in the model, with `ManyToManyField` instances appearing last.
+
+In addition, Django applies the following rule: if you set `editable=False` on the model field, *any* form created from the model via `ModelForm` will not include that field.
+
+<hr>
+
+**Note**: Any fields not included in a form by the above logic will not be set by the form's `save()` method. Also, if you manually add the excluded fields back to the form, they will not be initialized from the model instance.
+
+Django will prevent any attempt to save an incomplete model, so if the model does not allow the missing fields to be empty, and does not provide a default value for the missing fields, any attempt to `save()` a `ModelForm` with missing fields will fail. To avoid this failure, you must instantiate your model with initial values for the missing, but required fields:
+```
+author = Author(title='Mr')
+form = PartialAuthorForm(request.POST, instance=author)
+from.save()
+```
+Alternatively, you can use `save(commit=False)` and manually set any extra required fields:
+```
+from = PartialAuthorForm(request.POST)
+author = form.save(commit=False)
+author.title = 'Mr
+author.save()
+```
+See the [section on saving forms](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Creating_Forms_from_Models#the-save-method) for more details on using `save(commit=False)`.
+
+<hr>
