@@ -80,3 +80,136 @@ In addition, each generated form field has attributes set as follows:
 * If the model field has `choices` set, then the form field's `widget` will be set to `Select`, with choices coming from the model field's `choices`. The choices will normally include the blank choice which is selected by default. If the field is required, this forces the user to make a selection. The blank choice will not be included if the model field has `blank=False` and an explicit `default` value (the `default` value will be initially selected instead).
 
 Finally, note that you can override the form field used for a given model field. See [Overriding the default fields]() below.
+
+### A full example
+
+Consider this set of models:
+```
+from django.db import models
+from django.forms import ModelForm
+
+TITLE_CHOICES = [
+    ('MR', 'Mr.'),
+    ('MRS', 'Mrs.'),
+    ('MS', 'Ms.'),
+]
+
+class Author(models.Model):
+    name = models.CharField(max_length=100)
+    title = models.CharField(max_length=3, choices=TITLE_CHOICES)
+    birth_date = models.DateField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+class Book(models.Model):
+    name = model.CharField(max_length=100)
+    authors = models.ManyToManyField(Author)
+
+class AuthorForm(ModelForm):
+    class Meta:
+        model = Author
+        fields = ['name', 'title', 'birth_date']
+
+class BookForm(ModelForm):
+    class Meta:
+        model = Book
+        fields = ['name', 'authors']
+```
+With these models, the `ModelForm` subclasses above would be roughly equivalent to this (the only difference being the `save()` method, which we'll discuss in a moment):
+```
+from django import forms
+
+class AuthorForm(forms.Form):
+    name = forms.CharField(max_length=100)
+    title = forms.Charfield(
+        max_length = 3,
+        widget=forms.Select(choices=TITLE_CHOICES),
+    )
+    birth_date = forms.DateField(required=False)
+
+class BookForm(forms.Form):
+    name = forms.CharField(max_length=100)
+    authors = forms.ModelMultipleChoiceField(queryset=Author.objects.all())
+```
+
+## Validation on a `ModelForm`
+
+There are two main steps involved in validating a `ModelForm`:
+
+1. [Validating the form]() <!-- possible future folder? (https://docs.djangoproject.com/en/4.0/ref/forms/validation/) -->
+2. [Validating the model instance](https://docs.djangoproject.com/en/4.0/ref/models/instances/#validating-objects)
+
+Just like normal form validation, model form validation is triggered implicitly when calling [`is_valid()`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.is_valid) or accessing the [`errors`]() attribute and explicitly when calling `full_clean()`, although you will typically not use the latter method in practice.
+
+`Model` validation ([`Model.full_clean()`](https://docs.djangoproject.com/en/4.0/ref/models/instances/#django.db.models.Model.full_clean)) is triggered from within the form validation step, right after the form's `clean()` method is called.
+
+<hr>
+
+:warning: **Warning**: The cleaning process modifies the model instance passed to the `ModelForm` constructor in various ways. For instance, any date fields on the model are converted into actual date objects. Failed validation may leave the underlying model instance in an inconsistent state and therefore it's not recommended to reuse it.
+
+<hr>
+
+#### Overriding the `clean()` method
+
+You can override the `clean()` method on a model form to provide additional validation in the same way you can on a normal form.
+
+A model form instance attached to a model object will contain an `instance` attribute that gives its methods access to that specific model instance.
+
+<hr>
+
+:warning: **Warning**: The `ModelForm.clean()` method sets a flag that makes the [model validation](https://docs.djangoproject.com/en/4.0/ref/models/instances/#validating-objects) step validate the uniqueness of model fields that are marked as `unique`, `unique_together` or `unique_for_date|month|year`.
+
+If you would like to override the `clean()` method and maintain this validation, you must call the parent class's `clean()` method.
+
+<hr>
+
+#### Interaction with model validation
+
+As part of the validation process, `ModelForm` will call the `clean()` method of each field on your model that has a corresponding field on your form. If you have excluded any model fields, validation will not be run on those fields. See the [form validation]() <!-- possible future folder? (https://docs.djangoproject.com/en/4.0/ref/forms/validation/) --> documentation for more on how field cleaning and validation work.
+
+The model's `clean()` method will be called before any uniqueness checks are made. See [Validation objects](https://docs.djangoproject.com/en/4.0/ref/models/instances/#validating-objects) for more information on the model's `clean()` hook.
+
+#### Considerations regarding model's `error_messages`
+
+Error messages defined at the [`form field`](https://docs.djangoproject.com/en/4.0/ref/forms/fields/#django.forms.Field.error_messages) level or at the [form `Meta`]() <!-- below --> level always take precedence over the error messages defined at the [`model field`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.error_messages) level.
+
+Error messages defined on `model fields` are only used when the `ValidationError` is raised during the [model validation](https://docs.djangoproject.com/en/4.0/ref/models/instances/#validating-objects) step and no corresponding error messages are defined at the form level.
+
+You can override the error messages from `NON_FIELD_ERRORS` raised by model validation by adding the [`NON_FIELD_ERRORS`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.NON_FIELD_ERRORS) key to the `error_messages` dictionary of the `ModelForm`'s inner `Meta` class:
+```
+from django.core.exceptions import NON_FIELD_ERRORS
+from django.forms import ModelForm
+
+class ArticleForm(ModelForm):
+    class Meta:
+        error_messages = {
+            NON_FIELD_ERRORS: {
+                'unique_together': "%(model_name)s's %(field_labels)s are not unique.",
+            }
+        }
+```
+
+### The `save()` method
+
+Every `ModelForm` also has a `save()` method. This method creates and saves a database object from the data bound to the form. A subclass of `ModelForm` can accept an existing model instance as the keyword argument `instance`; if this is supplied, `save()` will update that instance. If it's not supplied, `save()` will create a new instance of the specified model:
+```
+>>> from myapp.models import Article
+>>> from myapp.forms import ArticleForm
+
+# Create a form instance from POST data.
+>>> f = ArticleForm(request.POST)
+
+# Save a new Article object from the form's data.
+>>> new_article = f.save()
+
+# Create a form to edit an existing Article, but use POST data to populate the form.
+>>> a = Article.objects.get(pk=1)
+>>> f = ArticleForm(request.POST, instance=a)
+>>> f.save()
+```
+Note that if the form [hasn't been validated](https://docs.djangoproject.com/en/4.0/topics/forms/modelforms/#validation-on-modelform), calling `save()` will do so by checking `form.errors`. A `ValueError` will be raised if the data in the form doesn't validate -- i.e., if `form.errors` evaluates to `True`.
+
+If an optional field doesn't appear in the form's data, the resulting model instance uses the model field [`default`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.default), if there is one, for that field. This behavior doesn't apply to fields that use [`CheckboxInput`](https://docs.djangoproject.com/en/4.0/ref/forms/widgets/#django.forms.CheckboxInput), [`CheckboxSelectMultiple`](https://docs.djangoproject.com/en/4.0/ref/forms/widgets/#django.forms.CheckboxSelectMultiple), or [`SelectMultiple`](https://docs.djangoproject.com/en/4.0/ref/forms/widgets/#django.forms.SelectMultiple) (or any custom widget whose [`value_omitted_from_data()`](https://docs.djangoproject.com/en/4.0/ref/forms/widgets/#django.forms.Widget.value_omitted_from_data) method always returns `False`) since an unchecked checkbox and unselected `<select multiple>` don't appear in the data of an HTML form submission. Use a custom form field or widget if you're designing an API and want the default fallback behavior for a field that uses one of these widgets.
+
+This `save()` method accepts an optional `commit` keyword argument, which accepts either `True` or `False`. If you call `save()` with `commit=False`, then it will return an object that hasn't yet been saved to the database. In this case, it's up to you to call `save()` on the resulting model instance. This is useful if you want to do custom processing on the object before saving it, or if you want to use one of the specialized [model saving options](https://docs.djangoproject.com/en/4.0/ref/models/instances/#ref-models-force-insert). `commit` is `True` by default.
