@@ -726,3 +726,163 @@ def manage_authors(request):
     return render(request, 'manage_authors.html', {'formset': formset})
 ```
 Note that we pass the `queryset` argument in both the `POST` and `GET` cases in this example.
+
+### Using the formset in the template
+
+There are three ways to render a formset in a Django template.
+
+First, you can let the formset do most of the work:
+```
+<form method="post">
+    {{ formset }}
+</form>
+```
+Second, you can manually render the formset, but let the form deal with itself:
+```
+<form method="post">
+    {{ formset.management_form }}
+    {% for form in formset %}
+        {{ form }}
+    {% endfor %}
+</form>
+```
+When you manually render the forms yourself, be sure to render the management form as shown above. See the [management form documentation](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#understanding-the-managementform).
+
+Third, you can manually render each field:
+```
+<form method="post">
+    {{ formset.management_form }}
+    {% for form in formset %}
+        {% for field in form %}
+            {{ field.label_tag }} {{ field }} 
+        {% endfor %}
+    {% endfor %}
+</form>
+```
+If you opt to use this third method and you don't iterate over the fields with a `{% for %}` loop, you'll need to render the primary key field. For example, if you were rendering the `name` and `age` fields of a model:
+```
+<form method="post">
+    {{ formset.management_form }}
+    {% for form in formset %}
+        {{ form.id }}
+        <ul>
+            <li>{{ form.name }}</li>
+            <li>{{ form.age }}</li>
+        </ul>
+    {% endfor %}
+</form>
+```
+Notice how we need to explicitly render `{{ form.id }}`. This ensures that the model formset, in the `POST` case, will work correctly. (This example assumes a primary key named `id`. If you've explicitly defined your own primary key that isn't called `id`, make sure it gets rendered.)
+
+## Inline formsets
+
+##### `class models.BaseInlineFormSet`
+
+Inline formsets is a small abstraction layer on top of model formsets. These simplify the case of working with related objects via a foreign key. Suppose you have these two models:
+```
+from django.db import models
+
+class Author(models.Model):
+    name = models.CharField(max_length=100)
+
+class Book(modelsModel):
+    author = models.ForeignKey(Author, on_delete=models.CASCADE)
+    title = models.CharField(max_length=100)
+```
+If you want to create a formset that allows you to edit books belonging to a particular author, you could do this:
+```
+>>> from django.forms import inlineformset_factory
+>>> BookFormSet = inlineformset_factory(Author, Book, fields=('title',))
+>>> author = Author.objects.get(name='Mike Royko')
+>>> formset = BookFormSet(instance=author)
+```
+`BookFormSet`'s [prefix](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#customizing-a-formsets-prefix) is `'book_set'` (`<model name>_set`). If `Book`'s `ForeignKey` to `Author` has a [`related_name`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey.related_name), that's used instead.
+
+<hr>
+
+**Note**: [`inlineformset_factory()`](https://docs.djangoproject.com/en/4.0/ref/forms/models/#django.forms.models.inlineformset_factory) uses [`modelformset_factory()`](https://docs.djangoproject.com/en/4.0/ref/forms/models/#django.forms.models.modelformset_factory) and marks `can_delete=True`.
+
+<hr>
+
+**See also**
+
+[Manually rendered `can_delete` and `can_order`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#manually-rendered-can_delete-and-can_order).
+
+<hr>
+
+### Overriding methods on an `InlineFormSet`
+
+When overriding methods on `InlineFormSet`, you should subclass [`BaseInlineFormSet`]() rather than [`BaseModelFormSet`]().
+
+For example, if you want to override `clean()`:
+```
+from django.forms import BaseInlineFormSet
+
+class CustomInlineFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        # example custom validation across froms in the formset
+        for form in self.forms:
+            # your custom formset validation
+            ...
+```
+See also [Overriding `clean()` on a `ModelFormSet`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Creating_Forms_from_Models#overriding-clean-on-a-modelformset).
+
+Then when you create your inline formset, pass in the optional argument `formset`:
+```
+>>> from django.forms import inlineformset_factory
+>>> BookFormSet = inlineformset_factory(Author, Book, fields=('title',)),
+...     formset=CustomInlineFormSet)
+>>> author = Author.objects.get(name='Mike Royko')
+>>> formset = BookFormSet(instance=author)
+```
+
+### More than one foreign key to the same model
+
+If your model contains more than one foreign key to the same model, you'll need to resolve the ambiguity manually using `fk_name`. For example, consider the following model:
+```
+class Friendship(models.Model):
+    from_friend = models.ForeignKey(
+        Friend,
+        on_delete=models.CASCADE,
+        related_name='from_friends',
+    )
+    to_friend = models.ForeignKey(
+        Friend,
+        on_delete=models.CASCADE,
+        related_name='friends',
+    )
+    length_in_months = models.IntegerField()
+```
+To resolve this, you can use `fk_name` to [`inlineformset_factory()`](https://docs.djangoproject.com/en/4.0/ref/forms/models/#django.forms.models.inlineformset_factory):
+```
+>>> FriendshipFormSet = inlineformset_factory(Friend, Friendship, fk_name='from_friend',
+...     fields=('to_friend', 'length_in_months'))
+```
+
+### Using an inline formset in a view
+
+You may want to provide a view that allows a user to edit the related objects of a model. Here's how you can do that:
+```
+def manage_books(request, author_id):
+    author = Author.objects.get(pk=author_id)
+    BookInlineFormSet = inlineformset_factory(Author, Book, fields=('title',))
+    if request.method == "POST":
+        formset = BookInlineFormSet(request.POST, request.FILES, instance=author)
+        if formset.is_valid():
+            formset.save()
+            # Do something. Should generally end with a redirect. For example:
+            return HttpResponseRedirect(author.get_absolute_url())
+    else:
+        formset = BookInlineFormSet(instance=author)
+    return render(request, 'manage_books.html', {'formset': formset})
+```
+Notice how we pass `instance` in both the `POST` and `GET` cases.
+
+### Specifying widgets to use in the inline form
+
+`inlineformset_factory` uses `modelformset_factory` and passes most of its arguments to `modelformset_factory`. This means you can use the `widgets` parameter in much the same way as passing it to `modelformset_factory`. See [Specifying widgets to use in the form with `widgets`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Creating_Forms_from_Models#specifying-widgets-to-use-in-the-form-with-widgets) above.
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#formsets) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Creating_Forms_from_Models#creating-forms-from-models) - [[Next page]]()
