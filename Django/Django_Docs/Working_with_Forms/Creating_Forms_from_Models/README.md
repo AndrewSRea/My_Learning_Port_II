@@ -409,3 +409,75 @@ class ArticleForm(ModelForm):
 You must ensure that the type of the form field can be used to set the contents of the corresponding model field. When they are not compatible, you will get a  `ValueError` as no implicit conversion takes place.
 
 See the [form field documentation](https://docs.djangoproject.com/en/4.0/ref/forms/fields/) for more information on fields and their arguments.
+
+### Enabling localization of fields
+
+By default, the fields in a `ModelForm` will not localize their data. To enable localization for fields, you can use the `localized_fields` attribute on the `Meta` class.
+```
+>>> from django.forms import ModelForm
+>>> from myapp.models import Author
+>>> class AuthorForm(ModelForm):
+...     class Meta:
+...         model = Author
+...         localized_fields = ('birth_date',)
+```
+If `localized_fields` is set to the special value `'__all__'`, all fields will be localized.
+
+### Form inheritance
+
+As with basic forms, you can extend and reuse `ModelForms` by inherting them. This is useful if you need to declare extra fields or extra methods on a parent class for use in a number of forms derived from models. For example, using the previous `ArticleForm` class:
+```
+>>> class EnhancedArticleForm(ArticleForm):
+...     def clean_pub_date(self):
+...         ...
+```
+This creates a form that behaves identically to `ArticleForm`, except there's some extra validation and cleaning for the `pub_date` field.
+
+You can also subclass the parent's `Meta` inner class if you want to change the `Meta.fields` or `Meta.exclude` lists:
+```
+>>> class RestrictedArticleForm(EnhancedArticleForm):
+...     class Meta(ArticleForm.Meta):
+...         exclude = ('body',)
+```
+This adds the extra method from the `EnhancedArticleForm` and modifies the original `ArticleForm.Meta` to remove one field.
+
+There are a couple of things to note, however.
+
+* Normal Python name resolution rules apply. If you have multiple base classes that declare a `Meta` inner class, only the first one will be used. This means the child's `Meta`, if it exists, otherwise the `Meta` of the first parent, etc.
+* It's possible to inherit from both `Form` and `ModelForm` simultaneously, however, you must ensure that `ModelForm` appears first in the MRO. This is because these classes rely on different metaclasses and a class can only have one metaclass.
+* It's possible to declaratively remove a `Field` inherited from a parent class by setting the name to be `None` on the subclass.
+
+You can only use this technique to opt out from a field defined declaratively by a parent class; it won't prevent the `ModelForm` metaclass from generating a default field. To opt-out from default fields, see [Selecting the fields to use](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Creating_Forms_from_Models#selecting-the-fields-to-use).
+
+### Providing initial values
+
+As with regular forms, it's possible to specify initial data for forms by specifying an `initial` parameter when instantiating the form. Initial values provided this way will override both initial values from the form field and values from an attached model instance. For example:
+```
+>>> article = Article.objects.get(pk=1)
+>>> article.headline
+'My headline'
+>>> form = ArticleForm(initial={'headline': 'Initial headline'}, instance=article)
+>>> form['headline'].value()
+'Initial headline'
+```
+
+### `ModelForm` factory function
+
+You can create forms from a given model using the standalone function [`modelform_factory()`](https://docs.djangoproject.com/en/4.0/ref/forms/models/#django.forms.models.modelform_factory), instead of using a class definition. This may be more convenient if you do not have many customizations to make:
+```
+>>> from django.forms import modelform_factory
+>>> from myapp.models import Book
+>>> BookForm = modelform_factory(Book, fields=("author", "title"))
+```
+This can also be used to make modifications to existing forms, for example, by specifying the widgets to be used for a given field:
+```
+>>> from django.forms import Textarea
+>>> Form = modelform_factory(Book, form=BookForm,
+...                          widgets={"title": Textarea()})
+```
+The fields to include can be specified using the `fields` and `exclude` keyword arguments, or the corresponding attributes on the `ModelForm` inner `Meta` class. Please see the `ModelForm` [Selecting the fields to use](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Creating_Forms_from_Models#selecting-the-fields-to-use) documentation.
+
+...or enable localization for specific fields:
+```
+>>> Form = modelform_factory(Author, form=AuthorForm, localized_fields=("birth_date",))
+```
