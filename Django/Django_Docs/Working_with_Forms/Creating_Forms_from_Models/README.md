@@ -622,3 +622,107 @@ After calling `save()`, your model formset will have three new attributes contai
 ##### `models.BaseModelFormSet.deleted_objects`
 
 ##### `models.BaseModelFormSet.new_objects` 
+
+### Limiting the number of editable objects
+
+As with regular formsets, you can use the`max_num` and `extra` parameters to [`modelformset_factory()`](https://docs.djangoproject.com/en/4.0/ref/forms/models/#django.forms.models.modelformset_factory) to limit the number of extra forms displayed.
+
+`max_num` does not prevent existing objects from being displayed:
+```
+>>> Author.objects.order_by('name')
+<QuerySet [<Author: Charles Baudelaire>, <Author: Paul Verlaine>, <Author: Walt Whitman>]>
+
+>>> AuthorFormSet = modelformset_factory(Author, fields=('name',), max_num=1)
+>>> formset = AuthorFormSet(queryset=Author.objects.order_by('name'))
+>>> [x.name for x in formset.get_queryset()]
+['Charles Baudelaire', 'Paul Verlaine', 'Walt Whitman']
+```
+Also, `extra=0` doesn't prevent creation of new model instances as you can [add additional forms with JavaScript](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#understanding-the-managementform) or send additional POST data. Formsets [don't yet provide functionality](https://code.djangoproject.com/ticket/26142) for an "edit only" view that prevents creation of new instances.
+
+If the value of `max_num` is greater than the number of existing related objects, up to `extra` additional blank forms will be added to the formset, so long as the total number of forms does not exceed `max_num`:
+```
+>>> AuthorFormSet = modelformset_factory(Author, fields=('name',), max_num=4, extra=2)
+>>> formset = AuthorFormSet(queryset=Author.objects.order_by('name))
+>>> for form in formset:
+...     print(form.as_table()) 
+<tr><th><label for="id_form-0-name">Name:</label></th><td><input id="id_form-0-name" type="text" name="form-0-name" value="Charles Baudelaire" maxlength="100"><input type="hidden" name="form-0-id" value="1" id="id_form-0-id"></td></tr>
+<tr><th><label for="id_form-1-name">Name:</label></th><td><input id="id_form-1-name" type="text" name="form-1-name" value="Paul Verlaine" maxlength="100"><input type="hidden" name="form-1-id" value="3" id="id_form-1-id"></td></tr>
+<tr><th><label for="id_form-2-name">Name:</label></th><td><input id="id_form-2-name" type="text" name="form-2-name" value="Walt Whitman" maxlength="100"><input type="hidden" name="form-2-id" value="2" id="id_form-2-id"></td></tr>
+<tr><th><label for="id_form-3-name">Name:</label></th><td><input id="id_form-3-name" type="text" name="form-3-name" maxlength="100"><input type="hidden" name="form-3-id" id="id_form-3-id"></td></tr>
+```
+A `max_num` value of `None` (the default) puts a high limit on the number of forms displayed (1000). In practice, this is equivalent to no limit.
+
+### Using a model formset in a view
+
+Model formsets are very similar to formsets. Let's say we want to present a formset to edit `Author` model instances:
+```
+from django.forms import modelformset_factory
+from django.shortcuts import render
+from myapp.models import Author
+
+def manage_authors(request):
+    AuthorFormSet = modelformset_factory(Author, fields=('name', 'title'))
+    if request.method == 'POST':
+        formset = AuthorFormSet(request.POST, request.FILES)
+        if formset.is_valid():
+            formset.save()
+            # do something
+    else:
+        formset = AuthorFormSet()
+    return render(request, 'manage_authors.html', {'formset': formset})
+```
+As you can see, the view logic of a model formset isn't drastically different than that of a "normal" formset. The only difference is that we call `formset.save()` to save the data into the database. (This was described above, in [Saving objects in the formset](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Creating_Forms_from_Models#saving-objects-in-the-formset).)
+
+### Overriding `clean()` on a `ModelFormSet`
+
+Just like with `ModelForms`, by default the `clean()` method of a `ModelFormSet` will validate that none of the items in the formset violate the unique constraints on your model (either `unique`, `unique_together`, or `unique_for_date|month|year`). If you want to override the `clean()` method on a `ModelFormSet` and maintain this validation, you must call the parent class's `clean` method:
+```
+from django.forms import BaseModelFormSet
+
+class MyModelFormSet(BaseModelFormSet):
+    def clean(self):
+        super().clean()
+        # example custom validation across forms in the formset
+        for form in self.forms:
+            # your custom formset validation
+            ...
+```
+Also note that by the time you reach this step, individual model instances have already been created for each `Form`. Modifying a value in `form.cleaned_data` is not sufficient to affect the saved value. If you wish to modify a value in `ModelFormSet.clean()`, you must modify `form.instance`:
+```
+from django.forms import BaseModelFormSet
+
+class MyModelFormSet(BaseModelFormSet):
+    def clean(self):
+        super().clean()
+
+        for form in self.forms:
+            name = form.cleaned_data['name'].upper()
+            form.cleaned_data['name'] = name
+            # update the instance value
+            form.instance.name = name
+```
+
+### Using a custom queryset
+
+As stated earlier, you can override the default queryset used by the model formset:
+```
+from django.forms import modelformset_factory
+from django.shortcuts import render
+from myapp.models import Author
+
+def manage_authors(request):
+    AuthorFormSet = modelformset_factory(Author, fields=('name', 'title'))
+    queryset = Author.objects.filter(name__startswith='O')
+    if request.method == "POST":
+        formset = AuthorFormSet(
+            request.POST, request.FILES,
+            queryset=queryset,
+        )
+        if formset.is_valid():
+            formset.save()
+            # Do something
+    else: 
+        formset = AuthorFormSet(queryset=queryset)
+    return render(request, 'manage_authors.html', {'formset': formset})
+```
+Note that we pass the `queryset` argument in both the `POST` and `GET` cases in this example.
