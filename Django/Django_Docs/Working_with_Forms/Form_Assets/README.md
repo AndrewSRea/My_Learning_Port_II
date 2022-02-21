@@ -1,3 +1,134 @@
 # Form Assets (the `Media` class)
 
 Rendering an attractive and easy-to-use web form requires more than just HTML -- it also requires CSS stylesheets, and if you want to use fancy widgets, you may also need to include some JavaScript on each page. The exact combination of CSS and JavaScript that is required for any given page will depend upon the widgets that are in use on that page.
+
+This is where asset definitions come in. Django allows you to associate different files -- like stylesheets and scripts -- with the forms and widgets that require those assets. For example, if you want to use a calendar to render DateFields, you can define a custom Calendar widget. This widget can then be associated with the CSS and JavaScript that is required to render the calendar. When the Calendar widget is used on a form, Django is able to identify the CSS and JavaScript files that are required, and provide the list of file names in a form suitable for inclusion on your web page.
+
+<hr>
+
+**Assets and Django Admin**
+
+The Django Admin application defines a number of customized widgets for calendars, filtered selections, and so on. These widgets define asset requirements, and the Django Admin uses the custom widgets in place of the Django defaults. The Admin templates will only include those files that are required to render the widgets on any given page.
+
+If you like the widgets that the Django Admin application uses, feel free to use them in your own application! They're all stored in `django.contrib.admin.widgets`.
+
+<hr>
+
+**Which JavaScript toolkit?**
+
+Many JavaScript toolkits exist, and many of them include widgets (such as calendar widgets) that can be used to enhance your application. Django has deliberately avoided blessing any one JavaScript toolkit. Each toolkit has its own relative strengths and weaknesses -- use whichever toolkit suits your requirements. Django is able to integrate with any JavaScript toolkit.
+
+<hr>
+
+## Assets as a static definition
+
+The easiest way to define assets is as a static definition. Using the method, the declaration is an inner `Media` class. The properties of the inner class define the requirements.
+
+Here's an example:
+```
+from django import forms
+
+class CalendarWidget(forms.TextInput):
+    class Media:
+        css = {
+            'all': ('pretty.css',)
+        }
+        js = ('animation.js', 'actions.js')
+```
+This code defines a `CalendarWidget`, which will be based on `TextInput`. Every time the `CalendarWidget` is used on a form, that form will be directed to include the CSS file `pretty.css`, and the JavaScript files `animations.js` and ``actions.js`.
+
+This static definition is converted at runtime into a widget property named `media`. The list of assets for a `CalendarWidget` instance can be retrieved through this property:
+```
+>>> w = CalendarWidget()
+>>> print(w.media)
+<link href="http://static.example.com/pretty.css" type="text/css" media="all" rel="stylesheet">
+<script src="http://static.example.com/animations.js"></script>
+<script src="http://static.example.com/actions.js"></script>
+```
+Here's a list of all possible `Media` options. There are no required options.
+
+### `css`
+
+A dictionary describing the CSS files required for various forms ot output media.
+
+The values in the dictionary should be a tuple/list of file names. See [the section on paths]() <!-- below --> for details of how to specify paths to these files.
+
+The keys in the dictionary are the output media types. These are the same types accepted by CSS files in media declarations: "all", "aural", "braille", "embossed", "handheld", "print", "projection", "screen", "tty", and "tv". If you need to have different stylesheets for different media types, provide a list of CSS files for each output medium. The following example would provide two CSS options -- one for the screen, and one for print:
+```
+class Media:
+    css = {
+        'screen': ('pretty.css',),
+        'print': ('newspaper.css',)
+    }
+```
+If a group of CSS files are appropriate for multiple output media types, the dictionary key can be a comma separated list of output media types. In the following example, TV's and projectors will have the same media requirements:
+```
+class Media:
+    css = {
+        'screen': ('pretty.css',),
+        'tv,projector': ('lo_res.css',),
+        'print': ('newspaper.css',)
+    }
+```
+If this last CSS definition were to be rendered, it would become the following HTML:
+```
+<link href="http://static.example.com/pretty.css" type="text/css" media="screen" rel="stylesheet">
+<link href="http://static.example.com/lo_res.css" type="text/css" media="tv,projector" rel="stylesheet">
+<link href="http://static.example.com/newspaper.css" type="text/css" media="print" rel="stylesheet">
+```
+
+### `js`
+
+A tuple describing the required JavaScript files. See [the section on paths]() <!-- below --> for details of how to specify paths to these files.
+
+### `extend`
+
+A Boolean defining inheritance behavior for `Media` declarations.
+
+By default, any object using a static `Media` definition will inherit all the assets associated with the parent widget. This occurs regardless of how the parent defines its own requirements. For example, if we were to extend our basic Calendar widget from the example above:
+```
+>>> class FancyCalendarWidget(CalendarWidget):
+...     class Media:
+...         css = {
+...             'all': ('fancy.css',)
+...         }
+...         js = ('whizbang.js',)
+
+>>> w = FancyCalendarWidget()
+>>> print(w.media)
+<link href="http://static.example.com/pretty.css" type="text/css" media="all" rel="stylesheet">
+<link href="http://static.example.com/fancy.css" type="text/css" media="all" rel="stylesheet">
+<script src="http://static.example.com/animations.js"></script>
+<script src="http://static.example.com/actions.js"></script>
+<script src="http://static.example.com/whizbang.js"></script>
+```
+The "FancyCalendar" widget inherits all the assets from its parent widget. If you don't want `Media` to be inherited in this way, add an `extend=False` decalration to the `Media` declaration:
+```
+>>> class FancyCalendarWidget(CalendarWidget):
+...     class Media:
+...         extend = False
+...         css = {
+...             'all': ('fancy.css',)
+...         }
+...         js = ('whizbang.js',)
+
+>>> w = FancyCalendarWidget()
+>>> print(w.media)
+<link href="http://static.example.com/fancy.css" type="text/css" media="all" rel="stylesheet">
+<script src="http://static.example.com/whizbang.js"></script>
+```
+If you require even more control over inheritance, define your assets using a [dynamic property](). <!-- below --> Dynamic properties give you complete control over which files are inherited, and which are not.
+
+## `Media as a dynamic property
+
+If you need to perform some more sophisticated manipulation of asset requirements, you can define the `media` property directly. This is done by defining a widget property that returns an instance of `forms.Media`. The constructor for `forms.Media` accepts `css` and `js` keyword arguments in the same format as that used in a static media definition.
+
+For example, the static definition for our Calendar Widget could also be defined in a dynamic fashion:
+```
+class CalendarWidget(forms.TextInput):
+    @property
+    def media(self):
+        return forms.Media(css={'all': ('pretty.css',)},
+                           js=('animations.js', 'actions.js'))
+```
+See the section on [Media objects]() <!-- below --> for more details on how to construct return values for dynamic `media` properties.
