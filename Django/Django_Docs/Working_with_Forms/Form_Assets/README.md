@@ -132,3 +132,154 @@ class CalendarWidget(forms.TextInput):
                            js=('animations.js', 'actions.js'))
 ```
 See the section on [Media objects]() <!-- below --> for more details on how to construct return values for dynamic `media` properties.
+
+## Paths in asset definitions
+
+Paths used to specify assets can be either relative or absolute. If a path starts with `/`, `http://`, or `https://`, it will be interprested as an absolute path, and left as-is. All other paths will be prepended with the value of the appropriate prefix. If the [`django.contrib.staticfiles`](https://docs.djangoproject.com/en/4.0/ref/contrib/staticfiles/#module-django.contrib.staticfiles) app is installed, it will be used to serve assets.
+
+Whether or not you use `django.contrib.staticfiles`, the [`STATIC_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-STATIC_URL) and [`STATIC_ROOT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-STATIC_ROOT) settings are required to render a complete web page.
+
+To find the appropriate prefix to use, Django will check if the `STATIC_URL` setting is not `None` and automatically fall back to using [`MEDIA_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-MEDIA_URL). For example, if the [`MEDIA_URL`]() for your site was `'http://uploads.example.com/'` and `STATIC_URL`. was `None`:
+```
+
+>>> from django import forms
+>>> class CalendarWidget(forms.TextInput):
+...     class Media:
+...         css = {
+...             'all': ('/css/pretty.css',),
+...         }
+...         js = ('animations.js', 'http://othersite.com/actions.js')
+
+>>> w = CalendarWidget()
+>>> print(w.media)
+<link href="/css/pretty.css" type="text/css" media="all" rel="stylesheet">
+<script src="http://uploads.example.com/animations.js"></script>
+<script src="http://othersite.com/actions.js"></script>
+```
+But if [`STATIC_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-STATIC_URL) is `'http://static.example.com/'`:
+```
+>>> w = CalendarWidget()
+>>> print(w.media)
+<link href="/css/pretty.css" type="text/css" media="all" rel="stylesheet">
+<script src="http://static.example.com/animations.js"></script>
+<script src="http://othersite.com/actions.js"></script>
+```
+Or if [`staticfiles`](https://docs.djangoproject.com/en/4.0/ref/contrib/staticfiles/#module-django.contrib.staticfiles) is configured using the [`ManifestStaticFilesStorage`](https://docs.djangoproject.com/en/4.0/ref/contrib/staticfiles/#django.contrib.staticfiles.storage.ManifestStaticFilesStorage):
+```
+>>> w = CalendarWidget()
+>>> print(w.media)
+<link href="/css/pretty.css" type="text/css" media="all" rel="stylesheet">
+<script src="http://static.example.com/animations.27e20196a850.js"></script>
+<script src="http://othersite.com/actions.js"></script>
+```
+
+## `Media` objects
+
+When you interrogate the `media` attribute of a widget or form, the value that is returned is a `forms.Media` object. As we have already seen, the string representation of a `Media` object is the HTML required to include the relevant files in the `<head>` block of your HTML page.
+
+However, `Media` objects have some other interesting properties.
+
+### Subsets of assets
+
+If you only want files of a particular type, you can use the subscript operator to filter out a medium of interest. For example:
+```
+>>> w = CalendarWidget()
+>>> print(w.media)
+<link href="http://static.example.com/pretty.css" type="text/css" media="all" rel="stylesheet">
+<script src="http://static.example.com/animations.js"></script>
+<script src="http://static.example.com/actions.js"></script>
+
+>>> print(w.media['css'])
+<link href="http://static.example.com/pretty.css" type="text/css" media="all" rel="stylesheet">
+```
+When you use the subscript operator, the value that is returned is a new `Media` object -- but one that only contains the media of interest.
+
+### Combining `Media` objects
+
+`Media` objects can also be added together. When two `Media` objects are added, the resulting `Media` object contains the union of the assets specified by both:
+```
+>>> from django import forms
+>>> class CalendarWidget(forms.TextInput):
+...     class Media:
+...         css = {
+...             'all': ('pretty.css',)
+...         }
+...         js = ('animations.js', 'actions.js')
+
+>>> class OtherWidget(forms.TextInput):
+...     class Media:
+...         js = ('whizbang.js',)
+
+>>> w1 = CalendarWidget()
+>>> w2 = OtherWidget()
+>>> print(w1.media + w2.media)
+<link href="http://static.example.com/pretty.css" type="text/css" media="all" rel="stylesheet">
+<script src="http://static.example.com/animations.js"></script>
+<script src="http://static.example.com/actions.js"></script>
+<script src="http://static.example.com/whizbang.js"></script>
+```
+
+### Order of assets
+
+The order in which assets are inserted into the DOM is often important. For example, you may have a script that depends on jQuery. Therefore, combining `Media` objects attempts to preserve the relative order in which assets are defined in each `Media` class.
+
+For example:
+```
+>>> from django import forms
+>>> class CalendarWidget(forms.TextInput):
+...     class Media:
+...         js = ('jQuery.js', 'calendar.js', 'noConflict.js')
+>>> class TimeWidget(forms.TextInput):
+...     class Media:
+...         js = ('jQuery.js', 'time.js', 'noConflict.js')
+>>> w1 = CalendarWidget()
+>>> w2 = TimeWidget()
+>>> print(w1.media + w2.media)
+<script src="http://static.example.com/jQuery.js"></script>
+<script src="http://static.example.com/calendar.js"></script>
+<script src="http://static.example.com/time.js"></script>
+<script src="http://static.example.com/noConflict.js"></script>
+```
+Combining `Media` objects with assets in a conflicting order results in a `MediaOrderConflictWarning`.
+
+## `Media on Forms
+
+Widgets aren't the only objects that can have `media` definitions -- forms can also define `media`. The rules for `media` definitions on forms are the same as the rules for widgets: declarations can be static or dynamic; path and inheritance rules for those declarations are exactly the same.
+
+Regardless of whether you define a `media` declaration, *all* Form objects have a `media` property. The default value for this property is the result of adding the `media` definitions for all widgets that are part of the form:
+```
+>>> from django import forms
+>>> class ContactForm(forms.Form):
+...     date = DateField(widget=CalendarWidget)
+...     name = CharField(max_length=40, widget=OtherWidget)
+
+>>> f = ContactForm()
+>>> f.media
+<link href="http://static.example.com/pretty.css" type="text/css" media="all" rel="stylesheet">
+<script src="http://static.example.com/animations.js"></script>
+<script src="http://static.example.com/actions.js"></script>
+<script src="http://static.example.com/whizbang.js"></script>
+```
+If you want to associate additional assets with a form -- for example, CSS for form layout -- add a `Media` declaration to the form:
+```
+>>> class ContactForm(forms.Form):
+...     date = DateField(widget=CalendarWidget)
+...     name = CharField(max_length=40, widget=OtherWidget)
+...
+...     class Media:
+...         css = {
+...             'all': ('layout.css',)
+...         }
+
+>>> f = ContactForm()
+>>> f.media
+<link href="http://static.example.com/pretty.css" type="text/css" media="all" rel="stylesheet">
+<link href="http://static.example.com/layout.css" type="text/css" media="all" rel="stylesheet">
+<script src="http://static.example.com/animations.js"></script>
+<script src="http://static.example.com/actions.js"></script>
+<script src="http://static.example.com/whizbang.js"></script>
+```
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Creating_Forms_from_Models#creating-forms-from-models) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Form_Assets#form-assets-the-media-class) - [[Back to the Working with Forms opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms#working-with-forms) - [[Next module: Templates]]()
