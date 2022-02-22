@@ -28,7 +28,7 @@ This is an overview of the Django template language's syntax. For details, see t
 
 <hr>
 
-A Django tempalte is a text document or a Python string marked-up using the Django template language. Some constructs are recognized and interpreted by the template engine. The main ones are variables and tags.
+A Django template is a text document or a Python string marked-up using the Django template language. Some constructs are recognized and interpreted by the template engine. The main ones are variables and tags.
 
 A template is rendered with a context. Rendering replaces variables with their values, which are looked up in the context, and executes tags. Everything else is output as is.
 
@@ -308,7 +308,7 @@ Usage example:
 from django.template.loader import render_to_string
 rendered = render_to_string('my_template.html', {'foo': 'bar'})
 ```
-See also the [`render()`](https://docs.djangoproject.com/en/4.0/topics/http/shortcuts/#django.shortcuts.render) shortcut which calls [`render_to_string()`]() <!-- above --> and feeds the result into an [`HttpResponse`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse) suitable for returning from a view.
+See also the [`render()`](https://docs.djangoproject.com/en/4.0/topics/http/shortcuts/#django.shortcuts.render) shortcut which calls [`render_to_string()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Templates#render_to_stringtemplate_name-contextnone-requestnone-usingnone) and feeds the result into an [`HttpResponse`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse) suitable for returning from a view.
 
 Finally, you can use configured engines directly:
 
@@ -322,3 +322,72 @@ django_engine = engines['django']
 template = django_engine.from_string("Hello {{ name }}!")
 ```
 The lookup key -- `'django'` in this example -- is the engine's [`NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-NAME).
+
+### Built-in backends
+
+##### `class DjangoTemplates`
+
+Set [`BACKEND`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-BACKEND) to `'django.template.backends.django.DjangoTemplates'` to configure a Django template engine.
+
+When [`APP_DIRS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-APP_DIRS) is `True`, `DjangoTemplates` engines look for templates in the `templates` subdirectory of installed applications. This generic name was kept for backwards-compatibility.
+
+`DjangoTemplates` engines accept the following [`OPTIONS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-OPTIONS):
+
+* `'autoescape'`: A Boolean that controls whether HTML autoescaping is enabled.
+
+    It defaults to `True`.
+
+    <hr>
+
+    :warning: **Warning**: Only set it to `False` if you're rendering non-HTML templates!
+
+    <hr>
+
+* `'context_processors'`: A list of dotted Python paths to callables that are used to populate the context when a template is rendered with a request. These callables take a request object as their argument and return a [`dict`](https://docs.python.org/3/library/stdtypes.html#dict) of items to be merged into the context.
+
+    It defaults to an empty list.
+
+    See [`RequestContext`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.RequestContext) for more information.
+
+* `'debug'`: A Boolean that turns on/off template debug mode. If it is `True`, the fancy error page will display a detailed report for any exception raised during template rendering. This report contains the relevant snippet of the tempalte with the appropriate line highlighted.
+
+    It defaults to the value of the [`DEBUG`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DEBUG) setting.
+
+* `'loaders'`: A list of dotted Python paths to template loader classes. Each `Loader` class knows how to import templates from a particular source. optionally, a tuple can be used instead of a string. The first item in the tuple should be the `Loader` class name, and subsequent items are passed to the `Loader` during initialization.
+
+    The default depends on the values of [`DIRS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-DIRS) and [`APP_DIRS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-APP_DIRS).
+
+    See [Loader types](https://docs.djangoproject.com/en/4.0/ref/templates/api/#template-loaders) for details.
+
+* `'string_if_invalid'`: The output, as a string, that the template system should use for invalid (e.g. misspelled) variables.
+
+    It defaults to an empty string.
+
+    See [How invalid variables are handled](https://docs.djangoproject.com/en/4.0/ref/templates/api/#invalid-template-variables) for details.
+
+* `'file_charset'`: The charset used to read template files on disk.
+
+    It defaults to `'utf-8'`.
+
+* `'libraries'`: A dictionary of labels and dotted Python paths of template tag modules to register with the templates engine. This can be used to add new libraries or provide alternate labels for existing ones. For example:
+
+    ```
+    OPTIONS={
+        'libraries': {
+            'myapp_tags': 'path.to.myapp.tags',
+            'admin.urls': 'django.contrib.admin.templatetags.admin_urls',
+        },
+    }
+    ```
+
+    Libraries can be loaded by passing the corresponding dictionary key to the [`{% load %}`](https://docs.djangoproject.com/en/4.0/ref/templates/builtins/#std:templatetag-load) tag.
+
+* `'builtins'`: A list of dotted Python paths of template tag modules to add to [built-ins](https://docs.djangoproject.com/en/4.0/ref/templates/builtins/). For example:
+
+    ```
+    OPTIONS={
+        'builtins': ['myapp.builtins'],
+    }
+    ```
+
+    Tags and filters from built-in libraries can be used without first calling the `{% load %}` tag.
