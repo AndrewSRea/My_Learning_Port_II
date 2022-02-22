@@ -15,3 +15,197 @@ For historical reasons, both the generic support for template engines and the im
 :warning: **Warning**: The template system isn't safe against untrusted template authors. For example, a site shouldn't allow its users to provide their own templates, since template authors can do things like perform XSS attacks and access properties of template variables that may contain sensitive information.
 
 <hr>
+
+## The Django template language
+
+### Syntax
+
+<hr>
+
+**About this section**
+
+This is an overview of the Django template language's syntax. For details, see the [language syntax reference](https://docs.djangoproject.com/en/4.0/ref/templates/language/).
+
+<hr>
+
+A Django tempalte is a text document or a Python string marked-up using the Django template language. Some constructs are recognized and interpreted by the template engine. The main ones are variables and tags.
+
+A template is rendered with a context. Rendering replaces variables with their values, which are looked up in the context, and executes tags. Everything else is output as is.
+
+The syntax of the Django template language involves four constructs.
+
+#### Variables
+
+A variable outputs a value from the context, which is a dict-like object mapping keys to values.
+
+Variables are surrounded by `{{` and `}}` like this:
+```
+My first name is {{ first_name }}. My last name is {{ last_name }}.
+```
+With a context of `{'first_name': 'John', 'last_name': 'Doe'}.`, this template renders to:
+```
+My first name is John. My last name is Doe.
+```
+Dictionary lookups, attribute lookups, and list-index lookups are implemented with a dot notation:
+```
+{{ my_dict.key }}
+{{ my_object.attribute }}
+{{ my_list.0 }}
+```
+If a variable resolves to a callable, the template system will call it with no arguments and use its result instead of the callable.
+
+#### Tags
+
+Tags provide arbitrary logic in the rendering process.
+
+This definition is deliberately vague. For example, a tag can output content, serve as a control structure, e.g. an "if" statement or a "for" loop, grab content from a database, or even enable access to other template tags.
+
+Tags are surrounded by `{%` and `%}` like this:
+```
+{% csrf_token %}
+```
+Most tags accept arguments:
+```
+{% cycle 'odd' 'even' %}
+```
+Some tags require beginning and ending tags:
+```
+{% if user.is_authenticated %}Hello, {{ user.username }}.{% endif %}
+```
+A [reference of built-in tags](https://docs.djangoproject.com/en/4.0/ref/templates/builtins/#ref-templates-builtins-tags) is available as well as [instructions for writing custom tags](https://docs.djangoproject.com/en/4.0/howto/custom-template-tags/#howto-writing-custom-template-tags).
+
+#### Filters
+
+Filters transform the values of variables and tag arguments.
+
+They look like this:
+```
+{{ django|title }}
+```
+With a context of `{'django': 'the web framework for perfectionists with dealines'}`, this template renders to:
+```
+The Web Framework For Perfectionists With Deadlines
+```
+Some filters take an argument:
+```
+{{ my_data|date:"Y-m-d" }}
+```
+A [reference of built-in filters](https://docs.djangoproject.com/en/4.0/ref/templates/builtins/#ref-templates-builtins-filters) is available as well as [instructions for writing custom filters](https://docs.djangoproject.com/en/4.0/howto/custom-template-tags/#howto-writing-custom-template-filters).
+
+#### Comments
+
+Comments look like this:
+```
+{# this won't be rendered #}
+```
+A [`{% comment %}`](https://docs.djangoproject.com/en/4.0/ref/templates/builtins/#std:templatetag-comment) tag provides multi-line comments.
+
+### Components
+
+<hr>
+
+**About this section**
+
+This is an overview of the Django template language's APIs. For details, see the [API reference](https://docs.djangoproject.com/en/4.0/ref/templates/api/).
+
+<hr>
+
+#### Engine
+
+[`django.template.Engine`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.Engine) encapsulates an instance of the Django template system. The main reason for instantiating an [`Engine`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.Engine) directly is to use the Django template language outside of a Django project.
+
+[`django.template.backends.django.DjangoTemplates`](https://docs.djangoproject.com/en/4.0/topics/templates/#django.template.backends.django.DjangoTemplates) is a thin wrapper adapting `django.template.Engine` to Django's template backend API.
+
+#### Template
+
+[`django.template.Template`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.Template) represents a compiled template. Templates are obtained with [`Engine.get_template()`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.Engine.get_template) or [`Engine.from_string()`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.Engine.from_string).
+
+Likewise `django.template.backends.django.Template` is a thin wrapper adapting `django.template.Template` to the common template API.
+
+#### Context
+
+[`django.template.Context`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.Context) holds some metadata in addition to the context data. It is passed to [`Template.render()`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.Template.render) for rendering a template.
+
+[`django.template.RequestContext`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.RequestContext) is a subclass of [`Context`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.Context) that stores the current [`HttpRequest`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest) and runs template context processors.
+
+The common API doesn't have an equivalent concept. Context data is passed in a plain [`dict`](https://docs.python.org/3/library/stdtypes.html#dict) and the current `HttpRequest` is passed separately if needed.
+
+#### Loaders
+
+Template loaders are responsible for locating templates, loading them, and returning [`Template`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.Template) objects.
+
+Django provides several [built-in template loaders](https://docs.djangoproject.com/en/4.0/ref/templates/api/#template-loaders) and supports [custom template loaders](https://docs.djangoproject.com/en/4.0/ref/templates/api/#custom-template-loaders).
+
+#### Context processors
+
+Context processors are functions that receive the current [`HttpRequest`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest) as an argument and return a [`dict`](https://docs.python.org/3/library/stdtypes.html#dict) of data to be added to the rendering context.
+
+Their main use is to add common data shared by all templates to the context without repeating code in every view.
+
+Django provides many [built-in context processors](https://docs.djangoproject.com/en/4.0/ref/templates/api/#context-processors), and you can implement your own additional context processors, too.
+
+## Support for template engines
+
+### Configuration
+
+Template engines are configured with the [`TEMPLATES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES) setting. It's a list of configurations, one for each engine. The default value is empty. The `settings.py` generated by the [`startproject`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-startproject) command defines a more useful value:
+```
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            # ... some options here ...
+        },
+    },
+]
+```
+[`BACKEND`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-BACKEND) is a dotted Python path to a template engine class implementing Django's template backend API. The built-in backends are [`django.template.backends.django.DjangoTemplates`](https://docs.djangoproject.com/en/4.0/topics/templates/#django.template.backends.django.DjangoTemplates) and [`django.template.backends.jinja2.Jinja2`](https://docs.djangoproject.com/en/4.0/topics/templates/#django.template.backends.jinja2.Jinja2).
+
+Since most engines load templates from files, the top-level configuration for each engine contains two common settings:
+
+* [`DIRS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-DIRS) defines a list of directories where the engine should look for template source files, in search order.
+* [`APP_DIRS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-APP_DIRS) tells whether the engine should look for templates inside installed applications. Each backend defines a conventional name for the subdirectory inside applications where its template should be stored.
+
+While uncommon, it's possible to configure several instances of the same backend with different options. In that case, you should define a unique [`NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-NAME) for each engine.
+
+[`OPTIONS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-OPTIONS) contains backend-specific settings.
+
+### Usage
+
+The `django.template.loader` module defines two functions to load templates.
+
+##### `get_template(template_name, using=None)`
+
+This function loads the template with the given name and returns a `Template` object.
+
+The exact type of the return value depends on the backend that loaded the template. Each backend has its own `Template` class.
+
+`get_template()` tries each template engine in order until one succeeds. If the template cannot be found, it raises [`TemplateDoesNotExist`](https://docs.djangoproject.com/en/4.0/topics/templates/#django.template.TemplateDoesNotExist). If the template is found but contains invalid syntax, it raises [`TemplateSyntaxError`](https://docs.djangoproject.com/en/4.0/topics/templates/#django.template.TemplateSyntaxError).
+
+How templates are searched and loaded depends on each engine's backend and configuration.
+
+If you want to restrict the search to a particular template engine, pass the engine's [`NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-NAME) in the `using` argument.
+
+##### `select_template(template_name_list, using=None)`
+
+`select_template()` is just like `get_template()`, except it takes a list of template names. It tries each name in order and returns the first template that exists.
+
+If loading a template fails, the following two exceptions, defined in `django.template`, may be raised:
+
+##### `exception TemplateDoesNotExist(msg, tried=None, backend=None, chain=None)`
+
+This exception is raised when a template cannot be found. It accepts the following optional arguments for populating the [template postmortem](https://docs.djangoproject.com/en/4.0/howto/custom-template-backend/#template-postmortem) on the debug page:
+
+**`backend`**
+
+The template backend instance from which the exception originated.
+
+**`tried`**
+
+A list of sources that were tried when finding the template. This is formatted as a list of tuples containing `(origin, status)`, where `origin` is an [origin-like](https://docs.djangoproject.com/en/4.0/howto/custom-template-backend/#template-origin-api) object and `status` is a string with the reason the template wasn't found.
+
+**`chain`**
+
+A list of intermediate [`TemplateDoesNotExist`](https://docs.djangoproject.com/en/4.0/topics/templates/#django.template.TemplateDoesNotExist) exceptions raised when trying to load a template. This is used by functions, such as [`get_template()`](), <!-- above --> that try to load a given template from multiple engines.
