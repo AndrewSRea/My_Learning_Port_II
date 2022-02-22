@@ -99,4 +99,4 @@ When you want to update your copy of the Django source code, run the command `gi
 
 <hr>
 
-[[Back to the Django Documentation Table of Contents]]() - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Install_Django#how-to-install-django) - [[Next module: Models and databases]]()
+[[Back to the Django Documentation Table of Contents]]() - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Install_Django#how-to-install-django) - [[Next module: Models and databases]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases#models-and-databases)
