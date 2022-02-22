@@ -208,4 +208,117 @@ A list of sources that were tried when finding the template. This is formatted a
 
 **`chain`**
 
-A list of intermediate [`TemplateDoesNotExist`](https://docs.djangoproject.com/en/4.0/topics/templates/#django.template.TemplateDoesNotExist) exceptions raised when trying to load a template. This is used by functions, such as [`get_template()`](), <!-- above --> that try to load a given template from multiple engines.
+A list of intermediate [`TemplateDoesNotExist`](https://docs.djangoproject.com/en/4.0/topics/templates/#django.template.TemplateDoesNotExist) exceptions raised when trying to load a template. This is used by functions, such as [`get_template()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Templates#get_templatetemplate_name-usingnone), that try to load a given template from multiple engines.
+
+##### `exception TemplateSyntaxError(msg)`
+
+This exception is raised when a template was found but contains errors.
+
+`Template` objects returned by `get_template()` and `select_template()` must provide a `render()` method with the following signature:
+
+##### `Template.render(context=None, request=None)`
+
+Renders this template with a given context.
+
+If `context` is provided, it must be a [`dict`](). If it isn't provided, the engine will render the template with an empty context.
+
+If `request` is provided, it must be an [`HttpRequest`](). Then the engine must make it, as well as the CSRF token, available in the template. How this is achieved is up to each backend.
+
+Here's an example of the search algorithm. For this example, the [`TEMPLATES`]() setting is:
+```
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [
+            '/home/html/example.com',
+            '/home/html/default',
+        ],
+    },
+    {
+        'BACKEND': 'django.template.backends.jinja2.Jinja2',
+        'DIRS': [
+            '/home/html/jinja2',
+        ],
+    },
+]
+```
+If you call `get_template('story_detail.html')`, here are the files Django will look for, in order:
+
+* `/home/html/example.com/story_detail.html` (`'django'` engine)
+* `/home/html/default/story_detail.html` (`'django'` engine)
+* `/home/html/jinja2/story_detail.html` (`'jinja2'` engine)
+
+If you call `select_template(['story_253_detail.html', 'story_detail.html'])`, here's what Django will look for:
+
+* `/home/html/example.com/story_253_detail.html` (`'django'` engine)
+* `/home/html/default/story_253_detail.html` (`'django'` engine)
+* `/home/html/jinja2/story_253_detail.html` (`'jinja2'` engine)
+* `/home/html/example.com/story_detail.html` (`'django'` engine)
+* `/home/html/default/story_detail.html` (`'django'` engine)
+* `/home/html/jinja2/story_detail.html` (`'jinja2'` engine)
+
+When Django finds a template that exists, it stops looking.
+
+<hr>
+
+**Tip**
+
+You can use [`select_template()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Templates#select_templatetemplate_name_list-usingnone) for flexible template loading. For example, if you've written a news story and want some stories to have custom templates, use something like `select_template(['story_%s_detail.html' % story.id, 'story_detail.html'])`. That'll allow you to use a custom template for an individual story, with a fallback template for stories that don't have custom templates.
+
+<hr>
+
+It's possible -- and preferable -- to organize templates in subdirectories inside each directory containing templates. The convention is to make a subdirectory for each Django app, with subdirectories within those subdirectories as needed.
+
+Do this for your own sanity. Storing all templates in the root level of a single directory gets messy.
+
+To load a template that's within a subdirectory, use a slash, like so:
+```
+get_template('news/story_detail.html')
+```
+Using the same [`TEMPLATES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES) option as above, this will attempt to load the following templates:
+
+* `/home/html/example.com/news/story_detail.html` (`'django'` engine)
+* `/home/html/default/news/story_detail.html` (`'django'` engine)
+* `/home/html/jinja2/news/story_detail.html` (`'jinja2'` engine)
+
+In addition, to cut down on the repetitive nature of loading and rendering templates, Django provides a shortcut function which automates the process.
+
+##### `render_to_string(template_name, context=None, request=None, using=None)`
+
+`render_to_string()` loads a template like [`get_template()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Templates#get_templatetemplate_name-usingnone) and calls its `render()` method immediately. It takes the following arguments.
+
+**`template_name`**
+
+The name of the template to load and render. If it's a list of template names, Django uses [`select_template()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Templates#select_templatetemplate_name_list-usingnone) instead of [`get_template()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Templates#get_templatetemplate_name-usingnone) to find the template.
+
+**`context`**
+
+A [`dict`](https://docs.python.org/3/library/stdtypes.html#dict) to be used as the template's context for rendering.
+
+**`request`**
+
+An optional [`HttpRequest`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest) that will be available during the template's rendering process.
+
+**`using`**
+
+An optional template engine [`NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-NAME). The search for the template will be restricted to that engine.
+
+Usage example:
+```
+from django.template.loader import render_to_string
+rendered = render_to_string('my_template.html', {'foo': 'bar'})
+```
+See also the [`render()`](https://docs.djangoproject.com/en/4.0/topics/http/shortcuts/#django.shortcuts.render) shortcut which calls [`render_to_string()`]() <!-- above --> and feeds the result into an [`HttpResponse`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse) suitable for returning from a view.
+
+Finally, you can use configured engines directly:
+
+##### `engines`
+
+Template engines are available in `django.template.engines`:
+```
+from django.template import engines
+
+django_engine = engines['django']
+template = django_engine.from_string("Hello {{ name }}!")
+```
+The lookup key -- `'django'` in this example -- is the engine's [`NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-NAME).
