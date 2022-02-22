@@ -527,8 +527,8 @@ class MyForm(forms.Form):
 This covers the basic, but forms can do a whole lot more:
 
 * [Formsets](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Formsets#formsets)
-* [Creating forms from models]()
-* [Form Assets (the `Media` class)]()
+* [Creating forms from models](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Creating_Forms_from_Models#creating-forms-from-models)
+* [Form Assets (the `Media` class)](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Form_Assets#form-assets-the-media-class)
 
 <hr>
 
