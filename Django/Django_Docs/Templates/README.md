@@ -391,3 +391,78 @@ When [`APP_DIRS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:settin
     ```
 
     Tags and filters from built-in libraries can be used without first calling the `{% load %}` tag.
+
+##### `class Jinja2`
+
+Requires [Jinja2](https://jinja.palletsprojects.com/en/3.0.x/) to be installed:
+```
+$ python -m pip install Jinja2
+```
+Set [`BACKEND`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-BACKEND) to `'django.template.backends.jinja2.Jinja2'` to configure a Jinja2 engine.
+
+When [`APP_DIRS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-APP_DIRS) is `True`, `Jinja2` engines look for templates in the `jinja2` subdirectory of installed applications.
+
+The most important entry in [`OPTIONS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-OPTIONS) is `'environment'`. It's a dotted Python path to a callable returning a Jinja2 environment. It defaults to `'jinja2.Environment'`. Django invokes that callable and passes other options as keyword arguments. Furthermore, Django adds defaults that differ from Jinja2's for a few options:
+
+* `'autoescape'`: `True`
+* `'loader'`: A loader configured for [`DIRS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-DIRS) and [`APP_DIRS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-APP_DIRS).
+* `'auto_reload'`: `settings.DEBUG`
+* `'undefined'`: `DebugUndefined if settings.DEBUG else Undefined`
+
+`Jinja2` engines also accept the following [`OPTIONS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEMPLATES-OPTIONS):
+
+* `'context_processors'`: A list of dotted Python paths to callables that are used to populate the context when a template is rendered with a request. These callables take a request object as their argument and return a [`dict`](https://docs.python.org/3/library/stdtypes.html#dict) of items to be merged into the context.
+
+    It defaults to an empty list.
+
+    <hr>
+
+    **Using context processors with Jinja2 templates is discouraged.**
+
+    Context processors are useful with Django templates because Django templates don't support calling functions with arguments. Since Jinja2 doesn't have tha limitation, it's recommended to put the function that you would use as a context processor in the global variables available to the template using `jinja2.Environment` as described below. You can then call that function in the template:
+    ```
+    {{ function(request) }}
+    ```
+    Some Django templates context processors return a fixed value. For Jinja2 templates, this layer of indirection isn't necessary since you can add constants directly in `jinja2.Environment`.
+
+    The original use case for adding context processors for Jinja2 involved:
+
+    - Making an expensive computation that depends on the request.
+    - Needing the result in every template.
+    - Using the result multiple times in each template.
+
+    Unless all of these conditions are met, passing a function to the template is more in line with the design of Jinja2.
+
+    <hr>
+
+The default configuration is purposefully kept to a minimum. If a template is rendered with a request (e.g. when using [`render()`]()), the `Jinja2` backend adds the globals `request`, `csrf_input`, and `csrf_token` to the context. Apart from that, this backend doesn't create a Django-flavored environment. It doesn't know about Django filters and tags. In order to use Django-specific APIs, you must configure them into the environment.
+
+For example, you can create `myproject/jinja2.py` with this content:
+```
+from django.templatetags.static import static
+from django.urls import reverse
+
+from jinja2 import Environment
+
+
+def environment(**options):
+    env = Environment(**options)
+    env.globals.update({
+        'static': static,
+        'url': reverse,
+    })
+    return env
+```
+...and set the `'environment'` option to `'myproject.jinja2.environment'`.
+
+Then you could use the following constructs in Jinja2 templates:
+```
+<img src="{{ static('path/to/company-logo.png') }}" alt="Company Logo">
+
+<a href="{{ url('admin:index') }}">Administration</a>
+```
+The concepts of tags and filters exist both in the Django template language and in Jinja2 but they're used differently. Since Jinja2 supports passing arguments to callables in templates, many features that require a template tag or filter in Django templates can be achieved by calling a function in Jinja2 templates, as shown in the example above. Jinja2's global namespace removes the need for template context processors. The Django template language doesn't have an equivalent of Jinja2 tests.
+
+<hr>
+
+[[Previous module: Working with Forms]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms#working-with-forms) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Templates#templates) - [[Next module: Class-based Views]]()
