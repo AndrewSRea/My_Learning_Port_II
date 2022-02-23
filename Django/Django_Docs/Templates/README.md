@@ -465,4 +465,4 @@ The concepts of tags and filters exist both in the Django template language and 
 
 <hr>
 
-[[Previous module: Working with Forms]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms#working-with-forms) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Templates#templates) - [[Next module: Class-based Views]]()
+[[Previous module: Working with Forms]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms#working-with-forms) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Templates#templates) - [[Next module: Class-based Views]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views#class-based-views)
