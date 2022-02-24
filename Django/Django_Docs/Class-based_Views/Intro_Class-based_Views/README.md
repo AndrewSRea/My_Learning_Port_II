@@ -94,3 +94,115 @@ For example, in the generic class-based views there is a mixin called [`Template
 Mixins are an excellent way of reusing code across multiple classes, but they come with some cost. The more your code is scattered among mixins, the harder it will be to read a child class and know what exactly it is doing, and the harder it will be to know which methods from which mixins to override if you are subclassing something that has a deep inheritance tree.
 
 Note also that you can only inherit from one generic view -- that is, only one parent class may inherit from [`View`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/base/#django.views.generic.base.View) and the rest (if any) should be mixins. Trying to inherit from more than one class that inherits from `View` -- for example, trying to use a form at the top of a list and combining [`ProcessFormView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-editing/#django.views.generic.edit.ProcessFormView) and [`ListView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/generic-display/#django.views.generic.list.ListView) -- won't work as expected.
+
+## Handling forms with class-based views
+
+A basic function-based view that handles forms may look something like this:
+```
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+
+from .forms import MyForm
+
+def myview(request):
+    if request.method == "POST":
+        form = MyForm(request.POST)
+        if form.is_valid():
+            # <process form cleaned data>
+            return HttpResponseRedirect('/success/')
+    else:
+        form = MyForm(initial={'key': 'value'})
+
+
+    return render(request, 'form_template.html', {'form': form})
+```
+A similar class-based view might look like:
+```
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from django.views import View
+
+from .forms import MyForm
+
+class MyFormView(View):
+    form_class = MyForm
+    initial = {'key': 'value'}
+    template_name = 'form_template.html'
+
+    def get(self, request, *args, **kwargs):
+        form = self.form_class(request.POST)
+        if form.is_valid():
+            # <process form cleaned data>
+            return HttpResponseRedirect('/success/')
+
+        return render(request, self.template_name, {'form': form})
+```
+This is a minimal case, but you can see that you would then have the option of customizing this view by overriding any of the class attributes, e.g. `form_class`, via URLconf configuration, or subclassing and overriding one or more of the methods (or both!).
+
+## Decorating class-based views
+
+The extension of class-based views isn't limited to using mixins. You can also use decorators. Since class-based views aren't functions, decorating them works differently depending on if you're using `as_view()` or creating a subclass.
+
+### Decorating in URLconf
+
+You can adjust class-based views by decorating the result of the [`as_view()`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/base/#django.views.generic.base.View.as_view) method. The easiest place to do this is in the URLconf where you deploy your view:
+```
+from django.contrib.auth.decorators import login_required, permission_required
+from django.views.generic import TemplateView
+
+from .views import VoteView
+
+urlpatterns = [
+    path('about/', login_required(TemplateView.as_view(template_name="secret.html"))),
+    path('vote/', permission_required('polls.can_vote')(VoteView.as_view())),
+]
+```
+This approach applies the decorator on a per-instance basis. If you want every instance of a view to be decorated, you need to take a different approach.
+
+### Decorating the class
+
+To decorate every instance of a class-based view, you need to decorate the class definition itself. To do this, you apply the decorator to the [`dispatch()`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/base/#django.views.generic.base.View.dispatch) method of the class.
+
+A method on a class isn't quite the same as a standalone function, so you can't just apply a function decorator to the method -- you need to transform it into a method decorator first. The `method_decorator` transforms a function decorator into a method decorator so that it can be used on an instance method. For example:
+```
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from django.views.generic import TemplateView
+
+class ProtectedView(TemplateView):
+    template_name = 'secret.html'
+
+    @method_decorator(login_required)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+```
+Or, more succinctly, you can decorate the class instead and pass the name of the method to be decorated as the keyword argument `name`:
+```
+@method_decorator(login_required, name='dispatch')
+class ProtectedView(TemplateView):
+    template_name = 'secret.html'
+```
+If you have a set of common decorators used in several places, you can define a list or tuple of decorators and use this instead of invoking `method_decorator()` multiple times. These two classes are equivalent:
+```
+decorators = [never_cache, login_required]
+
+@method_decorator(decorators, name='dispatch')
+class ProtectView(TemplateView):
+    template_name = 'secret.html'
+
+@method_decorator(never_cache, name='dispatch')
+@method_decorator(login_required, name='dispatch')
+class ProtectedView(TemplateView):
+    template_name = 'secret.html'
+```
+The decorators will process a request in the order they are passed to the decorator. In the example, `never_cache()` will process the request before `login_required()`.
+
+In this example, every instance of `ProtectedView` will have login protection. These examples use `login_required`, however, the same behavior can be obtained by using [`LoginRequiredMixin`](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.mixins.LoginRequiredMixin).
+
+<hr>
+
+**Note**: `method_decorator` passes `*args` and `**kwargs` as parameters to the decorated method on the class. If your method does not accept a compatible set of parameters, it will raise a `TypeError` exception.
+
+<hr>
+
+[[Back to Class-based Views opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views#class-based-views) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Intro_Class-based_Views#introduction-to-class-based-views) - [[Next page]]()
