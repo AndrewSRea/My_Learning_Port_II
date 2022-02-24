@@ -104,4 +104,95 @@ This template will be rendered against a context containing a variable called `o
     </ul>
 {% endblock %}
 ```
-That's really all there is to it. All the cool features of generic views come from changing the attributes set on the generic view. The [generic views reference](https://docs.djangoproject.com/en/4.0/ref/class-based-views/) documents all the generic views and their options in detail; the rest of this document will consider some of the common ways you might customize and extend generic views.
+That's really all there is to it. All the cool features of generic views come from changing the attributes set on the generic view. The [generic views reference](https://docs.djangoproject.com/en/4.0/ref/class-based-views/ ) documents all the generic views and their options in detail; the rest of this document will consider some of the common ways you might customize and extend generic views.
+
+### Making "friendly" template contexts
+
+You might have noticed that our sample publisher list template stores all the publishers in a variable named `object_list`. While this works just fine, it isn't all that "friendly" to template authors: they have to "just know" that they're dealing with publishers here.
+
+Well, if you're dealing with a model object, this is already done for you. When you are dealing with an object or queryset, Django is able to populate the context using the lowercased version of the model class' name. This is provided in addition to the default `object_list` entry, but contains exactly the same data, i.e. `publisher_list`.
+
+If this still isn't a good match, you can manually set the name of the context variable. The `context_object_name` attribute on a generic view specifies the context variable to use:
+```
+# views.py
+from django.views.generic import ListView
+from books.models import Publisher
+
+class PublisherListView(ListView):
+    model = Publisher
+    context_object_name = 'my_favorite_publishers'
+```
+Providing a useful `context_object_name` is always a good idea. Your coworkers who design templates will thank you.
+
+### Adding extra context
+
+Often you need to present some extra information beyond that provided by the generic view. For example, think of showing a list of all the books on each publisher detail page. The [`DetailView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/generic-display/#django.views.generic.detail.DetailView) generic view provides the publisher to the context, but how do we get additional information in that template?
+
+The answer is to subclass `DetailView` and provide your own implementation of the `get_context_data` method. The default implementation adds the object being displayed to the template, but you can override it to send more:
+```
+from django.views.generic import DetailView
+from books.models import Book, Publisher
+
+class PublisherDetailView(DetailView):
+
+    model = Publisher
+
+    def get_context_data(self, **kwargs):
+        # Call the base implementation first to get a context
+        context = super().get_context_data(**kwargs)
+        # Add in a QuerySet of all the books
+        context['book_list'] = Book.objects.all()
+        return context
+```
+
+<hr>
+
+**Note**: Generally, `get_context_data` will merge the context data of all parent classes with those of the current class. To preserve this behavior in your own classes where you want to alter the context, you should be sure to call `get_context_data` on the super class. When no two classes try to define the same key, this will give the expected results. However, if any class attempts to override a key after parent classes have set it (after the call to `super()`), any children of that class will also need to explicitly set it after `super` if they want to be sure to override all parents. If you're having trouble, review the method resolution order of your view.
+
+Another consideration is that the context data from class-based generic views will override data provided by context processors; see [`get_context_data()`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-single-object/#django.views.generic.detail.SingleObjectMixin.get_context_data) for an example.
+
+<hr>
+
+### Viewing subsets of objects
+
+Now let's take a closer look at the `model` argument we've been using all along. The `model` argument, which specifies the database model that the view will operate upon, is available on all the generic views that operate on a single object or a collection of objects. However, the `model` argument is not the only way to specify the objects that the view will operate upon -- you can also specify the list of objects using the queryset argument:
+```
+from django.views.generic import DetailView
+from books.models import Publisher
+
+class PublisherDetailView(DetailView):
+
+    context_object_name = 'publisher'
+    queryset = Publisher.objects.all()
+```
+Specifying `model = Publisher` is shorthand for saying `queryset = Publisher.objects.all()`. However, by using `queryset` to define a filtered list of objects, you can be more specific about the objects that will be visible in the view (see [Making queries](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#making-queries) for more information about [`QuerySet`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet) objects, and see the [class-based views reference](https://docs.djangoproject.com/en/4.0/ref/class-based-views/) for the complete details).
+
+To pick an example, we might want to order a list of books by publication date, with the most recent first:
+```
+from django.views.generic import ListView
+from books.models import Book
+
+class BookListView(ListView):
+    queryset = Book.objects.order_by('-publication_date')
+    context_object_name = 'book_list'
+```
+That's a pretty minimal example, but it illustrates the idea nicely. You'll usually want to do more than just reorder objects. If you want to present a list of books by a particular publisher, you can use the same technique:
+```
+from django.views.generic import ListView
+from books.models import Book
+
+class AcmeBookListView(ListView):
+
+    context_object_name = 'book_list'
+    queryset = Book.objects.filter(publisher__name='ACME Publishing')
+    template_name = 'books/acme_list.html'
+```
+Notice that along with a filtered `queryset`, we're also using a custom template name. If we didn't, the generic view would use the same template as the "vanilla" object list, which might not be what we want.
+
+Also notice that this isn't a very elegant way of doing publisher-specific books. If we want to add another publisher page, we'd need another handful of lines in the URLconf, and more than a few publishers would get unreasonable. We'll deal with this problem in the next section.
+
+<hr>
+
+**Note**: If you get a 404 when requesting `/books/acme/`, check to ensure you actually have a Publisher with the name 'ACME Publishing'. Generic views have an `allow_empty` parameter for this case. See the [class-based views reference](https://docs.djangoproject.com/en/4.0/ref/class-based-views/) for more details.
+
+<hr>
