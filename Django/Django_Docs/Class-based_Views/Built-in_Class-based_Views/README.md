@@ -196,3 +196,106 @@ Also notice that this isn't a very elegant way of doing publisher-specific books
 **Note**: If you get a 404 when requesting `/books/acme/`, check to ensure you actually have a Publisher with the name 'ACME Publishing'. Generic views have an `allow_empty` parameter for this case. See the [class-based views reference](https://docs.djangoproject.com/en/4.0/ref/class-based-views/) for more details.
 
 <hr>
+
+### Dynamic filtering
+
+Another common need is to filter down the objects given in a list page by some key in the URL. Earlier we hard-coded the publisher's name in the URLconf, but what if we wanted to write a view that displayed all the books by some arbitrary publisher?
+
+Handily, the `ListView` has a [`get_queryset()`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-multiple-object/#django.views.generic.list.MultipleObjectMixin.get_queryset) method we can override. By default, it returns the value of the `queryset` attribute, but we can use it to add more logic.
+
+The key part to making this work is that when class-based views are called, various useful things are stored on `self`; as well as the request (`self.request`), this includes the positional (`self.args`) and name-based (`self.kwargs`) arguments captured according to the URLconf.
+
+Here, we have a URLconf with a single captured group:
+```
+# urls.py
+from django.urls import path
+from books.views import PublisherBookListView
+
+urlpatterns = [
+    path('books/<publisher>/', PublisherBookListView.as_view()),
+]
+```
+Next, we'll write the `PublisherBookListView` view itself:
+```
+# views.py
+from django.shortcuts import get_object_or_404
+from django.views.generic import ListView
+from books. models import Book, Publisher
+
+class PublisherBookListView(ListView):
+
+    template_name = 'books/books_by_publisher.html'
+
+    def get_queryset(self):
+        self.publisher = get_object_or_404(Publisher, name=self.kwargs['publisher'])
+        return Book.objects.filter(publisher=self.publisher)
+```
+Using `get_queryset` to add logic to the queryset selection is as convenient as it is powerful. For instance, if we wanted, we could use `self.request.user` to filter using the current user, or other more complex logic.
+
+We can also add the publisher into the context at the same time, so we can use it in the template:
+```
+# ...
+
+def get_context_data(self, **kwargs):
+    # Call the base implementation first to get a context
+    context = super().get_context_data(**kwargs)
+    # Add in the publisher
+    context['publisher'] = self.publisher
+    return context
+```
+
+### Performing extra work
+
+The last common pattern we'll look at involves doing some extra work before or after calling the generic view.
+
+Imagine we had a `last_accessed` field on our `Author` model that we were using to keep track of the last time anybody looked at that author:
+```
+# models.py
+from django.db import models
+
+class Author(models.Model):
+    salutation = models.CharField(max_length=10)
+    name = models.CharField(max_length=200)
+    email = models.EmailField()
+    headshot = models.ImageField(upload_to='author_headshots')
+    last_accessed = models.DateTimeField()
+```
+The generic `DetailView` class wouldn't know anything about this field, but once again we could write a custom view to keep that field updated.
+
+First, we'd need to add an author detail bit in the URLconf to point to a custom view:
+```
+from django.urls import path
+from books.views import AuthorDetailView
+
+urlpatterns = [
+    # ...
+    path('authors/<int:pk>/', AuthorDetailView.as_view(), name='author-detail'),
+]
+```
+Then we'd write our new view -- `get_object` is the method that retrieves the object -- so we override it and wrap the call:
+```
+from django.utils import timezone
+from django.views.generic import DetailView
+from books.models import Author
+
+class AuthorDetailView(DetailView):
+
+    queryset = Author.objects.all()
+
+    def get_object(self):
+        obj = super().get_object()
+        # Record the last accessed date
+        obj.last_accessed = timezone.now()
+        obj.save()
+        return obj
+```
+
+<hr>
+
+**Note**: The URLconf here uses the named group `pk` -- this name is the default name that `DetailView` uses to find the value of the primary key used to filter the queryset.
+
+If you want to call the group something else, you can set [`pk_url_kwarg`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-single-object/#django.views.generic.detail.SingleObjectMixin.pk_url_kwarg) on the view.
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Intro_Class-based_Views#introduction-to-class-based-views) - [[Top]]() - [[Next page]]()
