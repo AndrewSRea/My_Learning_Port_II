@@ -205,4 +205,4 @@ In this example, every instance of `ProtectedView` will have login protection. T
 
 <hr>
 
-[[Back to Class-based Views opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views#class-based-views) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Intro_Class-based_Views#introduction-to-class-based-views) - [[Next page]]()
+[[Back to Class-based Views opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views#class-based-views) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Intro_Class-based_Views#introduction-to-class-based-views) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Built-in_Class-based_Views#built-in-class-based-generic-views)
