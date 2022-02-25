@@ -96,3 +96,113 @@ class AuthorDeleteView(DeleteView):
     model = Author
     success_url = reverse_lazy('author-list')
 ```
+
+<hr>
+
+**Note**: We have to use [`reverse_lazy()`](https://docs.djangoproject.com/en/4.0/ref/urlresolvers/#django.urls.reverse_lazy) instead of `reverse()`, as the urls are not loaded when the file is imported.
+
+<hr>
+
+The `fields` attribute works the same way as the `fields` attribute on the inner `Meta` class on [`ModelForm`](https://docs.djangoproject.com/en/4.0/topics/forms/modelforms/#django.forms.ModelForm). Unless you define the form class in another way, the attribute is required and the view will raise an [`ImproperlyConfigured`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.ImproperlyConfigured) exception if it's not.
+
+If you specify both the [`fields`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-editing/#django.views.generic.edit.ModelFormMixin.fields) and [`form_class`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-editing/#django.views.generic.edit.FormMixin.form_class) attributes, an `ImproperlyConfigured` exception will be raised.
+
+Finally, we hook these new views into the URLconf:
+```
+# urls.py
+from django.urls import path
+from myapp.views import AuthorCreateView, AuthorDeleteView, AuthorUpdateView
+
+urlpatterns = [
+    # ...
+    path('author/add/', AuthorCreateView.as_view(), name='author-add'),
+    path('author/<int:pk>/', AuthorUpdateView.as_view(), name='author-update'),
+    path('author/<int:pk>/delete/', AuthorDeleteView.as_view(), name='author-delete'),
+]
+```
+
+<hr>
+
+**Note**: These views inherit [`SingleObjectTemplateResponseMixin`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-single-object/#django.views.generic.detail.SingleObjectTemplateResponseMixin) which uses [`template_name_suffix`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-single-object/#django.views.generic.detail.SingleObjectTemplateResponseMixin.template_name_suffix) to construct the [`template_name`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-simple/#django.views.generic.base.TemplateResponseMixin.template_name) based on the model.
+
+In this example:
+
+* [`CreateView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/flattened-index/#CreateView) and [`UpdateView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/flattened-index/#UpdateView) use `myapp/author_form.html`
+* [`DeleteView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/flattened-index/#DeleteView) uses `myapp/author_confirm_delete.html`
+
+If you wish to have separate tempaltes for `CreateView` and `UpdateView`, you can set either `template_name` or `template_name_suffix` on your view class.
+
+<hr>
+
+## Models and `request.user`
+
+To track the user that created an object using a [`CreateView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/flattened-index/#CreateView), you can use a custom [`ModelForm`](https://docs.djangoproject.com/en/4.0/topics/forms/modelforms/#django.forms.ModelForm) to do this. First, add the foreign key relation to the model:
+```
+# modles.py
+from django.contrib.auth.models import User
+from django.db import models
+
+class Author(models.Model):
+    name = models.CharField(max_length=200)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    # ...
+```
+In the view, ensure that you don't include `created_by` in the list of fields to edit, and override [`form_valid()`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-editing/#django.views.generic.edit.ModelFormMixin.form_valid) to add the user:
+```
+# views.py
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.view.generic.edit import CreateView
+from myapp.models import Author
+
+class AuthorCreateView(LoginRequiredMixin, CreateView):
+    model = Author
+    fields = ['name']
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        return super().form_valid(form)
+```
+[`LoginRequiredMixin`](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.mixins.LoginRequiredMixin) prevents users who aren't logged in from accessing the form. If you omit that, you'll need to handle unauthorized users in [`form_valie()`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-editing/#django.views.generic.edit.ModelFormMixin.form_valid).
+
+## Content negotiation example
+
+Here is an example showing how might go along implementing a form that works with an API-based workflow as well as "normal" form `POST`s:
+```
+from django.http import JsonResponse
+from django.views.generic.edit import CreateView
+from myapp.models import Author
+
+class JsonableResponseMixin:
+    """
+    Mixin to add JSON support to a form.
+    Must be used with an object-based FormView (e.g. CreateView)
+    """
+    def form_invalid(self, form):
+        response = super().form_invalid(form)
+        if self.request.accepts('text/html'):
+            return response
+        else:
+            return JsonResponse(form.errors, status=400)
+
+    def form_valid(self, form):
+        # We make sure to call the parent's form_valid() method because
+        # it might do some processing (in the case of CreateView, it will
+        # call form.save() for example).
+        response = super().form_valid(form)
+        if self.request.accepts('text/html'):
+            return response
+        else:
+            data = {
+                'pk': self.object.pk,
+            }
+            return JsonResponse(data)
+
+class AuthorCreateView(JsonableResponseMixin, CreateView):
+    model = Author
+    fields = ['name']
+```
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Built-in_Class-based_Views#built-in-class-based-generic-views) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Form_Handling_Class-based_Views#form-handling-with-class-based-views) - [[Next page]]()
