@@ -205,4 +205,4 @@ class AuthorCreateView(JsonableResponseMixin, CreateView):
 
 <hr>
 
-[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Built-in_Class-based_Views#built-in-class-based-generic-views) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Form_Handling_Class-based_Views#form-handling-with-class-based-views) - [[Next page]]()
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Built-in_Class-based_Views#built-in-class-based-generic-views) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Form_Handling_Class-based_Views#form-handling-with-class-based-views) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Mixins_Class-based_Views)
