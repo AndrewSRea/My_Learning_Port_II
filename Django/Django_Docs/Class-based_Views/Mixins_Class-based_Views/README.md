@@ -149,7 +149,7 @@ class PublisherDetailView(SingleObjectMixin, ListView):
 ```
 Notice how we set `self.object` within `get()` so we can use it again later in `get_context_data()` and `get_queryset()`. If you don't set `template_name`, the template will default to the normal [`ListView`]() choice, which in this case would be `"books/book_list.html"` because it's a list of books; `ListView` knows nothing about [`SingleObjectMixin`](), so it doesn't have any clue this view is anything to do with a `Publisher`.
 
-The `paginate_by` is deliberately small in the example so you don't have to create lots of books to see the pagination working! Here's the tempalte you'd want to use:
+The `paginate_by` is deliberately small in the example so you don't have to create lots of books to see the pagination working! Here's the template you'd want to use:
 ```
 {% extends "base.html" %}
 
@@ -179,3 +179,77 @@ The `paginate_by` is deliberately small in the example so you don't have to crea
     </div>
 {% endblock %}
 ```
+
+## Avoid anything more complex
+
+Generally you can use [`TemplateResponseMixin`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-simple/#django.views.generic.base.TemplateResponseMixin) and [`SingleObjectMixin`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-single-object/#django.views.generic.detail.SingleObjectMixin) when you need their functionality. As shown above, with a bit of care you can even combine `SingleObjectMixin` with [`ListView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/generic-display/#django.views.generic.list.ListView). However, things get increasingly complex as you try to do so, and a good rule of thumb is:
+
+<hr>
+
+**Hint**: Each of your views should use only mixins or views from one of the groups of generic class-based views: [detail](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Built-in_Class-based_Views#built-in-class-based-generic-views), [list](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Built-in_Class-based_Views#built-in-class-based-generic-views), [editing](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Form_Handling_Class-based_Views#form-handling-with-class-based-views), and date. For example, it's fine to combine [`TemplateView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/flattened-index/#TemplateView) (built-in view) with [`MultipleObjectMixin`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-multiple-object/#django.views.generic.list.MultipleObjectMixin) (generic list), but you're likely to have problems combining `SingleObjectMixin` (generic detail) with `MultipleObjectMixin` (generic list).
+
+<hr>
+
+To show what happens when you try to get more sophisticated, we show an example that sacrifices readability and maintainability when there is a simpler solution. First, let's look at a naive attempt to combine [`DetailView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/generic-display/#django.views.generic.detail.DetailView) with [`FormMixin`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-editing/#django.views.generic.edit.FormMixin) to enable us to `POST` a Django [`Form`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form) to the same URL as we're displaying an object using [`DetailView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/flattened-index/#DetailView).
+
+### Using `FormMixin` with `DetailView`
+
+Think back to our earlier example of using [`View`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/flattened-index/#View) and [`SingleObjectMixin`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-single-object/#django.views.generic.detail.SingleObjectMixin) together. We were recording a user's interest in a particular author; say now that we want to let them leave a message saying why they like them. Again, let's assume we're not going to store this in a relational database but instead in something more esoteric that we won't worry about here.
+
+At this point, it's natural to reach for a [`Form`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form) to encapsulate the information sent from the user's browser to Django. Say also that we're heavily invested in [REST](https://en.wikipedia.org/wiki/Representational_state_transfer), so we want to use the same URL for displaying the author as for capturing the message from the user. Let's rewrite our `AuthorDetailView` to do that.
+
+We'll keep the `GET` handling from [`DetailView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/flattened-index/#DetailView), although we'll have to add a `Form` into the context data so we can render it in the template. We'll also want to pull in form processing from [`FormMixin`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-editing/#django.views.generic.edit.FormMixin), and write a bit of code so that on `POST` the form gets called appropriately.
+
+<hr>
+
+**Note**: We use `FormMixin` and implement `post()` ourselves rather than try to mix `DetailView` with [`FormView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/flattened-index/#FormView) (which provides a suitable `post()` already) because both of the views implement `get()`, and things would get much more confusing.
+
+<hr>
+
+Our new `AuthorDetailView` looks like this:
+```
+# CAUTION: you almost certainly do not want to do this.
+# It is provided as part of a discussion of problems you can run into when combining 
+# different generic class-based view functionality that is not designed to be used together.
+
+from django import forms
+from django.http import HttpResponseForbidden
+from django.urls import reverse
+from django.views.generic import DetailView
+from django.views.generic.edit import FormMixin
+from books.models import Author
+
+class AuthorInterestForm(forms.Form):
+    message = forms.CharField()
+
+class AuthorDetailView(FormMixin, DetailView):
+    model = Author
+    form_class = AuthorInterestForm
+
+    def get_success_url(self):
+        return reverse('author-detail', kwargs={'pk': self.object.pk})
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return HttpResponseForbidden()
+        self.object = self.get_object()
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+
+    def form_valid(self, form):
+        # Here, we would record the user's interest using the message
+        # passed in form.cleaned_data['message']
+        return super().form_valid(form)
+```
+`get_success_url()` provides somewhere to redirect to, which gets used in the default implementation of `form_valid()`. We have to provide our own `post()` as noted earlier.
+
+### A better solution
+
+The number of subtle interactions between [`FormMixin`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-editing/#django.views.generic.edit.FormMixin) and [`DetailView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/flattened-index/#DetailView) is already testing our ability to manage things. It's unlikely you'd want to write this kind of class yourself.
+
+In this case, you could write the `post()` method yourself, keeping `DetailView` as the only generic functionality, although writing [`Form`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form) handling code involves a lot of duplication.
+
+Alternatively, it would still be less work than the above approach to have a separate view for processing the form, which could use [`FormView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/generic-editing/#django.views.generic.edit.FormView) distinct from `DetailView` without concerns.
