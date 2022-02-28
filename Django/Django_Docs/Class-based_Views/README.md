@@ -5,7 +5,7 @@ A view is a callable which takes a request and returns a response. This can be m
 * [Introduction to class-based views](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Intro_Class-based_Views#introduction-to-class-based-views)
 * [Built-in class-based generic views](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Built-in_Class-based_Views#built-in-class-based-generic-views)
 * [Form handling with class-based views](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Form_Handling_Class-based_Views#form-handling-with-class-based-views)
-* [Using mixins with class-based views]()
+* [Using mixins with class-based views](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Mixins_Class-based_Views#using-mixins-with-class-based-views)
 
 ## Basic examples
 
