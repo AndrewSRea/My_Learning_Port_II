@@ -253,3 +253,139 @@ The number of subtle interactions between [`FormMixin`](https://docs.djangoproje
 In this case, you could write the `post()` method yourself, keeping `DetailView` as the only generic functionality, although writing [`Form`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form) handling code involves a lot of duplication.
 
 Alternatively, it would still be less work than the above approach to have a separate view for processing the form, which could use [`FormView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/generic-editing/#django.views.generic.edit.FormView) distinct from `DetailView` without concerns.
+
+### An alternative better solution
+
+What we're really trying to do here is to use two different class-based views from the same URL. So why not do just that? We have a very clear division here: `GET` requests should get the [`DetailView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/flattened-index/#DetailView) (with the [`Form`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form) added to the context data), and `POST` requests should get the [`FormView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/flattened-index/#FormView). Let's set up those views first.
+
+The `AuthorDetailView` view is almost the same as [when we first introduced `AuthorDetailView`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Built-in_Class-based_Views#performing-extra-work); we have to write our own `get_context_data()` to make the `AuthorInterestForm` available to the template. We'll skip the `get_object()` override from before for clarity:
+```
+from django import forms
+from django.views.generic import DetailView
+from books.models import Author
+
+class AuthorInterestForm(forms.Form):
+    message = forms.CharField()
+
+class AuthorDetailView(DetailView):
+    model = Author
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = AuthorInterestForm()
+        return context
+```
+Then the `AuthorInterestForm` is a [`FormView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/flattened-index/#FormView), but we have to bring in [`SingleObjectMixin`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-single-object/#django.views.generic.detail.SingleObjectMixin) so we can find the author we're talking about, and we have to remember to set `template_name` to ensure that form errors will render the same template as `AuthorDetailView` is using on `GET`:
+```
+from django.http import HttpResponseForbidden
+from django.urls import reverse
+from django.views.generic import FormView
+from django.views.generic.detail import SingleObjectMixin
+
+class AuthorInterestFormView(SingleObjectMixin, FormView):
+    template_name = 'books/author_detail.html'
+    form_class = AuthorInterestForm
+    model = Author
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return HttpResponseForbidden()
+        self.object = self.get_object()
+        return super().post(request, *args, **kwargs)
+
+    def get_success_url(self):
+        return reverse('author-detail', kwargs={'pk': self.object.pk})
+```
+Finally, we bring this together in a new `AuthorView` view. We already know that calling [`as_view()`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/base/#django.views.generic.base.View.as_view) on a class-based view gives us something that behaves exactly like a function-based view, so we can do that at the point we choose between the two subviews.
+
+You can pass through keyword arguments to `as_view()` in the same way you would in your URLconf, such as if you wanted the `AuthorInterestFormView` behavior to also appear at another URL but using a different template:
+```
+from django.views import View
+
+class AuthorView(View):
+
+    def get(self, request, *args, **kwargs):
+        view = AuthorDetailView.as_view()
+        return view(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        view = AuthorInterestFormView.as_view()
+        return view(request, *args, **kwargs)
+```
+This approach can also be used with any other generic class-based views or your own class-based views inheriting directly from [`View`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/flattened-index/#View) or [`TemplateView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/flattened-index/#TemplateView), as it keeps the different views as separate as possible.
+
+## More than just HTML
+
+Where class-based views shine is when you want to do the same thing many times. Suppose you're writing an API, and every view should return JSON instead of rendered HTML.
+
+We can create a mixin class to use in all of our views, handling the conversion to JSON once.
+
+For example, a JSON mixin might look something like this:
+```
+from django.http import JsonResponse
+
+class JSONResponseMixin:
+    """
+    A mixin that can be used to render a JSON response.
+    """
+    def render_to_json_response(self, context, **response_kwargs):
+        """
+        Returns a JSON response, transforming 'context' to make the payload.
+        """
+        return JsonResponse(
+            self.get_data(context),
+            **response_kwargs
+        )
+
+    def get_data(self.context):
+        """
+        Returns an object that will be serialized as JSON by json.dumps().
+        """
+        # Note: This is *EXTREMELY* naive; in reality, you'll need to do
+        # much more complex handling to ensure that arbitrary objects --
+        # such as Django model instances or querysets -- can be serialized
+        # as JSON.
+        return context
+```
+
+<hr>
+
+**Note**: Check out the [Serializing Django objects](https://docs.djangoproject.com/en/4.0/topics/serialization/) documentation for more information on how to correctly transform Django models and querysets into JSON.
+
+<hr>
+
+This mixin provides a `render_to_json_response()` method with the same signature as [`render_to_response()`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-simple/#django.views.generic.base.TemplateResponseMixin.render_to_response). To use it, we need to mix it into a `TemplateView`, for example, and override `render_to_response()` to call `render_to_json_response()` instead:
+```
+from django.views.generic import TemplateView
+
+class JSONView(JSONResponseMixin, TemplateView):
+    def render_to_response(self, context, **response_kwargs):
+        return self.render_to_json_response(context, **response_kwargs)
+```
+Equally we could use our mixin with one of the generic views. We can make our own version of [`DetailView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/generic-display/#django.views.generic.detail.DetailView) by mixing `JSONResponseMixin` with the [`BaseDetailView`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/generic-display/#django.views.generic.detail.BaseDetailView) -- (the `DetailView` before template rendering behavior has been mixed in):
+```
+from django.view.generic.detail import BaseDetailView
+
+class JSONDetailView(JSONResponseMixin, BaseDetailView):
+    def render_to_response(self, context, **response_kwargs):
+        return self.render_to_json_response(context, **response_kwargs)
+```
+This view can then be deployed in the same way as any other `DetailView`, with exactly the same behavior -- except for the format of the response.
+
+If you want to be really adventurous, you could even mix a `DetailView` subclass that is able to return *both* HTML and JSON content, depending on some property of the HTTP request, such as a query argument or an HTTP header. Mix in both the `JSONResponseMixin` and a [`SingleObjectTemplateResponseMixin`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-single-object/#django.views.generic.detail.SingleObjectTemplateResponseMixin), and override the implementation of [`render_to_response()`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-simple/#django.views.generic.base.TemplateResponseMixin.render_to_response) to defer to the appropriate rendering method depending on the type of response that the user requested:
+```
+from django.views.generic.detail import SingleObjectTemplateResponseMixin
+
+class HybridDetailView(JSONResponseMixin, SingleObjectTemplateResponseMixin, BaseDetailView):
+    def render_to_response(self, context):
+        # Look for a 'format=json' GET argument
+        if self.request.GET.get('format') == 'json':
+            return self.render_to_json_response(context)
+        else:
+            return super().render_to_response(context)
+```
+Because of the way that Python resolves method overloading, the call to `super().render_to_response(context)` ends up calling the [`render_to_response()`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-simple/#django.views.generic.base.TemplateResponseMixin.render_to_response) implementation of [`TemplateResponseMixin`](https://docs.djangoproject.com/en/4.0/ref/class-based-views/mixins-simple/#django.views.generic.base.TemplateResponseMixin).
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Form_Handling_Class-based_Views#form-handling-with-class-based-views) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views/Mixins_Class-based_Views) - [[Back to the Class-based Views opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views#class-based-views) - [[Next module: Migrations]]()
