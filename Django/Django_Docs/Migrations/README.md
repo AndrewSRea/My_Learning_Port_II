@@ -156,3 +156,95 @@ class MyManager(models.Manager):
 class MyModel(models.Model):
     objects = MyManager()
 ```
+If you are using the [`from_queryset()`](https://docs.djangoproject.com/en/4.0/topics/db/managers/#django.db.models.from_queryset) function to dynamically generate a manager class, you need to inherit from the generated class to make it importable:
+```
+class MyManager(MyBaseManager.from_queryset(CustomQuerySet)):
+    use_in_migrations = True
+
+class MyModel(models.Model):
+    objects = MyManager()
+```
+Please refer to the notes about [Historical models]() <!-- below --> in migrations to see the implications that come along.
+
+### Initial migrations
+
+##### `Migration.initial`
+
+The "initial migrations" for an app are the migrations that create the first version of that app's tables. Usually an app will have one initial migration, but in some cases of complex model interdependencies it may have two or more.
+
+Initial migrations are marked with an `initial = True` class attribute on the migration class. If an `initial` class attribute isn't found, a migration will be considered "initial" if it is the first migration in the app (i.e. if it has no dependencies on any other migration in the same app).
+
+When the [`migrate --fake-initial`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#cmdoption-migrate-fake-initial) option is used, these initial migrations are treated specially. For an initial migration that creates one or more tables (`CreateModel` operation), Django checks that all of those tables already exist in the database and fake-applies the migration if so. Similarly, for an initial migration that adds one or more fields (`AddField` operation), Django checks that all of the respective columns already exist in the database and fake-applies the migration if so. Without `--fake-initial`, initial migrations are treated no differently from any other migration.
+
+### History consistency
+
+As previously discussed, you may need to linearize migrations manually when two development branches are joined. While editing migration dependencies, you can inadvertently create an inconsistent history state where a migration has been applied but some of its dependencies haven't. This is a strong indication that the dependencies are incorrect, so Django will refuse to run migrations or make new migrations until it's fixed. When using multiple databases, you can use the [`allow_migrate()`](https://docs.djangoproject.com/en/4.0/topics/db/multi-db/#allow_migrate) method of [database routers](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Multiple_Databases#automatic-database-routing) to control which databases [`makemigrations`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemigrations) checks for consistent history.
+
+## Adding migrations to apps
+
+New apps come preconfigured to accept migrations, and so you can add migrations by running `makemigrations` once you've made some changes.
+
+If your app already has models and database tables, and doesn't have migrations yet (for example, you created it against a previous Django version), you'll need to convert it to use migrations by running:
+```
+$ python manage.py makemigrations your_app_label
+```
+This will make a new initial migration for your app. Now, run `python manage.py migrate --fake-initial`, and Django will detect that you have an initial migration *and* that the tables it wants to create already exist, and will mark the migration as already applied. (Without the [`migrate -- fake-initial`)(https://docs.djangoproject.com/en/4.0/ref/django-admin/#cmdoption-migrate-fake-initial) flag, the command would error out because the tables it wants to create already exist.)
+
+Note that this only works given two things:
+
+* You have not changed your models since you made their tables. For migrations to work, you must make the initial migration *first* and then make changes, as Django compares changes against migration files, not the database.
+* You have not manually edited your database -- Django won't be able to detect that your database doesn't match your models, you'll just get errors when migrations try to modify those tables.
+
+## Reversing migrations
+
+Migrations can be reversed with [`migrate`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-migrate) by passing the number of the previous migration. For example, to reverse migration `books.0003`:
+```
+$ python manage.py migrate books 0002
+Operations to perform:
+    Target specific migration: 0002_auto, from books
+Running migrations:
+    Rendering model states... DONE
+    Unapplying books.0003_auto... OK
+```
+If you want to reverse all migrations applied for an app, use the name `zero`:
+```
+$ python manage.py migrate books zero
+Operations to perform:
+    Unapply all migrations: books
+Running migrations:
+    Rendering model states... DONE
+    Unapplying books.0002_auto... OK
+    Unapplying books.0001_initial... OK
+```
+A migration is irreversible if it contains any irreversible operations. Attempting to reverse such migrations will raise `IrreversibleError`:
+```
+$ python manage.py migrate books 0002
+Operations to perform:
+    Target specific migration: 0002_auto, from books
+Running migrations:
+    Rendering model states... DONE
+    Unapplying books.0003_auto...Traceback (most recent call last):
+django.db.migrations.exception.IrreversibleError: Operation <RunSQL  sql='DROP
+TABLE demo_books'> in books.0003_auto is not reversible
+```
+
+## Historical models
+
+When you run migrations, Django is working from historical versions of your models stored in the migration files. If you write Python code using the [`RunPython`](https://docs.djangoproject.com/en/4.0/ref/migration-operations/#django.db.migrations.operations.RunPython) operation, or if you have `allow_migrate` methods on your database routers, you **need to use** these historical model versions rather than importing them directly.
+
+<hr>
+
+:warning: **Warning**: If you import models directly rather than using the historical models, your migrations *may work initially* but will fail in the future when you try to rerun old migrations (commonly, when you set up a new installation and run through all the migrations to set up the database).
+
+This means that historical model problems may not be immediately obvious. If you run into this kind of failure, it's OK to edit the migration to use the historical models rather than direct imports and commit those changes.
+
+<hr>
+
+Because it's impossible to serialize arbitrary Python code, these historic models will not have any custom methods that you have defined. They will, however, have the same fields, relationships, managers (limited to those with `use_in_migrations = True`) and `Meta` options (also versioned, so they may be different from your current ones).
+
+<hr>
+
+:warning: **Warning**: This means that you will NOT have custom `save()` methods called on objects when you access them in migrations, and you will NOT have any custom constructors or instance methods. Plan appropriately!
+
+<hr>
+
