@@ -54,7 +54,7 @@ SQLite has very little built-in schema alteration support, and so Django attempt
 * Dropping the old table.
 * Renaming the new table to match the original name.
 
-This process generally works well, but it can be slow and occassionally buggy. It is not recommended that you run and migrate SQLite in a production environment unless you are very aware of the risks and its limitations; the support Django ships with is designed to allow developers to use SQLite on their local machines to develop less complex Django projects without the need for a full database.
+This process generally works well, but it can be slow and occasionally buggy. It is not recommended that you run and migrate SQLite in a production environment unless you are very aware of the risks and its limitations; the support Django ships with is designed to allow developers to use SQLite on their local machines to develop less complex Django projects without the need for a full database.
 
 ## Workflow
 
@@ -81,4 +81,78 @@ Once the migration is applied, commit the migration and the models change to you
 If you want to give the migration(s) a meaningful name instead of a generated one, you can use the [`makemigrations --name`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#cmdoption-makemigrations-name) option:
 ```
 $ python manage.py makemigrations --name changed_my_model your_app_label
+```
+
+### Version control
+
+Because migrations are stored in version control, you'll occasionally come across situations where you and another developer have both committed a migration to the same app at the same time, resulting in two migrations with the same number.
+
+Don't worry -- the numbers are just there for developers' reference, Django just cares that each migration has a different name. Migrations specify which other migrations they depend on -- including earlier migrations in the same app -- in the file, so it's possible to detect when there's two new migrations for the same app that aren't ordered.
+
+When this happens, Django will prompt you and give you some options. If it thinks it's safe enough, it will offer to automatically linearize the two migrations for you. If not, you'll have to go in and modify the migrations yourself -- don't worry, this isn't difficult, and is explained more in [Migration files]() below.
+
+## Transactions
+
+On databases that support DDL transactions (SQLite and PostgreSQL), all migration operations will run inside a single transaction by default. In contrast, if a database doesn't support DDL transactions (e.g. MySQL, Oracle), then all operations will run without a transaction.
+
+You can prevent a migration from running in a transaction by setting the `atomic` attribute to `False`. For example:
+```
+from django.db import migrations
+
+class Migration(migrations.Migration):
+    atomic = False
+```
+It's also possible to execute parts of the migration inside a transaction using [`atomic()`](https://docs.djangoproject.com/en/4.0/topics/db/transactions/#django.db.transaction.atomic) or by passing `atomic=True` to [`RunPython`](https://docs.djangoproject.com/en/4.0/ref/migration-operations/#django.db.migrations.operations.RunPython). See [Non-atomic migrations](https://docs.djangoproject.com/en/4.0/howto/writing-migrations/#non-atomic-migrations) for more details.
+
+## Dependencies
+
+While migrations are per-app, the tables and relationships implied by your models are too complex to be created for one app at a time. When you make a migration that requires something else to run -- for example, you add a `ForeignKey` in your `books` app to your `authors` app -- the resulting migration will contain a dependency on a migration in `authors`.
+
+This means that when you run the migrations, the `authors` migration runs first and creates the table the `ForeignKey` references, and then the migration that makes the `ForeignKey` column runs afterward and creates the constraint. If this didn't happen, the migration would try to create the `ForeignKey` column without the table it's referencing existing and your database would throw an error.
+
+This dependency behavior afects most migration operations where you restrict to a single app. Restricting to a single app (either in `makemigrations` or `migrate`) is a best-efforts promise, and not a guarantee; any other apps that need to be used to get dependencies correct will be.
+
+Apps without migrations must not have relations (`ForeignKey`, `ManyToManyField`, etc.) to apps with migrations. Sometimes it may work, but it's not supported.
+
+## Migration files
+
+Migrations are stored as an on-disk format, referred to here as "migration files". These files are actually normal Python files with an agreed-upon object layout, written in a declarative style.
+
+A basic migration file looks like this:
+```
+from django.db import migrations, models
+
+class Migration(migrations.Migration):
+
+    dependencies = [('migrations', '0001_initial')]
+
+    operations = [
+        migrations.DeleteModel('Tribble'),
+        migrations.AddField('Author', 'rating', models.IntegerField(default=0)),
+    ]
+```
+What Django looks for when it loads a migration file (as a Python module) is a subclass of `django.db.migrations.Migration` called `Migration`. It then inspects this object for four attributes, only two of which are used most of the time:
+
+* `dependencies`, a list of migrations this one depends on.
+* `operations`, a list of `Operation` classes that define what this migration does.
+
+The operations are the key; they are a set of declarative instructions which tell Django what schema changes need to be made. Django scans them and builds an in-memory representation of all of the schema changes to all apps, and uses this to generate the SQL which makes the schema changes.
+
+That in-memory structure is also used to work out what the differences are between your models and the current state of your migrations; Django runs through all the changes, in order, on an in-memory set of models to come up with the state of your models last time you ran `makemigrations`. It then uses these models to compare against the ones in your `models.py` files to work out what you have changed.
+
+You should rarely, if ever, need to edit migration files by hand, but it's entirely possible to write them manually if you need to. Some of the more complex operations are not autodetectable and are only available via a hand-written migration, so don't be scared about editing them if you have to.
+
+### Custom fields
+
+You can't modify the number of positional arguments in an already migrated custom field without raising a `TypeError`. The old migration will call the modified `__init__` method with the old signature. So if you need a new argument, please create a keyword argument and add something like `assert 'argument_name' in kwargs` in the constructor.
+
+### Model managers
+
+You can optionally serialize managers into migrations and have them available in [`RunPython`](https://docs.djangoproject.com/en/4.0/ref/migration-operations/#django.db.migrations.operations.RunPython) operations. This is done by defining a `use_in_migrations` attribute on the manager class:
+```
+class MyManager(models.Manager):
+    use_in_migrations = True
+
+class MyModel(models.Model):
+    objects = MyManager()
 ```
