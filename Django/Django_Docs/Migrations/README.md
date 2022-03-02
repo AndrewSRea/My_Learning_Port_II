@@ -89,7 +89,7 @@ Because migrations are stored in version control, you'll occasionally come acros
 
 Don't worry -- the numbers are just there for developers' reference, Django just cares that each migration has a different name. Migrations specify which other migrations they depend on -- including earlier migrations in the same app -- in the file, so it's possible to detect when there's two new migrations for the same app that aren't ordered.
 
-When this happens, Django will prompt you and give you some options. If it thinks it's safe enough, it will offer to automatically linearize the two migrations for you. If not, you'll have to go in and modify the migrations yourself -- don't worry, this isn't difficult, and is explained more in [Migration files]() below.
+When this happens, Django will prompt you and give you some options. If it thinks it's safe enough, it will offer to automatically linearize the two migrations for you. If not, you'll have to go in and modify the migrations yourself -- don't worry, this isn't difficult, and is explained more in [Migration files](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Migrations#migration-files) below.
 
 ## Transactions
 
@@ -164,7 +164,7 @@ class MyManager(MyBaseManager.from_queryset(CustomQuerySet)):
 class MyModel(models.Model):
     objects = MyManager()
 ```
-Please refer to the notes about [Historical models]() <!-- below --> in migrations to see the implications that come along.
+Please refer to the notes about [Historical models](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Migrations#historical-models) in migrations to see the implications that come along.
 
 ### Initial migrations
 
@@ -252,7 +252,7 @@ References to functions in field options such as `upload_to` and `limit_choices_
 
 In addition, the concrete base classes of the model are stored as pointers, so you must always keep base classes around for as long as there is a migration that contains a reference to them. On the plus side, methods and managers from these base classes inherit normally, so if you absolutely need access to these you can opt to move them into a superclass.
 
-To remove old references, you can [squash migrations]() <!-- below --> or, if there aren't many references, copy them into the migration files.
+To remove old references, you can [squash migrations](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Migrations#squashing-migrations) or, if there aren't many references, copy them into the migration files.
 
 ## Considerations when removing model fields
 
@@ -373,7 +373,7 @@ Django does this by taking all of your existing migrations, extracting their `Op
 
 Once the operation sequence has been reduced as much as possible -- the amount possible depends on how closely intertwined your models are and if you have any [`RunSQL`](https://docs.djangoproject.com/en/4.0/ref/migration-operations/#django.db.migrations.operations.RunSQL) or [`RunPython`](https://docs.djangoproject.com/en/4.0/ref/migration-operations/#django.db.migrations.operations.RunPython) operations (which can't be optimized through unless they are marked as `elidable` (*no, that's not a typo, it's a version of the word **elide**, which means "to suppress or alter"*)) -- Django will then write it back out into a new set of migration files.
 
-These files are marked to say they replace the previously-squashed migrations, so they can coexist with the old migration fiels, and Django will intelligently switch between them depending where you are in the history. If you're still part-way through the set of migrations that you squashed, it will keep using tehm until it hits the end and then switch to the squashed history, while new installs will use the new squashed migration and skip all the old ones.
+These files are marked to say they replace the previously-squashed migrations, so they can coexist with the old migration files, and Django will intelligently switch between them depending where you are in the history. If you're still part-way through the set of migrations that you squashed, it will keep using tehm until it hits the end and then switch to the squashed history, while new installs will use the new squashed migration and skip all the old ones.
 
 This enables you to squash and not mess up systems currently in production that aren't fully up-to-date yet. The recommended process is to squash, keeping the old files, commit and release, wait until all systems are upgraded with the new release (or if you're a third-party project, ensure your users upgrade releases in order without skipping any), and then remove the old files, commit and do a second release.
 
@@ -445,3 +445,78 @@ Django cannot serialize:
 * Nested classes.
 * Arbitrary class instances (e.g. `MyClass(4.3, 5.7)`).
 * Lambdas.
+
+### Custom serializers
+
+You can serialize other types by writing a custom serializer. For example, if Django didn't serialize [`Decimal`](https://docs.python.org/3/library/decimal.html#decimal.Decimal) by default, you could do this:
+```
+from decimal import Decimal
+
+from django.db.migrations.serializer import BaseSerializer
+from django.db.migrations.writer import MigrationWriter
+
+class DecimalSerializer(BaseSerializer):
+    def serialize(self):
+        return repr(self.value), {'from decimal import Decimal'}
+
+MigrationWriter.register_serializer(Decimal, DecimalSerializer)
+```
+The first argument of `MigrationWriter.register_serializer()` is a type or iterable of types that should use the serializer.
+
+The `serializer()` method of your serializer must return a string of how the value should appear in migrations and a set of any imports that are needed in the migration.
+
+### Adding a `deconstruct()` method
+
+You can let Django serialize your own custom class instances by giving the class a `deconstruct()` method. It takes no arguments, and should return a tuple of three things `(path, args, kwargs)`:
+
+* `path` should be the Python path to the class, with the class name included as the last part (for example, `myapp.custom_things.MyClass`). If your class is not available at the top level of a module, it is not serializable.
+* `args` should be a list of positional arguments to pass to your class' `__init__` method. Everything in this list should itself be serializable.
+* `kwargs` should be a `dict` of keyword arguments to pass to your class' `__init__` method. Every value should itself be serializable.
+
+<hr>
+
+**Note**: This return value is different from the `deconstruct()` method [for custom fields](https://docs.djangoproject.com/en/4.0/howto/custom-model-fields/#custom-field-deconstruct-method) which returns a tuple of four items.
+
+<hr>
+
+Django will write out the value as an instantiation of your class with the given arguments, similar to the way it writes out references to Django fields.
+
+To prevent a new migration from being created each time [`makemigrations`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemigrations) is run, you should also add an `__eq__()` method to the decorated class. This function will be called by Django's migration framework to detect changes between states.
+
+As long as all of the arguments to your class' constructor are themselves serializable, you can use the `@deconstructible` class decorator from `django.utils.deconstruct` to add the `deconstruct()` method:
+```
+from django.utils.deconstruct import deconstructible
+
+@deconstructible
+class MyCustomClass:
+
+    def __init__(self, foo=1):
+        self.foo = foo
+        ...
+
+    def __eq__(self, other):
+        return self.foo == other.foo
+```
+The decorator adds logic to capture and preserve the arguments on their way into your constructor, and then returns those arguments exactly when `deconstruct()` is called.
+
+## Supporting multiple Django versions
+
+If you are the maintainer of a third-party app with models, you may need to ship migrations that support multiple Django versions. In this case, you should always run [`makemigrations`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemigrations) **with the lowest Django version you wish to support**.
+
+The migrations system will maintain backwards-compatibility according to the same policy as the rest of Django, so migration files generated on Django X.Y should run unchanged on Django X.Y+1. The migrations system does not promise forwards-compatibility, however. New features may be added, and migration files generated with newer versions of Django may not work on older versions.
+
+<hr>
+
+**See also**
+
+[The Migrations Operations Reference](https://docs.djangoproject.com/en/4.0/ref/migration-operations/)
+
+Covers the schema operations API, special operations, and writing your own operations.
+
+[The Writing Migrations "how-to"](https://docs.djangoproject.com/en/4.0/howto/writing-migrations/)
+
+Explains how to structure and write database migrations for different scenarios you might encounter.
+
+<hr>
+
+[[Previous module: Class-based Views]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views#class-based-views) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Migrations#migrations) - [[Next module: Managing files]]()
