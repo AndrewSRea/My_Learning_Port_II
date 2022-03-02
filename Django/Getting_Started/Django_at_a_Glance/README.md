@@ -8,7 +8,7 @@ The goal of this document is to give you enough technical specifics to understan
 
 Although you can use Django without a database, it comes with an [object-relational mapper](https://en.wikipedia.org/wiki/Object%E2%80%93relational_mapping) in which you describe your database layout in Python code.
 
-The [data-model syntax]() <!-- link to internal folder? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/topics/db/models/) --> offers many rich ways of representing your models -- so far, it's been solving many years' worth of database-schema problems. Here's a quick example (within a `models.py` file):
+The [data-model syntax](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#models) offers many rich ways of representing your models -- so far, it's been solving many years' worth of database-schema problems. Here's a quick example (within a `models.py` file):
 ```
 from django.db import models
 
@@ -35,11 +35,11 @@ Next, run the Django command-line utilities to create the database tables automa
 $ python manage.py makemigrations
 $ python manage.py migrate
 ```
-The [`makemigrations`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemigrations) command looks at all your available models and creates migrations for whichever tables don't already exist. [`migrate`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-migrate) runs the migrations and creates tables in your database, as well as optionally providing [much richer schema control](). <!-- link to internal folder? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/topics/migrations/) -->
+The [`makemigrations`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemigrations) command looks at all your available models and creates migrations for whichever tables don't already exist. [`migrate`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-migrate) runs the migrations and creates tables in your database, as well as optionally providing [much richer schema control](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Migrations#migrations).
 
 ## Enjoy the free API
 
-With that, you've got a free, and rich, [Python API]() <!-- link to internal folder ("Make queries")? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/topics/db/queries/) --> to access your data. The API is created on the fly, no code generation necessary.
+With that, you've got a free, and rich, [Python API](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Making_Queries#making-queries) to access your data. The API is created on the fly, no code generation necessary.
 
 (The code displayed below is being input into a Terminal using a [Python shell](https://docs.djangoproject.com/en/4.0/ref/django-admin/#shell). Terminal commands in a Python shell are preceeded by `>>>`, and the output from each command is listed right below each command.)
 ```
@@ -115,7 +115,7 @@ DoesNotExist: Reporter matching query does not exist.
 
 ## A dynamic admin interface: it's not just scaffolding -- it's the whole house
 
-Once your models are defined, Django can automatically create a professional, production ready [administrative interface]() <!-- link to internal folder ("The Django admin site")? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/ref/contrib/admin/) --> -- a website that lets authenticated users add, chamnge, and delete objects. The only step required is to register your model in the admin site (within a `models.py` file):
+Once your models are defined, Django can automatically create a professional, production ready [administrative interface](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/) -- a website that lets authenticated users add, chamnge, and delete objects. The only step required is to register your model in the admin site (within a `models.py` file):
 ```
 from django.db import models
 
@@ -141,7 +141,7 @@ One typical workflow in creating Django apps is to create models and get the adm
 
 A clean, elegant URL scheme is an important detail in a high-quality web application. Django encourages beautiful URL design and doesn't put any *cruft* (badly designed, unnecessarily complicated, or unwanted code) in URLs, like `.php` or `.asp`.
 
-To design URLs for an app, you create a Pyhton module called a [URLconf](). <!-- link to internal folder ("URL dispatcher")? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/topics/http/urls/) --> A table of contents for your app, it contains a mapping between URL patterns and Python callback functions. URLconfs also serve to decouple URLs from Python code.
+To design URLs for an app, you create a Pyhton module called a [URLconf](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/URL_Dispatcher#url-dispatcher). A table of contents for your app, it contains a mapping between URL patterns and Python callback functions. URLconfs also serve to decouple URLs from Python code.
 
 Here's what a URLconf might look like for the `Reporter`/`Article` example above (code snippet put within a `urls.py` file):
 ```
@@ -176,7 +176,7 @@ def year_archive(request, year):
     context = {'year': year, 'article_list': a_list}
     return render(request, 'news/year_archive.html', context)
 ```
-This example uses Django's [template system]() <!-- link to internal folder ("Templates")? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/topics/templates/) -->, which has several powerful features but strives to stay simple enough for non-programmers to use.
+This example uses Django's [template system](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Templates#templates), which has several powerful features but strives to stay simple enough for non-programmers to use.
 
 ## Design your templates
 
@@ -204,11 +204,11 @@ Variables are surrounded by double-curly braces. `{{ article.headline }}` means 
 
 Note `{{ article.pub_date|date:"F j, Y" }}` uses a Unix-style "pipe" (the "`|`" character). This is called a template filter, and it's a way to filter the value of a variable. In this case, the date filter formats a Python datetime object in the given format (as found in PHP's date function).
 
-You can chain together as many filters as you'd like. You can write [custom template filters](). <!-- link to internal folder ("How to create custom template tags and filters / Writing custom template filters")? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/howto/custom-template-tags/#howto-writing-custom-template-filters) --> You can write [custom template tags]() <!-- link to internal folder ("How to create custom template tags and filters")? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/howto/custom-template-tags/) -->, which run custom Python code behind the scenes.
+You can chain together as many filters as you'd like. You can write [custom template filters](https://docs.djangoproject.com/en/4.0/howto/custom-template-tags/#howto-writing-custom-template-filters). You can write [custom template tags](https://docs.djangoproject.com/en/4.0/howto/custom-template-tags/), which run custom Python code behind the scenes.
 
 Finally, Django uses the concept of "template inheritance". That's what the `{% extends "base.html" %}` does. It means "First load the template called 'base', which has defined a bunch of blocks, and fill the blocks with the following blocks." In short, that lets you dramatically cut down on redundancy in templates: each template has to define only what's unique to that template.
 
-Here's what the "base.html" template, including the use of [static files]() <!-- link to internal folder ("How to manage static files (e.g. images, JavaScript, CSS)")? Or to DjangoProject? (https://docs.djangoproject.com/en/4.0/howto/static-files/) -->, might look like:
+Here's what the "base.html" template, including the use of [static files](https://docs.djangoproject.com/en/4.0/howto/static-files/), might look like:
 ```
 {% load static %}
 <html>
