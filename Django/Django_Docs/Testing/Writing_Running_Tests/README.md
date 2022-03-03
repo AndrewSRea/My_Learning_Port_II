@@ -92,3 +92,23 @@ If you do not want to wait for the currently running test to finish, you can pre
 It's a good idea to run your tests with Python warnings enabled: `python -Wa manage.py test`. The `-Wa` flag tells Python to display deprecation warnings. Django, like many other Python libraries, uses these warnings to flag when features are going away. It also might flag areas in your code that aren't strictly wrong but could benefit from a better implementation.
 
 <hr>
+
+### The test database
+
+Tests that require a database (namely, model tests) will not use your "real" (production) database. Separate, blank databases are created for the tests.
+
+Regardless of whether the tests pass or fail, the test databases are destroyed when all the tests have been executed.
+
+You can prevent the test databases from being destroyed by using the [`test --keepdb`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#cmdoption-test-keepdb) option. This will preserve the test database between runs. If the database does not exist, it will first be created. Any migrations will also be applied in order to keep it up to date.
+
+As described in the previous section, if a test run is forcefully interrupted, the test database may not be destroyed. On the next run, you'll be asked whether you want to reuse or destroy the database. Use the [`test --noinput`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#cmdoption-test-noinput) option to suppress that prompt and automatically destroy the database. This can be useful when running tests on a continuous integration server where tests may be interrupted by a timeout, for example.
+
+The default test database names are created by prepending `test_` to the value of each [`NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-NAME) in [`DATABASES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASES). When using SQLite, the tests will use an in-memory database by default (i.e., the database will be created in memory, bypassing the filesystem entirely!). The [`TEST`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASE-TEST) dictionary is `DATABASES` offers a number of settings to configure your test database. For example, if you want to use a different database name, specify `NAME` in the `TEST` dictionary for any given database in `DATABASES`.
+
+On PostgreSQL, [`USER`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-USER) will also need read access to the built-in `postgres` database.
+
+Aside from using a separate database, the test runner will otherwise use all of the same database settings you have in your settings file: [`ENGINE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASE-ENGINE), `USER`, [`HOST`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-HOST), etc. The test database is created by the user specified by `USER`, so you'll need to make sure that the given user account has sufficient privileges to create a new database on the system.
+
+For fine-grained control over the character encoding of your test database, use the [`CHARSET`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEST_CHARSET) `TEST` option. If you're using MySQL, you can also use the [`COLLATION`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEST_COLLATION) option to control the particular collation used by the test database. See the [settings documentation](https://docs.djangoproject.com/en/4.0/ref/settings/) for details of these and other advanced settings.
+
+If using an SQLite in-memory database with SQLite, [shared cache](https://www.sqlite.org/sharedcache.html) is enabled, so you can write tests with ability to share the database between threads.
