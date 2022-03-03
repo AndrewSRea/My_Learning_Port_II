@@ -4,7 +4,7 @@ This document describes Django's file access APIs for files such as those upload
 
 By default, Django stores files locally, using the [`MEDIA_ROOT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-MEDIA_ROOT) and [`MEDIA_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-MEDIA_URL) settings. The examples below assume that you're using these defaults.
 
-However, Django provides ways to write custom [file storage systems]() <!-- below --> that allow you to completely customize where and how Django stores files. The second half of this document describes how these storage systems work.
+However, Django provides ways to write custom [file storage systems](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Managing_Files#file-storage) that allow you to completely customize where and how Django stores files. The second half of this document describes how these storage systems work.
 
 ## Using files in models
 
