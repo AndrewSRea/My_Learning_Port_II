@@ -438,7 +438,7 @@ Django can serialize the following:
 * Any function or method reference (e.g. `datetime.datetime.today`)(must be in module's top-level scope).
 * Unbound methods used from within the class body.
 * Any class reference (must be in module's top-level scope).
-* Anything with a custom `deconstruct()` method ([see below]()).
+* Anything with a custom `deconstruct()` method ([see below](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Migrations#adding-a-deconstruct-method)).
 
 Django cannot serialize:
 
@@ -519,4 +519,4 @@ Explains how to structure and write database migrations for different scenarios 
 
 <hr>
 
-[[Previous module: Class-based Views]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views#class-based-views) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Migrations#migrations) - [[Next module: Managing files]]()
+[[Previous module: Class-based Views]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views#class-based-views) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Migrations#migrations) - [[Next module: Managing files]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Managing_Files#managing-files)
