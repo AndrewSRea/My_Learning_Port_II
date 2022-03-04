@@ -112,3 +112,43 @@ Aside from using a separate database, the test runner will otherwise use all of 
 For fine-grained control over the character encoding of your test database, use the [`CHARSET`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEST_CHARSET) `TEST` option. If you're using MySQL, you can also use the [`COLLATION`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEST_COLLATION) option to control the particular collation used by the test database. See the [settings documentation](https://docs.djangoproject.com/en/4.0/ref/settings/) for details of these and other advanced settings.
 
 If using an SQLite in-memory database with SQLite, [shared cache](https://www.sqlite.org/sharedcache.html) is enabled, so you can write tests with ability to share the database between threads.
+
+<hr>
+
+**Finding data from your production database when running tests?**
+
+If your code attempts to access the database when its modules are compiled, this will occur *before* the test database is set up, with potentially unexpected results. For example, if you have a database query in module-level code and a real database exists, production data could pollute your tests. *It is a bad idea to have such import-time database queries in your code anyway* - rewrite your code so that it doesn't do this.
+
+This also applies to customized implementations of [`ready()`](https://docs.djangoproject.com/en/4.0/ref/applications/#django.apps.AppConfig.ready).
+
+<hr>
+
+**See also**
+
+The [advanced multi-db testing topics](https://docs.djangoproject.com/en/4.0/topics/testing/advanced/#topics-testing-advanced-multidb).
+
+<hr>
+
+### Order in which tests are executed
+
+In order to guarantee that all `TestCase` code starts with a clean database, the Django test runner reorders tests in the following way:
+
+* All [`TestCase`](https://docs.djangoproject.com/en/4.0/topics/testing/tools/#django.test.TestCase) subclasses are run first.
+* Then, all other Django-based tests (test cases based on [`SimpleTestCase`](https://docs.djangoproject.com/en/4.0/topics/testing/tools/#django.test.SimpleTestCase), including [`TransactionTestCase`](https://docs.djangoproject.com/en/4.0/topics/testing/tools/#django.test.TransactionTestCase)) are run with no particular ordering guaranteed nor enforced among them.
+* Then any other [`unittest.TestCase`](https://docs.python.org/3/library/unittest.html#unittest.TestCase) tests (including doctests) that may alter the database without restoring it to its original state are run.
+
+<hr>
+
+**Note**: The new ordering of tests may reveal unexpected dependencies on test case ordering. This is the case with doctests that relied on state left in the database by a given `TransactionTestCase` test, they must be updated to be able to run independently.
+
+<hr>
+
+**Note**: Failures detected when loading tests are ordered before all of the above for quicker feedback. This includes things like test modules that couldn't be found or that couldn't be loaded due to syntax errors.
+
+<hr>
+
+You may randomize and/or reverse the execution order inside groups using the [`test --shuffle`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#cmdoption-test-shuffle) and [`--reverse`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#cmdoption-test-reverse) options. This can help with ensuring your tests are independent from each other.
+
+### Rollback emulation
+
+Any initial data loaded in migrations will only be available in `TestCase` tests and not in `TransactionTestCase` tests, and additionally only on backends where transactions are supported (the most important exception being MyISAM). This is also true for tests which rely on `TransactionTestCase` such as [`LiveServerTestCase`](https://docs.djangoproject.com/en/4.0/topics/testing/tools/#django.test.LiveServerTestCase) and [`StaticLiveServerTestCase`](https://docs.djangoproject.com/en/4.0/ref/contrib/staticfiles/#django.contrib.staticfiles.testing.StaticLiveServerTestCase).
