@@ -152,3 +152,78 @@ You may randomize and/or reverse the execution order inside groups using the [`t
 ### Rollback emulation
 
 Any initial data loaded in migrations will only be available in `TestCase` tests and not in `TransactionTestCase` tests, and additionally only on backends where transactions are supported (the most important exception being MyISAM). This is also true for tests which rely on `TransactionTestCase` such as [`LiveServerTestCase`](https://docs.djangoproject.com/en/4.0/topics/testing/tools/#django.test.LiveServerTestCase) and [`StaticLiveServerTestCase`](https://docs.djangoproject.com/en/4.0/ref/contrib/staticfiles/#django.contrib.staticfiles.testing.StaticLiveServerTestCase).
+
+Django can reload that data for you on a per-testcase basis by setting the `serialized_rollback` option to `True` in the body of the `TestCase` or `TransactionTestCase`, but note that this will slow down that test suite by approximately 3x.
+
+Third-party apps or those developing against MyISAM will need to set this; in general, however, you should be developing your own projects against a transactional database and be using `TestCase` for most tests, and thus not need this setting.
+
+The initial serialization is usually very quick, but if you wish to exclude some apps from this process (and speed up test runs slightly), you may add those apps to [`TEST_NON_SERIALIZED_APPS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEST_NON_SERIALIZED_APPS).
+
+To prevent serialized data from being loaded twice, setting `serialized_rollback=True` disables the [`post_migrate`](https://docs.djangoproject.com/en/4.0/ref/signals/#django.db.models.signals.post_migrate) signal when flushing the test database.
+
+### Other test conditions
+
+Regardless of the value of the [`DEBUG`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DEBUG) setting in your configuration file, all Django tests run with `DEBUG=False`. This is to ensure that the observed output of your code matches what will be seen in a production setting.
+
+Caches are not cleared after each test, and running `manage.py test fooapp` can insert data from the tests into the cache of a live system if you run your tests in production because, unlike databases, a separate "test cache" is not used. This behavior [may change](https://code.djangoproject.com/ticket/11505) in the future.
+
+### Understanding the test output
+
+When you run your tests, you'll see a number of messages as the test runner prepares itself. You can control the level of detail of these messages with the `verbosity` option on the command line:
+```
+Creating test database...
+Creating table myapp_animal
+Creating table myapp_mineral
+```
+This tells you that the test runner is creating a test database, as described in the previous section.
+
+Once the test database has been created, Django will run your tests. If everything goes well, you'll see something like this:
+```
+----------------------------------------------------------------------
+Ran 22 tests in 0.221s
+
+OK
+```
+If there are test failures, however, you'll see full details about which tests failed:
+```
+======================================================================
+FAIL: test_was_published_recently_with_future_poll (polls.tests.PollMethodTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    File "/dev/mysite/polls/tests.py", line 16, in
+test_was_published_recently_with_future_poll
+    self.assertIs(future_poll.was_published_recently(), False)
+AssertionError: True is not False
+
+----------------------------------------------------------------------
+Ran 1 test in 0.003s
+
+FAILED (failures=1)
+```
+A full explanation of this error output is beyond the scope of this document, but it's pretty intuitive. You can consult the documentation of Python's [`unittest`](https://docs.python.org/3/library/unittest.html#module-unittest) library for details.
+
+Note that the return code for the test-runner script is 1 for any number of failed and erroneous tests. If all the tests pass, the return code is 0. This failure is useful if you're using the test-runner script in a shell script and need to test for success or failure at that level.
+
+### Speeding up the tests
+
+#### Running tests in parallel
+
+As long as your tests are properly isolated, you can run them in parallel to gain a speed up on multi-core hardware. See [`test --parallel`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#cmdoption-test-parallel).
+
+#### Password hashing
+
+The default password hasher is rather slow by design. If you're authenticating many users in your tests, you may want to use a custom settings file and set the [`PASSWORD_HASHERS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-PASSWORD_HASHERS) setting to a faster hashing algorithm:
+```
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.MD5PasswordHasher',
+]
+```
+Don't forget to also include in `PASSWORD_HASHERS` any hasing algorithm used in fixtures, if any.
+
+#### Preserving the test database
+
+The [`test --keepdb`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#cmdoption-test-keepdb) option preserves the test database between test runs. It skips the create and destroy actions which can greatly decrease the time to run tests.
+
+<hr>
+
+[[Back to the Testing in Django opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing#testing-in-django) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Writing_Running_Tests#writing-and-running-tests) - [[Next page]]()
