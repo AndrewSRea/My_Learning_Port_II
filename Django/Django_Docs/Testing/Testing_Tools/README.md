@@ -77,7 +77,7 @@ It requires no arguments at time of construction. However, you can use keyword a
 ```
 >>> c = Client(HTTP_USER_AGENT='Mozilla/5.0')
 ```
-The values from the `extra` keyword arguments pased to [`get()`](), [`post()`](), etc., have precedence over the defaults passsed to the class constructor. <!-- below -->
+The values from the `extra` keyword arguments pased to [`get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra), [`post()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#postpath-datanone-content_typemultipart_content-followfalse-securefalse-extra), etc., have precedence over the defaults passsed to the class constructor.
 
 The `enforce_csrf_checks` argument can be used to test CSRF protection (see above).
 
@@ -150,7 +150,7 @@ The key-value pairs in the `data` dictionary are used to submit POST data. For e
 ```
 name=fred&password=secret
 ```
-If you provide `content_type` as *application/json*, the `data` is serialized using [`json.dumps()`](https://docs.python.org/3/library/json.html#json.dumps) if it's a dict, list, or tuple. Serialization is performed with [`DjangoJSONEncoder`](https://docs.djangoproject.com/en/4.0/topics/serialization/#django.core.serializers.json.DjangoJSONEncoder) by default, and can be overridden by providing a `json_encoder` argument to [`Client`](). <!-- above --> This serialization also happens for [`put()`](), [`patch()`](), and [`delete()`]() requests. <!-- below -->
+If you provide `content_type` as *application/json*, the `data` is serialized using [`json.dumps()`](https://docs.python.org/3/library/json.html#json.dumps) if it's a dict, list, or tuple. Serialization is performed with [`DjangoJSONEncoder`](https://docs.djangoproject.com/en/4.0/topics/serialization/#django.core.serializers.json.DjangoJSONEncoder) by default, and can be overridden by providing a `json_encoder` argument to [`Client`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-clientenforce_csrf_checksfalse-json_encoderdjangojsonencoder-defaults). This serialization also happens for [`put()`](), [`patch()`](), and [`delete()`]() requests. <!-- below -->
 
 If you provide any other `content_type` (e.g. *text/html* for an XML payload), the contents of `data` are sent as-is in the POST request, using `content_type` in the HTTP `Content-Type` header.
 
@@ -178,7 +178,7 @@ Note that if you wish to use the same file handle for multiple `post()` calls, t
 
 You should also ensure that the file is opened in a way that allows the data to be read. If your file contains binary data such as an image, this means you will need to open the file in `rb` (read binary) mode.
 
-The `extra` argument acts the same as for [`client.get()`](). <!-- "get()" above -->
+The `extra` argument acts the same as for [`client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
 
 If the URL you request with a POST contains encoded parameters, these parameters will be made available in the `request.GET` data. For example, if you were to make the request:
 ```
@@ -189,3 +189,64 @@ If the URL you request with a POST contains encoded parameters, these parameters
 If you set `follow` to `True`, the client will follow any redirects and a `redirect_chain` attribute will be set in the response object containing tuples of the intermediate URLs and status codes.
 
 If you set `secure` to `True`, the client will emulate an HTTPS request.
+
+* ##### `head(path, data=None, follow=False, secure=False, **extra)`
+
+Makes a HEAD request on the provided `path` and returns a `Response` object. This method works just like [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra), including the `follow`, `secure`, and `extra` arguments, except it does not return a message body.
+
+* ##### `options(path, data='', content_type='application/octet-stream', follow=False, secure=False, **extra)`
+
+Makes an OPTIONS request on the provided `path` and returns a `Response` object. Useful for testing RESTful interfaces.
+
+When `data` is provided, it is used as the request body, and a `Content-Type` header is set to `content_type`.
+
+The `follow`, `secure`, and `extra` arguments act the same as for [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
+
+* ##### `put(path, data='', content_type='application/octet-stream', follow=False, secure=False, **extra)`
+
+Makes a PUT request on the provided `path` and returns a `Response` object. Useful for testing RESTful interfaces.
+
+When `data` is provided, it is used as the request body, and a `Content-Type` header is set to `content_type`.
+
+The `follow`, `secure`, and `extra` arguments act the same as for [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
+
+* ##### `patch(path, data='', content_type='application/octet-stream', follow=False, secure=False, **extra)`
+
+Makes a PATCH request on the provided `path` and returns a `Response` object. Useful for testing RESTful interfaces.
+
+The `follow`, `secure`, and `extra` arguments act the same as for [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
+
+* ##### `delete(path, data='', content_type='application/octet-stream', follow=False, secure=False, **extra)`
+
+Makes a DELETE request on the provided `path` and returns a `Response` object. Useful for testing RESTful interfaces.
+
+When `data` is provided, it is used as the request body, and a `Content-Type` header is set to `content_type`.
+
+The `follow`, `secure`, and `extra` arguments act the same as for [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
+
+* ##### `trace(path, follow=False, secure=False, **extra)`
+
+Makes a TRACE request on the provided `path` and returns a `Response` object. Useful for simulating diagnostic probes.
+
+Unlike the other request methods, `data` is not provided as a keyword parameter in order to comply with [RFC 7231#section-4.3.8](https://datatracker.ietf.org/doc/html/rfc7231.html#section-4.3.8), which mandates that TRACE requests must not have a body.
+
+The `follow`, `secure`, and `extra` arguments act the same as for [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
+
+* ##### `login(**credentials)`
+
+If your site uses Django's [authentication system]() <!-- next module --> and you deal with logging in users, you can use the test client's `login()` method to simulate the effect of a user logging into the site.
+
+After you call this method, the test client will have all the cookies and session data required to pass any login-based tests that may form part of a view.
+
+The format of the `credentials` argument depends on which [authentication backend](https://docs.djangoproject.com/en/4.0/topics/auth/customizing/#authentication-backends) you're using (which is configured by your [`AUTHENTICATION_BACKENDS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTHENTICATION_BACKENDS) setting). If you're using the standard authentication backend provided by Django (`ModelBackend`), `credentials` should be the user's username and password, provided as keyword arguments:
+```
+>>> c = Client()
+>>> c.login(username='fred', password='secret')
+
+# Now you can access a view that's only available to logged-in users.
+```
+If you're using a different authentication backend, this method may require different credentials. It requires whichever credentials are required by your backend's `authenticate()` method.
+
+`login()` returns `True` if the credentials were accepted and login was successful.
+
+Finally, you'll need to remember to create user accounts before you can use this method. As we explained above, the test runner is executed using a test database, which contains no users by default. As a result, user accounts that are valid on your production site will not work under test conditions. You'll need to create users as part of the test suite -- either manually (using the Django model API) or with a test fixture. Remember that if you want your test user to have a password, you can't set the user's password by setting the password attribute directly -- you must use the [`set_password()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.set_password) function to store a correctly hashed password. Alternatively, you can use the [`create_user()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.UserManager.create_user) helper method to create a new user with a correctly hashed password.
