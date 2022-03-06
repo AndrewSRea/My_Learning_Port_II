@@ -89,164 +89,278 @@ Once you have a `Client` instance, you can call any of the following methods:
 
 * ##### `get(path, data=None, follow=False, secure=False, **extra)`
 
-Makes a GET request on the provided `path` and returns a `Response` object, which is documented below.
+    Makes a GET request on the provided `path` and returns a `Response` object, which is documented below.
 
-The key-value pairs in the `data` dictionary are used to create a GET data payload. For example:
-```
->>> c = Client()
->>> c.get('/customers/details/', {'name': 'fred', 'age': 7})
-```
-...will result in the evaluation of a GET request equivalent to:
-```
-/customers/details/?name=fred&age=7
-```
-The `extra` keyword arguments parameter can be used to specify headers to be sent in the request. For example:
-```
->>> c = Client()
->>> c.get('/customers/details/', {'name': 'fred', 'age': 7},
-...       HTTP_ACCEPT='application/json')
-```
-...will send the HTTP header `HTTP_ACCEPT` to the details view, which is a good way to test code paths that use the [`django.http.HttpRequest.accepts()`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest.accepts) method.
+    The key-value pairs in the `data` dictionary are used to create a GET data payload. For example:
+    ```
+    >>> c = Client()
+    >>> c.get('/customers/details/', {'name': 'fred', 'age': 7})
+    ```
+    ...will result in the evaluation of a GET request equivalent to:
+    ```
+    /customers/details/?name=fred&age=7
+    ```
+    The `extra` keyword arguments parameter can be used to specify headers to be sent in the request. For example:
+    ```
+    >>> c = Client()
+    >>> c.get('/customers/details/', {'name': 'fred', 'age': 7},
+    ...       HTTP_ACCEPT='application/json')
+    ```
+    ...will send the HTTP header `HTTP_ACCEPT` to the details view, which is a good way to test code paths that use the [`django.http.HttpRequest.accepts()`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest.accepts) method.
 
-<hr>
+    <hr>
 
-**CGI specification**
+    **CGI specification**
 
-The headers sent via `**extra` should follow [CGI](https://www.w3.org/CGI/) specification. For example, emulating a different "Host" header as sent in the HTTP request from the browser to the server should be passed as `HTTP_HOST`.
+    The headers sent via `**extra` should follow [CGI](https://www.w3.org/CGI/) specification. For example, emulating a different "Host" header as sent in the HTTP request from the browser to the server should be passed as `HTTP_HOST`.
 
-<hr>
+    <hr>
 
-If you already have the GET arguments in URL-encoded form, you can use that encoding instead of using the data argument. For example, the previous GET request could also be posed as:
-```
->>> c = Client()
->>> c.get('/customers/details/?name=fred&age=7')
-```
-If you provide a URL with both an encoded GET data and a data argument, the data argument will take precedence.
+    If you already have the GET arguments in URL-encoded form, you can use that encoding instead of using the data argument. For example, the previous GET request could also be posed as:
+    ```
+    >>> c = Client()
+    >>> c.get('/customers/details/?name=fred&age=7')
+    ```
+    If you provide a URL with both an encoded GET data and a data argument, the data argument will take precedence.
 
-If you set `follow` to `True`, the client will follow any redirects and a `redirect_chain` attribute will be set in the response object containing tuples of the intermediate URLs and status codes.
+    If you set `follow` to `True`, the client will follow any redirects and a `redirect_chain` attribute will be set in the response object containing tuples of the intermediate URLs and status codes.
 
-If you had a URL `/redirect_me/` that redirects to `/next/`, that redirected to `/final/`, this is what you'd see:
-```
->>> response = c.get('/redirect_me/', follow=True)
->>> response.redirect_chain
-[('http://testserver/next/', 302), ('http://testserver/final/', 302)]
-```
-If you set `secure` to `True`, the client will emulate an HTTPS request.
+    If you had a URL `/redirect_me/` that redirects to `/next/`, that redirected to `/final/`, this is what you'd see:
+    ```
+    >>> response = c.get('/redirect_me/', follow=True)
+    >>> response.redirect_chain
+    [('http://testserver/next/', 302), ('http://testserver/final/', 302)]
+    ```
+    If you set `secure` to `True`, the client will emulate an HTTPS request.
 
 * ##### `post(path, data=None, content_type=MULTIPART_CONTENT, follow=False, secure=False, **extra)`
 
-Makes a POST request on the provided `path` and returns a `Response` object, which is documented below.
+    Makes a POST request on the provided `path` and returns a `Response` object, which is documented below.
 
-The key-value pairs in the `data` dictionary are used to submit POST data. For example:
-```
->>> c = Client()
->>> c.post('/login/', {'name': 'fred', 'password': 'secret'})
-```
-...will result in the evaluation of a POST request to this URL:
-```
-/login/
-```
-...with this POST data:
-```
-name=fred&password=secret
-```
-If you provide `content_type` as *application/json*, the `data` is serialized using [`json.dumps()`](https://docs.python.org/3/library/json.html#json.dumps) if it's a dict, list, or tuple. Serialization is performed with [`DjangoJSONEncoder`](https://docs.djangoproject.com/en/4.0/topics/serialization/#django.core.serializers.json.DjangoJSONEncoder) by default, and can be overridden by providing a `json_encoder` argument to [`Client`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-clientenforce_csrf_checksfalse-json_encoderdjangojsonencoder-defaults). This serialization also happens for [`put()`](), [`patch()`](), and [`delete()`]() requests. <!-- below -->
+    The key-value pairs in the `data` dictionary are used to submit POST data. For example:
+    ```
+    >>> c = Client()
+    >>> c.post('/login/', {'name': 'fred', 'password': 'secret'})
+    ```
+    ...will result in the evaluation of a POST request to this URL:
+    ```
+    /login/
+    ```
+    ...with this POST data:
+    ```
+    name=fred&password=secret
+    ```
+    If you provide `content_type` as *application/json*, the `data` is serialized using [`json.dumps()`](https://docs.python.org/3/library/json.html#json.dumps) if it's a dict, list, or tuple. Serialization is performed with [`DjangoJSONEncoder`](https://docs.djangoproject.com/en/4.0/topics/serialization/#django.core.serializers.json.DjangoJSONEncoder) by default, and can be overridden by providing a `json_encoder` argument to [`Client`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-clientenforce_csrf_checksfalse-json_encoderdjangojsonencoder-defaults). This serialization also happens for [`put()`](), [`patch()`](), and [`delete()`]() requests. <!-- below -->
 
-If you provide any other `content_type` (e.g. *text/html* for an XML payload), the contents of `data` are sent as-is in the POST request, using `content_type` in the HTTP `Content-Type` header.
+    If you provide any other `content_type` (e.g. *text/html* for an XML payload), the contents of `data` are sent as-is in the POST request, using `content_type` in the HTTP `Content-Type` header.
 
-If you don't provide a value for `content_type`, the values in `data` will be transmitted with a content type of *multipart/form-data*. In this case, the key-value pairs in `data` will be encoded as a multipart message and used to create the POST data payload.
+    If you don't provide a value for `content_type`, the values in `data` will be transmitted with a content type of *multipart/form-data*. In this case, the key-value pairs in `data` will be encoded as a multipart message and used to create the POST data payload.
 
-To submit multiple values for a given key -- for example, to specify the selections for a `<select multiple>` -- provide the values as a list or tuple for the required key. For example, this value of `data` would submit three selected values for the field named `choices`:
-```
-{'choices': ('a', 'b', 'd')}
-```
-Submitting files is a special case. To POST a file, you need only provide the file name as a key, and a file handle to the file you wish to upload as a value. For example:
-```
->>> c = Client()
->>> with open('wishlist.doc', 'rb') as fp:
-...     c.post('/customers/wishes/', {'name': 'fred', 'attachment': fp})
-```
-(The name `attachment` here is not relevant; use whatever name your file-processing code expects.)
+    To submit multiple values for a given key -- for example, to specify the selections for a `<select multiple>` -- provide the values as a list or tuple for the required key. For example, this value of `data` would submit three selected values for the field named `choices`:
+    ```
+    {'choices': ('a', 'b', 'd')}
+    ```
+    Submitting files is a special case. To POST a file, you need only provide the file name as a key, and a file handle to the file you wish to upload as a value. For example:
+    ```
+    >>> c = Client()
+    >>> with open('wishlist.doc', 'rb') as fp:
+    ...     c.post('/customers/wishes/', {'name': 'fred', 'attachment': fp})
+    ```
+    (The name `attachment` here is not relevant; use whatever name your file-processing code expects.)
 
-You may also provide any file-like object (e.g. [`StringIO`](https://docs.python.org/3/library/io.html#io.StringIO) or [`BytesIO`](https://docs.python.org/3/library/io.html#io.BytesIO)) as a file handle. If you're uploading to an [`ImageField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ImageField), the object needs a `name` attribute that passes the [`validate_image_file_extension`](https://docs.djangoproject.com/en/4.0/ref/validators/#django.core.validators.validate_image_file_extension) validator. For example:
-```
->>> from io import BytesIO
->>> img = BytesIO(b'mybinarydata')
->>> img.name = 'myimage.jpg'
-```
-Note that if you wish to use the same file handle for multiple `post()` calls, then you will need to manually reset the file pointer between posts. The easiest way to do this is to manually close the file after it has been provided to `post()`, as demonstrated above.
+    You may also provide any file-like object (e.g. [`StringIO`](https://docs.python.org/3/library/io.html#io.StringIO) or [`BytesIO`](https://docs.python.org/3/library/io.html#io.BytesIO)) as a file handle. If you're uploading to an [`ImageField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ImageField), the object needs a `name` attribute that passes the [`validate_image_file_extension`](https://docs.djangoproject.com/en/4.0/ref/validators/#django.core.validators.validate_image_file_extension) validator. For example:
+    ```
+    >>> from io import BytesIO
+    >>> img = BytesIO(b'mybinarydata')
+    >>> img.name = 'myimage.jpg'
+    ```
+    Note that if you wish to use the same file handle for multiple `post()` calls, then you will need to manually reset the file pointer between posts. The easiest way to do this is to manually close the file after it has been provided to `post()`, as demonstrated above.
 
-You should also ensure that the file is opened in a way that allows the data to be read. If your file contains binary data such as an image, this means you will need to open the file in `rb` (read binary) mode.
+    You should also ensure that the file is opened in a way that allows the data to be read. If your file contains binary data such as an image, this means you will need to open the file in `rb` (read binary) mode.
 
-The `extra` argument acts the same as for [`client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
+    The `extra` argument acts the same as for [`client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
 
-If the URL you request with a POST contains encoded parameters, these parameters will be made available in the `request.GET` data. For example, if you were to make the request:
-```
->>> c.post('/login/?visitor=true', {'name': 'fred', 'password': 'secret'})
-```
-...the view handling this request could interrogate `request.POST` to retrieve the username and password, and could interrogate `request.GET` to determine if the user was a visitor.
+    If the URL you request with a POST contains encoded parameters, these parameters will be made available in the `request.GET` data. For example, if you were to make the request:
+    ```
+    >>> c.post('/login/?visitor=true', {'name': 'fred', 'password': 'secret'})
+    ```
+    ...the view handling this request could interrogate `request.POST` to retrieve the username and password, and could interrogate `request.GET` to determine if the user was a visitor.
 
-If you set `follow` to `True`, the client will follow any redirects and a `redirect_chain` attribute will be set in the response object containing tuples of the intermediate URLs and status codes.
+    If you set `follow` to `True`, the client will follow any redirects and a `redirect_chain` attribute will be set in the response object containing tuples of the intermediate URLs and status codes.
 
-If you set `secure` to `True`, the client will emulate an HTTPS request.
+    If you set `secure` to `True`, the client will emulate an HTTPS request.
 
 * ##### `head(path, data=None, follow=False, secure=False, **extra)`
 
-Makes a HEAD request on the provided `path` and returns a `Response` object. This method works just like [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra), including the `follow`, `secure`, and `extra` arguments, except it does not return a message body.
+    Makes a HEAD request on the provided `path` and returns a `Response` object. This method works just like [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra), including the `follow`, `secure`, and `extra` arguments, except it does not return a message body.
 
 * ##### `options(path, data='', content_type='application/octet-stream', follow=False, secure=False, **extra)`
 
-Makes an OPTIONS request on the provided `path` and returns a `Response` object. Useful for testing RESTful interfaces.
+    Makes an OPTIONS request on the provided `path` and returns a `Response` object. Useful for testing RESTful interfaces.
 
-When `data` is provided, it is used as the request body, and a `Content-Type` header is set to `content_type`.
+    When `data` is provided, it is used as the request body, and a `Content-Type` header is set to `content_type`.
 
-The `follow`, `secure`, and `extra` arguments act the same as for [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
+    The `follow`, `secure`, and `extra` arguments act the same as for [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
 
 * ##### `put(path, data='', content_type='application/octet-stream', follow=False, secure=False, **extra)`
 
-Makes a PUT request on the provided `path` and returns a `Response` object. Useful for testing RESTful interfaces.
+    Makes a PUT request on the provided `path` and returns a `Response` object. Useful for testing RESTful interfaces.
 
-When `data` is provided, it is used as the request body, and a `Content-Type` header is set to `content_type`.
+    When `data` is provided, it is used as the request body, and a `Content-Type` header is set to `content_type`.
 
-The `follow`, `secure`, and `extra` arguments act the same as for [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
+    The `follow`, `secure`, and `extra` arguments act the same as for [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
 
 * ##### `patch(path, data='', content_type='application/octet-stream', follow=False, secure=False, **extra)`
 
-Makes a PATCH request on the provided `path` and returns a `Response` object. Useful for testing RESTful interfaces.
+    Makes a PATCH request on the provided `path` and returns a `Response` object. Useful for testing RESTful interfaces.
 
-The `follow`, `secure`, and `extra` arguments act the same as for [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
+    The `follow`, `secure`, and `extra` arguments act the same as for [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
 
 * ##### `delete(path, data='', content_type='application/octet-stream', follow=False, secure=False, **extra)`
 
-Makes a DELETE request on the provided `path` and returns a `Response` object. Useful for testing RESTful interfaces.
+    Makes a DELETE request on the provided `path` and returns a `Response` object. Useful for testing RESTful interfaces.
 
-When `data` is provided, it is used as the request body, and a `Content-Type` header is set to `content_type`.
+    When `data` is provided, it is used as the request body, and a `Content-Type` header is set to `content_type`.
 
-The `follow`, `secure`, and `extra` arguments act the same as for [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
+    The `follow`, `secure`, and `extra` arguments act the same as for [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
 
 * ##### `trace(path, follow=False, secure=False, **extra)`
 
-Makes a TRACE request on the provided `path` and returns a `Response` object. Useful for simulating diagnostic probes.
+    Makes a TRACE request on the provided `path` and returns a `Response` object. Useful for simulating diagnostic probes.
 
-Unlike the other request methods, `data` is not provided as a keyword parameter in order to comply with [RFC 7231#section-4.3.8](https://datatracker.ietf.org/doc/html/rfc7231.html#section-4.3.8), which mandates that TRACE requests must not have a body.
+    Unlike the other request methods, `data` is not provided as a keyword parameter in order to comply with [RFC 7231#section-4.3.8](https://datatracker.ietf.org/doc/html/rfc7231.html#section-4.3.8), which mandates that TRACE requests must not have a body.
 
-The `follow`, `secure`, and `extra` arguments act the same as for [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
+    The `follow`, `secure`, and `extra` arguments act the same as for [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra).
 
 * ##### `login(**credentials)`
 
-If your site uses Django's [authentication system]() <!-- next module --> and you deal with logging in users, you can use the test client's `login()` method to simulate the effect of a user logging into the site.
+    If your site uses Django's [authentication system]() <!-- next module --> and you deal with logging in users, you can use the test client's `login()` method to simulate the effect of a user logging into the site.
 
-After you call this method, the test client will have all the cookies and session data required to pass any login-based tests that may form part of a view.
+    After you call this method, the test client will have all the cookies and session data required to pass any login-based tests that may form part of a view.
 
-The format of the `credentials` argument depends on which [authentication backend](https://docs.djangoproject.com/en/4.0/topics/auth/customizing/#authentication-backends) you're using (which is configured by your [`AUTHENTICATION_BACKENDS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTHENTICATION_BACKENDS) setting). If you're using the standard authentication backend provided by Django (`ModelBackend`), `credentials` should be the user's username and password, provided as keyword arguments:
-```
->>> c = Client()
->>> c.login(username='fred', password='secret')
+    The format of the `credentials` argument depends on which [authentication backend](https://docs.djangoproject.com/en/4.0/topics/auth/customizing/#authentication-backends) you're using (which is configured by your [`AUTHENTICATION_BACKENDS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTHENTICATION_BACKENDS) setting). If you're using the standard authentication backend provided by Django (`ModelBackend`), `credentials` should be the user's username and password, provided as keyword arguments:
+    ```
+    >>> c = Client()
+    >>> c.login(username='fred', password='secret')
 
-# Now you can access a view that's only available to logged-in users.
-```
-If you're using a different authentication backend, this method may require different credentials. It requires whichever credentials are required by your backend's `authenticate()` method.
+    # Now you can access a view that's only available to logged-in users.
+    ```
+    If you're using a different authentication backend, this method may require different credentials. It requires whichever credentials are required by your backend's `authenticate()` method.
 
-`login()` returns `True` if the credentials were accepted and login was successful.
+    `login()` returns `True` if the credentials were accepted and login was successful.
 
-Finally, you'll need to remember to create user accounts before you can use this method. As we explained above, the test runner is executed using a test database, which contains no users by default. As a result, user accounts that are valid on your production site will not work under test conditions. You'll need to create users as part of the test suite -- either manually (using the Django model API) or with a test fixture. Remember that if you want your test user to have a password, you can't set the user's password by setting the password attribute directly -- you must use the [`set_password()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.set_password) function to store a correctly hashed password. Alternatively, you can use the [`create_user()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.UserManager.create_user) helper method to create a new user with a correctly hashed password.
+    Finally, you'll need to remember to create user accounts before you can use this method. As we explained above, the test runner is executed using a test database, which contains no users by default. As a result, user accounts that are valid on your production site will not work under test conditions. You'll need to create users as part of the test suite -- either manually (using the Django model API) or with a test fixture. Remember that if you want your test user to have a password, you can't set the user's password by setting the password attribute directly -- you must use the [`set_password()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.set_password) function to store a correctly hashed password. Alternatively, you can use the [`create_user()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.UserManager.create_user) helper method to create a new user with a correctly hashed password.
+
+* ##### `force_login(user, backend=None)`
+
+    If your site uses Django's [authentication system](), <!-- next module --> you can use the `force_login()` method to simulate the effect of a user logging into the site. Use this method instead of [`login()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#logincredentials) when a test requires a user be logged in and the details of how a user logged in aren't important.
+
+    Unlike `login()`, this method skips the authentication and verification steps: inactive users ([`is_active=False`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.is_active)) are permitted to login and the user's credentials don't need to be provided.
+
+    The user will have its `backend` attribute set to the value of the `backend` argument (which should be a dotted Python path string), or to `settings.AUTHENTICATION_BACKENDS[0]` if a value isn't provided. The [`authenticate()`](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.authenticate) function called by [`login()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#logincredentials) normally annotates the user like this.
+
+    This method is faster than `login()` since the expensive password hashing algorithms are bypassed. Also, you can speed up `login()` by [using a weaker hasher while testing](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Writing_Running_Tests#speeding-up-the-tests).
+
+* ##### `logout()`
+
+    If your site uses Django's [authentication system](), <!-- next module --> the `logout()` method can be used to simulate the effect of a user logging out of your site.
+
+    After you call this method, the test client will have all the cookies and session data cleared to defaults. Subsequent requests will appear to come from an [`AnonymousUser`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.AnonymousUser).
+
+### Testing responses
+
+The `get()` and `post()` methods both return a `Response` object. This `Response` object is *not* the same as the `HttpResponse` object returned by Django views; the test response object has some additional data useful for test code to verify.
+
+Specifically, a `Response` object has the following attributes:
+
+##### `class Response`
+
+* ##### `client`
+
+    The test client that was used to make the request that resulted in the response.
+
+* ##### `content`
+
+    The body of the response, as a bytestring. This is the final page content as rendered by the view, or any error message.
+
+* ##### `context`
+
+    The template `Context` instance that was used to render the template that produced the response content.
+
+    If the rendered page used multiple templates, then `context` will be a list of `Context` objects, in the order in which they were rendered.
+
+    Regardless of the number of templates used during rendering, you can retrieve context values using the `[]` operator. For example, the context variable `name` could be retrieved using:
+    ```
+    >>> response = client.get('/foo/')
+    >>> response.context['name']
+    'Arthur'
+    ```
+
+    <hr>
+
+    **Not using Django templates?**
+
+    This attribute is only populated when using the [DjangoTemplates](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Templates#class-djangotemplates) backend. If you're using another template engine, [`context_data`](https://docs.djangoproject.com/en/4.0/ref/template-response/#django.template.response.SimpleTemplateResponse.context_data) may be a suitable alternative on responses with that attribute.
+
+    <hr>
+
+* ##### `exc_info`
+
+    A tuple of three values that provides information about the unhandled exception, if any, that occurred during the view.
+
+    The values are (type, value, traceback), the same as returned by Python's [`sys.exc_info()`](). Their meanings are:
+
+    * *type*: The type of the exception.
+    * *value*: The exception instance.
+    * *traceback*: A traceback object which encapsulates the call stack at the point where the exception originally occurred.
+
+    If no exception occurred, the `exc_info` will be `None`.
+
+* ##### `json(**kwargs)`
+
+    The body of the response, parsed as JSON. Extra keyword arguments are passed to [`json.loads()`](https://docs.python.org/3/library/json.html#json.loads). For example:
+    ```
+    >>> response = client.get('/foo/')
+    >>> response.json()['name']
+    'Arthur'
+    ```
+    If the `Content-Type` header is not `"application/json"`, then a [`ValueError`](https://docs.python.org/3/library/exceptions.html#ValueError) will be raised when trying to parse the response.
+
+* ##### `request`
+
+    The request data that stimulated the response.
+
+* ##### `wsgi_request`
+
+    The `WSGIRequest` instance generated by the test handler that generated the response.
+
+* ##### `status_code`
+
+    The HTTP status of the response, as an integer. For a full list of defined codes, see the [IANA status code registry](https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml).
+
+* ##### `templates`
+
+    A list of `Template` instances used to render the final content, in the order they were rendered. For each template in the list, use `template.name` to get the template's file name, if the template was loaded from a file. (The name is a string such as `'admin/index.html'`.)
+
+    <hr>
+
+    **Not using Django templates?**
+
+    This attribute is only populated when using the [DjangoTemplates](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Templates#class-djangotemplates) backend. If you're using another template engine, [`template_name`](https://docs.djangoproject.com/en/4.0/ref/template-response/#django.template.response.SimpleTemplateResponse.template_name) may be a suitable alternative if you only need the name of the template used for rendering.
+
+    <hr>
+
+* `resolver_match`
+
+    An instance of [`ResolverMatch`](https://docs.djangoproject.com/en/4.0/ref/urlresolvers/#django.urls.ResolverMatch) for the reponse. You can use the [`func`](https://docs.djangoproject.com/en/4.0/ref/urlresolvers/#django.urls.ResolverMatch.func) attribute, for example, to verify the view that server the response:
+    ```
+    # my_view here is a function-based view
+    self.assertEqual(response.resolver_match.func, my_view)
+
+    # class-based views need to be compared by name, as the functions
+    # generated by as_view() won't be equal
+    self.assertEqual(response.resolve_match.func.__name__, MyView.as_view().__name__)
+    ```
+    If the given URL is not found, accessing this attribute will raise a [`Resolver404`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.urls.Resolver404) exception.
+
+As with a normal response, you can also access the headers through [`HttpResponse.headers`](). For example, you could determine the content type of a response using `response.headers['Content-Type']`.
