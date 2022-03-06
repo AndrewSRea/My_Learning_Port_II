@@ -363,4 +363,68 @@ Specifically, a `Response` object has the following attributes:
     ```
     If the given URL is not found, accessing this attribute will raise a [`Resolver404`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.urls.Resolver404) exception.
 
-As with a normal response, you can also access the headers through [`HttpResponse.headers`](). For example, you could determine the content type of a response using `response.headers['Content-Type']`.
+As with a normal response, you can also access the headers through [`HttpResponse.headers`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse.headers). For example, you could determine the content type of a response using `response.headers['Content-Type']`.
+
+### Exceptions
+
+If you point the test client at a view that raises an exception and `Client.raise_request_exception` is `True`, that exception will be visible in the test case. You can then use a standard `try ... except` block or [`assertRaises()`](https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertRaises) to test for exceptions.
+
+The only exceptions that are not visible to the test client are [`Http404`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Writing_Views#class-djangohttphttp404), [`PermissionDenied`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.PermissionDenied), [`SystemExit`](https://docs.python.org/3/library/exceptions.html#SystemExit), and [`SuspiciousOperation`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.SuspiciousOperation). Django catches these exceptions internally and converts them into the appropriate HTTP response codes. In these cases, you can check `reponse.status_code` in your test.
+
+If `Client.raise_request_exception` is `False`, the test client will return a 500 response as would be returned to a browser. The response has the attribute [`exc_info`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#exc_info) to provide information about the unhandled exception.
+
+### Persistent state
+
+The test client is stateful. If a response returns a cookie, then that cookie will be stored in the test client and sent with all subsequent `get()` and `post()` requests.
+
+Expiration policies for these cookies are not followed. If you want a cookie to expire, either delete it manually or create a new `Client` instance (which will effectively delete all cookies).
+
+A test client has two attributes that store persistent state information. You can access these properties as part of a test condition.
+
+* ##### `Client.cookies`
+
+    A Python [`SimpleCookie`](https://docs.python.org/3/library/http.cookies.html#http.cookies.SimpleCookie) object, containing session information. See the documentation of the [`http.cookies`](https://docs.python.org/3/library/http.cookies.html#module-http.cookies) module for more.
+    
+* ##### `Client.session`
+
+    A dictionary-like object containing session information. See the [session documentation](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#how-to-use-sessions) for full details.
+
+    To modify the session and then save it, it must be stored in a variable first (because a new `SessionStore` is created every time this property is accessed):
+    ```
+    def test_something(self):
+        session = self.client.session
+        session['somekey'] = 'test'
+        session.save()
+    ```
+
+### Setting the language
+
+When testing applications that support internationalization and localization, you might want to set the language for a test client request. The method for doing so depends on whether or not the [`LocaleMiddleware`](https://docs.djangoproject.com/en/4.0/ref/middleware/#django.middleware.locale.LocaleMiddleware) is enabled.
+
+If the middleware is enabled, the language can be set by creating a cookie with a name of [`LANGUAGE_COOKIE_NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_COOKIE_NAME) and a value of the language code:
+```
+from django.conf import settings
+
+def test_language_using_cookie(self):
+    self.client.cookies.load({settings.LANGUAGE_COOKIE_NAME: 'fr'})
+    response = self.client.get('/')
+    self.assertEqual(response.content, b"Bienvenue sur mon site.")
+```
+...or by including the `Accept-Language` HTTP header in the request:
+```
+def test_language_using_header(self):
+    response = self.client.get('/', HTTP_ACCEPT_LANGUAGE='fr')
+    self.assertEqual(response.content, b"Bienvenue sur mon site.")
+```
+More details are in [How Django discovers language preference](https://docs.djangoproject.com/en/4.0/topics/i18n/translation/#how-django-discovers-language-preference).
+
+If the middleware isn't enabled, the active langauge may be set using [`translation.override()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.override):
+```
+from django.utils import translation
+
+def test_language_using_override(self):
+    with translation.override('fr'):
+        response = self.client.get('/')
+    self.assertEqual(reponse.content, b"Bienvenue sur mon site.")
+```
+More details are in [Explicitly setting the active language](https://docs.djangoproject.com/en/4.0/topics/i18n/translation/#explicitly-setting-the-active-language).
