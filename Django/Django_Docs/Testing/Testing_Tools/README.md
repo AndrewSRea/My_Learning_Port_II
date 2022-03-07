@@ -541,3 +541,134 @@ Django's [`TestCase`]() <!-- below --> class is a more commonly used subclass of
 Apps [will not see their data reloaded](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Writing_Running_Tests#rollback-emulation); if you need this functionality (for example, third-party apps should enable this), you can set `serialized_rollback = True` inside the `TestCase` body.
 
 <hr>
+
+### `TestCase`
+
+##### `class TestCase`
+
+This is the most common class to use for writing tests in Django. It inherits from [`TransactionTestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-transactiontestcase) (and by extention, [`SimpleTestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-simpletestcase)). If your Django application doesn't use a database, use `SimpleTestCase`.
+
+The class:
+
+* Wraps the tests within two nested [`atomic()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#atomicusingnone-savepointtrue-durablefalse) blocks: one for the whole class and one for each test. Therefore, if you want to test some specific database transaction behavior, use [`TransactionTestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-transactiontestcase).
+* Checks deferrable database constraints at the end of each test.
+
+It also provides an additional method:
+
+##### `classmethod TestCase.setUpTestData()`
+
+The class-level `atomic` block described above allows the creation of initial data at the class level, once for the whole `TestCase`. This technique allows for faster tests as compared to using `setUp()`.
+
+For example:
+```
+from django.test import TestCase
+
+class MyTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # Set up data for the whole TestCase
+        cls.foo = Foo.objects.create(bar="Test")
+        ...
+
+    def test1(self):
+        # Some test using self.foo
+        ...
+
+    def test2(self):
+        # Some other test using self.foo
+        ...
+
+```
+Note that is the tests are run on a database with no transaction support (for instance, MySQL with the MyISAM engine), `setUpTestData()` will be called before each test, negating the speed benefits.
+
+##### `classmethod TestCase.captureOnCommitCallbacks(using=DEFAULT_DB_ALIAS, execute=False)`
+
+Returns a context manager that captures [`transaction.on_commit()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Database_Transactions#on_commitfunc-usingnone) callbacks for the given database connection. It returns a list that contains, on exit of the context, the captured callback functions. From this list, you can make assertions on the callbacks or call them to invoke their side effects, emulating a commit.
+
+`using` is the alias of the database connection to capture callbacks for.
+
+If `execute` is `True`, all the callbacks will be called as the context manager exits, if no exception occurred. This emulates a commit after the wrapped block of code.
+
+For example:
+```
+from django.core import mail
+from django.test import TestCase
+
+
+class ContactTests(TestCase):
+    def test_post(self):
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            response = self.client.post(
+                '/contact/',
+                {'message': 'I like your site'},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(callbacks), 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, 'Contact Form')
+        self.assertEqual(mail.outbox[0].body, 'I like your site')
+```
+
+### `LiveServerTestCase`
+
+##### `class LiveServerTestCase`
+
+`LiveServerTestCase` does basically the same as [`TransactionTestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-transactiontestcase) with one extra feature: it launches a live Django server in the background on setup, and shuts it down on teardown. This allows the use of automated test clients other than the [Django dummy client](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#the-test-client) such as, for example, the [Selenium](https://www.selenium.dev/) client, to execute a series of functional tests inside a browser and simulate a real user's actions.
+
+The live server listens on `localhost` and binds to port 0, which uses a free port assigned by the operating system. The server's URL can be accessed with `self.live_server_url` during the tests.
+
+To demonstrate how to use `LiveServerTestCase`, let's write a Selenium test. First of all, you need to install the [selenium package](https://pypi.org/project/selenium/) into your Python path:
+```
+$ python -m pip install selenium
+```
+Then, add a `LiveServerTestCase`-based test to your app's tests module (for example: `myapp/tests.py`). For this example, we'll assume you're using the [`staticfiles`](https://docs.djangoproject.com/en/4.0/ref/contrib/staticfiles/#module-django.contrib.staticfiles) app and want to have static files served during the execution of your tests similar to what we get at development time with `DEBUG=True`, i.e. without having to collect them using [`collectstatic`](). We'll use the [`StaticLiveServerTestCase`](https://docs.djangoproject.com/en/4.0/ref/contrib/staticfiles/#django.contrib.staticfiles.testing.StaticLiveServerTestCase) subclass which provides that functionality. Replace it with `django.test.LiveServerTestCase` if you don't need that.
+
+The code for this test may look as follows:
+```
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+from selenium.webdriver.firefox.webdriver import WebDriver
+
+class MySeleniumTests(StaticLiveServerTestCase):
+    fixtures = ['user-data.json']
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.selenium = WebDriver()
+        cls.selenium.implicitly_wait(10)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.selenium.quit()
+        super().tearDownClass()
+
+    def test_login(self):
+        self.selenium.get('%s%s' % (self.live_server_url, '/login/'))
+        username_input = self.selenium.find_element_by_name("username")
+        username_input.send_keys('myuser')
+        password_input = self.selenium.find_element_by_name("password")
+        self.selenium.find_element_by_xpath('//input[@value="Log in"]').click()
+```
+Finally, you may run the test as follows:
+```
+$ ./manage.py test myapp.tests.MySeleniumTests.test_login
+```
+This example will automatically open Firefox, then go to the login page, enter the credentials and press the "Log in" button. Selenium offers other drivers in case you do not have Firefox installed or wish to use another browser. The example above is just a tiny fraction of what the Selenium client can do; check out the [full reference](https://selenium-python.readthedocs.io/api.html) for more details.
+
+<hr>
+
+**Note**: When using an in-memory SQLite database to run the tests, the same database connection will be shared by two threads in parallel: the thread in which the live server is run and the thread in which the test case is run. It's important to prevent simultaneous database queries via this shared connection by the two threads, as that may sometimes randomly cause the tests to fail. So you need to ensure that the two threads don't access the database at the same time. In particular, this means that in some cases (for example, just after clicking a link or submitting a form), you might need to check that a response is received by Selenium and that the next page is loaded before proceeding with further test execution. Do this, for example, by making Selenium wait until the `<body>` HTML tag is found in the response (requires Selenium > 2.13):
+```
+def test_login(self):
+    from selenium.webdriver.support.wait import WebDriverWait
+    timeout = 2
+    ...
+    self.selenium.find_element_by_xpath('//input[@value="Log in"]').click()
+    # Wait until the response is received
+    WebDriverWait(self.selenium, timeout).until(
+        lambda driver: driver.find_element_by_tag_name('body'))
+```
+The tricky thing here is that there's really no such thing as a "page load", especially in modern web apps that generate HTML dynamically after the server generates the initial document. So, checking for the presence of `<body>` in the response might  not necessarily be appropriate for all use cases. Please refer to the [Selenium FAQ](https://web.archive.org/web/20160129132110/http://code.google.com/p/selenium/wiki/FrequentlyAskedQuestions#Q:_WebDriver_fails_to_find_elements_/_Does_not_block_on_page_loa) and [Selenium documentation](https://www.selenium.dev/documentation/webdriver/waits/#explicit-wait) for more information.
+
+<hr>
