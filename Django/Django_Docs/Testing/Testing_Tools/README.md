@@ -428,3 +428,116 @@ def test_language_using_override(self):
     self.assertEqual(reponse.content, b"Bienvenue sur mon site.")
 ```
 More details are in [Explicitly setting the active language](https://docs.djangoproject.com/en/4.0/topics/i18n/translation/#explicitly-setting-the-active-language).
+
+### Example
+
+The following is a unit test using the test client:
+```
+import unittest
+from django.test import Client
+
+class SimpleTest(unittest.TestCase):
+    def setUp(self):
+        # Every test needs a client.
+        self.client = Client()
+
+    def test_details(self):
+        # Issue a GET request.
+        response = self.client.get('/customer/details/')
+
+        # Check that the response is 200 OK.
+        self.assertEqual(response.status_code, 200)
+
+        # Check that the rendered context contains 5 customers.
+        self.assertEqual(len(response.context['customers']), 5)
+```
+
+<hr>
+
+**See also**
+
+[`django.test.RequestFactory`]() <!-- next module: "class RequestFactory" -->
+
+<hr>
+
+## Provided test case classes
+
+Normal Python unit test classes extend a base class of [`unittest.TestCase`](https://docs.python.org/3/library/unittest.html#unittest.TestCase). Django provides a few extensions of this base class:
+
+![Image showing the hierarchy of Django unit testing classes](https://docs.djangoproject.com/en/4.0/_images/django_unittest_classes_hierarchy.svg)
+
+Hierarchy of Django unit testing classes
+
+You can convert a normal `unittest.TestCase` to any of the subclasses: change the base class of your test from `unittest.TestCase` to the subclass. All of the standard Python unit test functionality will be available, and it will be augmented with some useful additions as described in each section below.
+
+### `SimpleTestCase`
+
+##### `class SimpleTestCase`
+
+A subclass of [`unittest.TestCase`](https://docs.python.org/3/library/unittest.html#unittest.TestCase) that adds this functionality:
+
+* Some useful assertions like:
+    - Checking that a callable [raises a certain exception](). <!-- all below (?) -->
+    - Checking that a callable [triggers a certain warning]().
+    - Testing form field [rendering and error treatment]().
+    - Testing [HTML responses for the presence/lack of a given fragment]().
+    - Verifying that a template [has/hasn't been used to generate a given response content]().
+    - Verifying that two [URLs]() are equal.
+    - Verifying an HTTP [`redirect`]() is performed by the app.
+    - Robustly testing two [HTML fragments]() for equality/inequality or [containment]().
+    - Robustly testing two [XML fragments]() for equality/inequality.
+    - Robustly testing two [JSON fragments]() for equality.
+* The ability to run tests with [modified settings]().
+* Using the [`client`]() [`Client`]().
+
+If your tests make any database queries, use subclasses [`TransactionTestCase`]() or [`TestCase`](). <!-- all below -->
+
+##### `SimpleTestCase.databases`
+
+[`SimpleTestCase`]() <!-- above --> disallows database queries by default. This helps to avoid executing write queries which will affect other tests since each `SimpleTestCase` test isn't run in a transaction. If you aren't concerned about this problem, you can disable this behavior by setting the `database` class attribute to `'__all__'` on your test class.
+
+<hr>
+
+:warning: **Warning**: `SimpleTestCase` and its subclasses (e.g. `TestCase`, ...) rely on `setUpClass()` and `tearDownClass()` to perform some class-wide initialization (e.g., overriding settings). If you need to override those methods, don't forget to call the `super` implementation:
+```
+class MyTestCase(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        ...
+
+    @classmethod
+    def tearDownClass(cls):
+        ...
+        super().tearDownClass()
+```
+Be sure to account for Python's behavior if an exception is raised during `setUpClass()`. If that happens, neither the tests in the class nor `tearDownClass()` are run. In the case of [`django.test.TestCase`](), <!-- below --> this will leak the transaction created in `super()` which results in various symptoms including a segmentation fault on some platforms (reported on macOS). If you want to intentionally raise an exception such as [`unittest.SkipTest`](https://docs.python.org/3/library/unittest.html#unittest.SkipTest) in `setUpClass()`, be sure to do it before calling `super()` to avoid this.
+
+<hr>
+
+### `TransactionTestCase`
+
+##### `class TransactionTestCase`
+
+`TransactionTestCase` inherits from [`SimpleTestCase`]() <!-- above --> to add some database-specific features:
+
+* Resetting the database to a known state at the beginning of each test to ease testing and using the ORM.
+* Database [`fixtures`]().
+* Test [skipping based on database backend features]().
+* The remaining specialized [`assert*`]() methods. <!-- all below -->
+
+Django's [`TestCase`]() <!-- below --> class is a more commonly used subclass of `TransactionTestCase` that makes use of database transaction facilities to speed up the process of resetting the database behaviors cannot be tested within a Django `TestCase` class. For instance, you cannot test that a block of code is executing within a transaction, as is required when using [`select_for_update()`](). In those cases, you should use `TransactionTestCase`.
+
+`TransactionTestCase` and `TestCase` are identical except for the manner in which the database is reset to a known state and the ability for test code to test the effects of commit and rollback:
+
+* A `TransactionTestCase` resets the database after the test runs by truncating all tables. A `TransactionTestCase` may call commit and rollback and observe the effects of these calls on the database.
+* A `TestCase`, on the other hand, does not truncate tables after a test. Instead, it encloses the test code in a database transaction that is rolled back at the end of the test. This guarantees that the rollback at the end of the test restores the database to its initial state.
+
+<hr>
+
+:warning: **Warning**: `TestCase` running on a database that does not support rollback (e.g., MySQL with the MyISAM storage engine), and all instances of `TransactionTestCase`, will roll back at the end of the test by deleting all data from the test database.
+
+Apps [will not see their data reloaded](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Writing_Running_Tests#rollback-emulation); if you need this functionality (for example, third-party apps should enable this), you can set `serialized_rollback = True` inside the `TestCase` body.
+
+<hr>
