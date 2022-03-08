@@ -15,7 +15,7 @@ Some of the things you can do with the test client are:
 Note that the test client is not intended to be a replacement for [Selenium](https://www.selenium.dev/) or other "in-browser" frameworks. Django's test client has a different focus. In short:
 
 * Use Django's test client to establish that the correct template is being rendered and that the template is passed the correct context data.
-* Use in-browser frameworks like [Selenium](https://www.selenium.dev/) to test *rendered* HTML and the *behavior* of web pages, namely JavaScript functionality. Django also provides special support for those frameworks; see the section on [`LiveServerTestCase`]() for more details. <!-- below -->
+* Use in-browser frameworks like [Selenium](https://www.selenium.dev/) to test *rendered* HTML and the *behavior* of web pages, namely JavaScript functionality. Django also provides special support for those frameworks; see the section on [`LiveServerTestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-liveservertestcase) for more details.
 
 A comprehensive test suite should use a combination of both test types.
 
@@ -150,7 +150,7 @@ Once you have a `Client` instance, you can call any of the following methods:
     ```
     name=fred&password=secret
     ```
-    If you provide `content_type` as *application/json*, the `data` is serialized using [`json.dumps()`](https://docs.python.org/3/library/json.html#json.dumps) if it's a dict, list, or tuple. Serialization is performed with [`DjangoJSONEncoder`](https://docs.djangoproject.com/en/4.0/topics/serialization/#django.core.serializers.json.DjangoJSONEncoder) by default, and can be overridden by providing a `json_encoder` argument to [`Client`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-clientenforce_csrf_checksfalse-json_encoderdjangojsonencoder-defaults). This serialization also happens for [`put()`](), [`patch()`](), and [`delete()`]() requests. <!-- below -->
+    If you provide `content_type` as *application/json*, the `data` is serialized using [`json.dumps()`](https://docs.python.org/3/library/json.html#json.dumps) if it's a dict, list, or tuple. Serialization is performed with [`DjangoJSONEncoder`](https://docs.djangoproject.com/en/4.0/topics/serialization/#django.core.serializers.json.DjangoJSONEncoder) by default, and can be overridden by providing a `json_encoder` argument to [`Client`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-clientenforce_csrf_checksfalse-json_encoderdjangojsonencoder-defaults). This serialization also happens for [`put()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#putpath-data-content_typeapplicationoctet-stream-followfalse-securefalse-extra), [`patch()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#patchpath-data-content_typeapplicationoctet-stream-followfalse-securefalse-extra), and [`delete()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#deletepath-data-content_typeapplicationoctet-stream-followfalse-securefalse-extra) requests.
 
     If you provide any other `content_type` (e.g. *text/html* for an XML payload), the contents of `data` are sent as-is in the POST request, using `content_type` in the HTTP `Content-Type` header.
 
@@ -308,7 +308,7 @@ Specifically, a `Response` object has the following attributes:
 
     A tuple of three values that provides information about the unhandled exception, if any, that occurred during the view.
 
-    The values are (type, value, traceback), the same as returned by Python's [`sys.exc_info()`](). Their meanings are:
+    The values are (type, value, traceback), the same as returned by Python's [`sys.exc_info()`](https://docs.python.org/3/library/sys.html#sys.exc_info). Their meanings are:
 
     * *type*: The type of the exception.
     * *value*: The exception instance.
@@ -488,13 +488,13 @@ A subclass of [`unittest.TestCase`](https://docs.python.org/3/library/unittest.h
     - Robustly testing two [XML fragments]() for equality/inequality.
     - Robustly testing two [JSON fragments]() for equality.
 * The ability to run tests with [modified settings]().
-* Using the [`client`]() [`Client`]().
+* Using the [`client`]() [`Client`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-clientenforce_csrf_checksfalse-json_encoderdjangojsonencoder-defaults).
 
-If your tests make any database queries, use subclasses [`TransactionTestCase`]() or [`TestCase`](). <!-- all below -->
+If your tests make any database queries, use subclasses [`TransactionTestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-transactiontestcase) or [`TestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-testcase).
 
 ##### `SimpleTestCase.databases`
 
-[`SimpleTestCase`]() <!-- above --> disallows database queries by default. This helps to avoid executing write queries which will affect other tests since each `SimpleTestCase` test isn't run in a transaction. If you aren't concerned about this problem, you can disable this behavior by setting the `database` class attribute to `'__all__'` on your test class.
+[`SimpleTestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-simpletestcase) disallows database queries by default. This helps to avoid executing write queries which will affect other tests since each `SimpleTestCase` test isn't run in a transaction. If you aren't concerned about this problem, you can disable this behavior by setting the `database` class attribute to `'__all__'` on your test class.
 
 <hr>
 
@@ -520,14 +520,14 @@ Be sure to account for Python's behavior if an exception is raised during `setUp
 
 ##### `class TransactionTestCase`
 
-`TransactionTestCase` inherits from [`SimpleTestCase`]() <!-- above --> to add some database-specific features:
+`TransactionTestCase` inherits from [`SimpleTestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-simpletestcase) to add some database-specific features:
 
 * Resetting the database to a known state at the beginning of each test to ease testing and using the ORM.
 * Database [`fixtures`]().
 * Test [skipping based on database backend features]().
 * The remaining specialized [`assert*`]() methods. <!-- all below -->
 
-Django's [`TestCase`]() <!-- below --> class is a more commonly used subclass of `TransactionTestCase` that makes use of database transaction facilities to speed up the process of resetting the database behaviors cannot be tested within a Django `TestCase` class. For instance, you cannot test that a block of code is executing within a transaction, as is required when using [`select_for_update()`](). In those cases, you should use `TransactionTestCase`.
+Django's [`TestCase`]() <!-- below --> class is a more commonly used subclass of `TransactionTestCase` that makes use of database transaction facilities to speed up the process of resetting the database behaviors cannot be tested within a Django `TestCase` class. For instance, you cannot test that a block of code is executing within a transaction, as is required when using [`select_for_update()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.select_for_update). In those cases, you should use `TransactionTestCase`.
 
 `TransactionTestCase` and `TestCase` are identical except for the manner in which the database is reset to a known state and the ability for test code to test the effects of commit and rollback:
 
@@ -672,3 +672,140 @@ def test_login(self):
 The tricky thing here is that there's really no such thing as a "page load", especially in modern web apps that generate HTML dynamically after the server generates the initial document. So, checking for the presence of `<body>` in the response might  not necessarily be appropriate for all use cases. Please refer to the [Selenium FAQ](https://web.archive.org/web/20160129132110/http://code.google.com/p/selenium/wiki/FrequentlyAskedQuestions#Q:_WebDriver_fails_to_find_elements_/_Does_not_block_on_page_loa) and [Selenium documentation](https://www.selenium.dev/documentation/webdriver/waits/#explicit-wait) for more information.
 
 <hr>
+
+## Test case features
+
+### Default test client
+
+##### `SimpleTestCase.client`
+
+Every test case in a `django.test.*TestCase` instance has access to an instance has access to an instance of a Django test client. This client can be accessed as `self.client`. This client is recreated for each test, so you don't have to worry about state (such as cookies) carrying over from one test to another.
+
+This means, instead of instantiating a `Client` in each test:
+```
+import unittest
+from django.test import Client
+
+class SimpleTest(unittest.TestCase):
+    def test_details(self):
+        client = Client()
+        response = client.get('/customer/details/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_index(self):
+        client = Client()
+        response = client.get('/customer/index/')
+        self.assertEqual(response.status_code, 200)
+```
+...you can refer to `self.client`, like so:
+```
+from django.test import TestCase
+
+class SimpleTest(TestCase):
+    def test_details(self):
+        response = self.client.get('/customer/details/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_index(self):
+        response = self.client.get('/customer/index/')
+        self.assertEqual(response.status_code, 200)
+```
+
+### Customizing the test client
+
+##### `SimpleTestCase.client_class`
+
+If you want to use a different `Client` class (for example, a subclass with customized behavior), use the `client_class` class attribute:
+```
+from django.test import Client, TestCase
+
+class MyTestClient(Client):
+    # Specialized methods for your environment
+    ...
+
+class MyTest(TestCase):
+    client_class = MyTestClient
+
+    def test_my_stuff(self):
+        # Here self.client is an instance of MyTestClient...
+        call_some_test_code()
+```
+
+### Fixture loading
+
+##### `TransactionTestCase.fixtures`
+
+A test case for a database-backed website isn't much use if there isn't any data in the database. Tests are more readable and it's more maintainable to create objects using the ORM, for example, in [`TestCase.setUpTestData()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#classmethod-testcasesetuptestdata). However, you can also use fixtures.
+
+A fixture is a collection of data that Django knows how to import into a database. For example, if your site has user accounts, you might set up a fixture of fake user accounts in order to populate your database during tests.
+
+The most straightforward way of creating a fixture is to use the [`manage.py dumpdata`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-dumpdata) command. This assumes you already have some data in your database. See the [`dumpdata` documentation](https://docs.djangoproject.com/en/4.0/ref/django-admin/#dumpdata) for more details.
+
+Once you've created a fixture and placed it in a `fixtures` directory in one of your [`INSTALLED_APPS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-INSTALLED_APPS), you can use it in your unit tests by specifying a `fixtures` class attribute on your [`django.test.TestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-testcase) subclass:
+```
+from django.test import TestCase
+from myapp.models import Animal
+
+class AnimalTestCase(TestCase):
+    fixtures = ['mammals.json', 'birds']
+
+    def setUp(self):
+        # Test definitions as before.
+        call_setup_methods()
+
+    def test_fluffy_animals(self):
+        # A test that uses the fixtures.
+        call_some_test_code()
+```
+Here's specifically what will happen:
+
+* At the start of each test, before `setUp()` is run, Django will flush the database, returning the database to the state it was in directly after [`migrate`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-migrate) was called.
+* Then, all the named fixtures are installed. In this example, Django will install any JSON fixture named `mammals`, followed by any fixture named `birds`. See the [`loaddata`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-loaddata) documentation for more details on defining and installing fixtures.
+
+For performance reasons, [`TestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-testcase) loads fixtures once for the entire test class, before [`setUpTestData()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#classmethod-testcasesetuptestdata), instead of before each test, and it uses transactions to clean the database before each test. In any case, you can be certain that the outcome of a test will not be affected by another test or by the order of test execution.
+
+By default, fixtures are only loaded into the `default` database. If you are using multiple databases and set [`TransactionTestCase.databases`](), <!-- below --> fixtures will be loaded into all specified databases.
+
+### URLconf configuration
+
+If your application provides views, you may want to include tests that use the test client to exercise those views. However, an end user is free to deploy the views in your application at any URL of their choosing. This means that your tests can't rely upon the fact that your views will be available at a particular URL. Decorate your test class or test method with `@override_settings(ROOT_URLCONF=...)` for URLconf configuration.
+
+### Multi-database support
+
+##### `TransactionTestCase.database`
+
+Django sets up a test database corresponding to every database that is defined in the [`DATABASES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASES) definition in your settings and referred to by at least one test through `databases`.
+
+However, a big part of the time taken to run a Django `TestCase` is consumed by the call to `flush` that ensures that you have a clean database at the start of each test run. If you have multiple databases, multiple flushes are required (one for each database), which can be a time consuming activity -- especially if your tests don't need to test multi-database activity.
+
+As an optimization, Django only flushes the `default` database at the start of each test run. If your setup contains multiple databases, and you have a test that requires every database to be clean, you can use the `databases` attribute on the test suite to request extra databases to be flushed.
+
+For example:
+```
+class TestMyViews(TransactionTestCase):
+    databases = {'default', 'other'}
+
+    def test_index_page_view(self):
+        call_some_test_code()
+```
+This test case will flush the `default` and `other` test databases before running `test_index_page_view`. You can also use `'__all__'` to specify that all of the test databases must be flushed.
+
+The `databases` flag also controls which databases the [`TransactionTestCase.fixtures`]() are loaded into. By default, fixtures are only loaded into the `default` database.
+
+Queries against databases not in `databases` will give assertion errors to prevent state leaking between tests.
+
+##### `TestCase.databases`
+
+By default, only the `default` database will be wrapped in a transaction during a `TestCase`'s execution and attempts to query other databases will result in assertion errors to prevent state leaking between tests.
+
+Use the `databases` class attribute on the test class to request transaction wrapping against non-`default` databases.
+
+For example:
+```
+class OtherDBTests(TestCase):
+    databases = {'other'}
+
+    def test_other_db_query(self):
+        ...
+```
+This test will only allow queries against the `other` database. Just like for [`SimpleTestCase.databases`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcasedatabases) and [`TransactionTestCase.databases`](), the `'__all__'` constant can be used to specify that the test should allow queries to all databases.
