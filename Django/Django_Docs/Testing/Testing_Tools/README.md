@@ -790,7 +790,7 @@ class TestMyViews(TransactionTestCase):
 ```
 This test case will flush the `default` and `other` test databases before running `test_index_page_view`. You can also use `'__all__'` to specify that all of the test databases must be flushed.
 
-The `databases` flag also controls which databases the [`TransactionTestCase.fixtures`]() are loaded into. By default, fixtures are only loaded into the `default` database.
+The `databases` flag also controls which databases the [`TransactionTestCase.fixtures`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#transactiontestcasefixtures) are loaded into. By default, fixtures are only loaded into the `default` database.
 
 Queries against databases not in `databases` will give assertion errors to prevent state leaking between tests.
 
@@ -808,4 +808,126 @@ class OtherDBTests(TestCase):
     def test_other_db_query(self):
         ...
 ```
-This test will only allow queries against the `other` database. Just like for [`SimpleTestCase.databases`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcasedatabases) and [`TransactionTestCase.databases`](), the `'__all__'` constant can be used to specify that the test should allow queries to all databases.
+This test will only allow queries against the `other` database. Just like for [`SimpleTestCase.databases`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcasedatabases) and [`TransactionTestCase.databases`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#transactiontestcasedatabase), the `'__all__'` constant can be used to specify that the test should allow queries to all databases.
+
+### Overriding settings
+
+<hr>
+
+:warning: **Warning**: Use the functions below to temporarily alter the value of settings in tests. Don't manipulate `django.conf.settings` directly as Django won't restore the original values after such manipulations.
+
+<hr>
+
+##### `SimpleTestCase.settings()`
+
+For testing purposes, it's often useful to change a setting temporarily and revert to the original value after running the testing code. For this use case, Django provides a standard Python context manager (see [PEP 343](https://www.python.org/dev/peps/pep-0343/)) called `settings()`, which can be used like this:
+```
+from django.test import TestCase
+
+class LoginTestCase(TestCase):
+
+    def test_login(self):
+
+        # First check for the default behavior
+        response = self.client.get('/sekrit/')
+        self.assertRedirects(response, '/accounts/login/?next=/sekrit/')
+
+        # Then override the LOGIN_URL setting
+        with self.settings(LOGIN_URL='/other/login/'):
+            response = self.client.get('/sekrit/')
+            self.assertRedirects(response, '/other/login/?next=/sekrit/')
+```
+This example will override the [`LOGIN_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_URL) setting for the code in the `with` block and reset its value to the previous state afterward.
+
+##### `SimpleTestCase.modify_settings()`
+
+It can prove unwieldy to redefine settings that contain a list of values. In practice, adding or removing values is often sufficient. Django provides the `modify_settings()` context manager for easier settings changes:
+```
+from django.test import TestCase
+
+class MiddlewareTestCase(TestCase):
+
+    def test_cache_middleware(self):
+        with self.modify_settings(MIDDLEWARE={
+            'append': 'django.middleware.cache.FetchFromCacheMiddleware',
+            'prepend': 'django.middleware.cache.UpdateCacheMiddleware',
+            'remove': [
+                'django.contrib.sessions.middleware.SesionMiddleware',
+                'django.contrib.auth.middleware.AuthenticationMiddleware',
+                'django.contrib.messages.middleware.MessageMiddleware',
+            ],
+        }):
+            response = self.client.get('/')
+            # ...
+```
+For each action, you can supply either a list of values or a string. When the value already exists in the list, `append` and `prepend` have no effect; neither does `remove` when the value doesn't exist.
+
+##### `override_settings(**kwargs)`
+
+In case you want to override a setting for a test method, Django provides the `override_settings()` decorator (see [PEP 318](https://www.python.org/dev/peps/pep-0318/)). It's used like this:
+```
+from django.test import TestCase, override_settings
+
+class LoginTestCase(TestCase):
+
+    @override_settings(LOGIN_URL='/other/login/')
+    def test_login(self):
+        response = self.client.get('/sekrit/')
+        self.assertRedirects(response, '/other/login/?next=/sekrit/')
+```
+The decorator can also be applied to [`TestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-testcase) classes:
+```
+from django.test import TestCase, override_settings
+
+@override_settings(LOGIN_URL='/other/login/')
+class LoginTestCase(TestCase):
+
+    def test_login(self):
+        response = self.client.get('/sekrit/')
+        self.assertRedirects(response, '/other/login/?next=/sekrit/')
+```
+
+##### `modify_settings(*args, **kwargs)`
+
+Likewise, Django provides the `modify_settings()` decorator:
+```
+from django.test import TestCase, modify_settings
+
+class MiddlewareTestCase(TestCase):
+
+    @modify_settings(MIDDLEWARE={
+        'append': 'django.middleware.cache.FetchFromCacheMiddleware',
+        'prepend': 'django.middleware.cache.UpdateCacheMiddleware',
+    })
+    def test_cache_middleware(self):
+        response = self.client.get('/')
+        # ...
+```
+The decorator can also be applied to test case classes:
+```
+from django.test import TestCase, modify_settings
+
+@modify_settings(MIDDLEWARE={
+    'append': 'django.middleware.cache.FetchFromCacheMiddleware',
+    'prepend': 'django.middleware.cache.UpdateCacheMiddleware',
+})
+class MiddlewareTestCase(TestCase):
+
+    def test_cache_middleware(self):
+        response = self.client.get('/')
+        # ...
+```
+
+<hr>
+
+**Note**: When given a class, these decorators modify the class directly and return it; they don't create and return a modified copy of it. So if you try to tweak the above examples to assign the return value to a different name than `LoginTestCase` or `MiddlewareTestCase`, you may be surprised to find that the original test case classes are still equally affected by the decorator. For a given class, [`modify_settings()`]() is always applied after [`override_settings()`]().
+
+<hr>
+
+:warning: **Warning**: The settings file contains some settings that are only consulted during initialization of Django internals. If you change them with `override_settings`, the setting is changed if you access it via the `django.conf.settings` module, however, Django's internals access it differently. Effectively, using `override_settings()` or `modify_settings()` with these settings is probably not going to do what you expect it to do.
+
+We do not recommend altering the [`DATABASES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASES) setting. Altering the [`CACHES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES) setting is possible, but a bit tricky if you are using internals that make use of caching, like [`django.contrib.sessions`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#how-to-use-sessions). For example, you will have to reinitialize the session backend in a test that uses cached sessions and overrides `CACHES`.
+
+Finally, avoid aliasing your settings as module-level constants as `override_settings()` won't work on such values since they are only evaluated the first time the module is imported.
+
+<hr>
