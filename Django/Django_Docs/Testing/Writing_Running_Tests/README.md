@@ -4,7 +4,7 @@
 
 **See also**
 
-The [testing tutorial](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Getting_Started/Tutorial_5#writing-your-first-django-app---part-5), the [testing tools reference](), and the [advanced testing topics]().
+The [testing tutorial](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Getting_Started/Tutorial_5#writing-your-first-django-app---part-5), the [testing tools reference](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#testing-tools), and the [advanced testing topics]().
 
 <hr>
 
