@@ -1109,3 +1109,175 @@ Asserts that the strings `html1` and `html2` are *not* equal. The comparison is 
 `html1` and `html2` must contain HTML. An `AssertionError` will be raised if one of them cannot be parsed.
 
 Output in case of error can be customized with the `msg` argument.
+
+##### `SimpleTestCase.assertXMLEqual(xml1, xml2, msg=None)`
+
+Asserts that the strings `xml1` and `xml2` are equal. The comparison is based on XML semantics. Similarly to [`assertHTMLEqual()`](), <!-- above --> the comparison is made on parsed content, hence only semantic differences are considered, not syntax differences. When invalid XML is passed in any parameter, an `AssertionError` is always raised, even if both strings are identical.
+
+XML declaration, document type, processing instructions, and comments are ignored. Only the root element and its children are compared.
+
+Output in case of error can be customized with the `msg` argument.
+
+##### `SimpleTestCase.assertXMLNotEqual(xml1, xml2, msg=None)`
+
+Asserts that the strings `xml1` and `xml2` are *not* equal. The comparison is based on XML semantics. See [`assertXMLEqual()`]() for details. <!-- directly above -->
+
+Output in case of error can be customized with the `msg` argument.
+
+##### `SimpleTestCase.assertInHTML(needle, haystack, count=None, msg_prefix='')`
+
+Asserts that the HTML fragment `needle` is contained in the `haystack` one.
+
+If the `count` integer argument is specified, then additionally the number of `needle` occurrences will be strictly verified.
+
+Whitespace in most cases is ignored, and attribute ordering is not significant. See [`assertHTMLEqual()`]() for more details. <!-- above -->
+
+##### `SimpleTestCase.assertJSONEqual(raw, expected_data, msg=None)`
+
+Asserts that the JSON fragments `raw` and `expected_data` are equal. Usual JSON non-significant whitespace rules apply as the heavyweight is delegated to the [`json`](https://docs.python.org/3/library/json.html#module-json) library.
+
+Output in case of error can be customized with the `msg` argument.
+
+##### `SimpleTestCase.assertJSONNotEqual(raw, expected_data, msg=None)`
+
+Asserts that the JSON fragments `raw` and `expected_data` are *not* equal. See [`assertJSONEqual()`]() for further details. <!-- directly above -->
+
+Output in case of error can be customized with the `msg` argument.
+
+##### `TransactionTestCase.assertQuerysetEqual(qs, values, transform=None, ordered=True, msg=None)`
+
+Asserts that a queryset `qs` matches a particular iterable of values `values`.
+
+If `transform` is provided, `values` is compared to a list produced by applying `transform` to each member of `qs`.
+
+By default, the comparison is also ordering dependent. If `qs` doesn't provide an implicit ordering, you can set the `ordered` parameter to `False`, which turns the comparison into a `collections.Counter` comparison. If the order is undefined (if the given `qs` isn't ordered and the comparison is against more than one ordered value), a `ValueError` is raised.
+
+Output in case of error can be customized with the `msg` argument.
+
+<hr>
+
+**Deprecated since version 3.2**:
+
+If `transform` is not provided and `values` is a list of strings, it's compared to a list produced by applying `repr()` to each member of `qs`. This behavior is deprecated and will be removed in Django 4.1. If you need it, explicitly set `transform` to `repr`.
+
+<hr>
+
+##### `TransactionTestCase.assertNumQueries(num, func, *args, **kwargs)`
+
+Asserts that when `func` is called with `*args` and `**kwargs` that `num` database queries are executed.
+
+If a `"using"` key is present in `kwargs`, it is used as the database alias for which to check the number of queries:
+```
+self.assertNumQueries(7, using='non_default_db')
+```
+If you wish to call a function with a `using` parameter, you can do it by wrapping the call with a `lambda` to add an extra parameter:
+```
+self.assertNumQueries(7, lambda: my_function(using=7))
+```
+You can also use this as a context manager:
+```
+with self.assertNumQueries(2):
+    Person.objects.create(name="Aaron")
+    Person.objects.create(name="Daniel")
+```
+
+### Tagging tests
+
+You can tag your tests so you can easily run a particular subset. For example, you might label fast or slow tests:
+```
+from django.test import tag
+
+class SampleTestCase(TestCase):
+
+    @tag('fast')
+    def test_fast(self):
+        ...
+
+    @tag('slow')
+    def test_slow(self):
+        ...
+
+    @tag('slow', 'core')
+    def test_slow_but_core(self):
+        ...
+```
+You can also tag a test case:
+```
+@tag('slow', 'core')
+class SampleTestCase(TestCase):
+    ...
+```
+Subclasses inherit tags from superclasses, and methods inherit tags from their class. Given:
+```
+@tag('foo')
+class SampleTestCaseChild(SampleTestCase):
+
+    @tag('bar')
+    def test(self):
+        ...
+```
+`SampleTestCaseChild.test` will be labeled with `'slow'`, `'core'`, `'bar'`, and `'foo'`.
+
+Then you can choose which tests to run. For example, to run only fast tests:
+```
+$ ./manage.py test --tag-fast
+```
+Or to run fast tests and the core one (even though it's slow):
+```
+$ ./manage.py test --tag-fast --tag-core
+```
+You can also exclude tests by tag. To run core tests if they are not slow:
+```
+$ ./manage.py test --tag-core --exclude-tag-slow
+```
+[`test --exclude-tag`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#cmdoption-test-exclude-tag) has precedence over [`test --tag`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#cmdoption-test-tag), so if a test has two tags and you select one of them and exclude the other, the test won't be run.
+
+## Testing asynchronous code
+
+If you merely want to test the output of your asynchronous views, the standard test client will run them inside their own asynchronous loop without any extra work needed on your part.
+
+However, if you want to write fully-asynchronous tests for a Django project, you will need to take several things into account.
+
+Firstly, your tests must be `async def` methods on the test class (in order to give them an asynchronous context). Django will automatically detect any `async def` tests and wrap them so they run in their own event loop.
+
+If you are testing from an asynchronous function, you must also use the asynchronous test client. This is available as `django.test.ASyncClient`, or as `self.async_client` on any test.
+
+`AsyncClient` has the same methods and signatures as the synchronous (normal) test client, with two exceptions:
+
+* The `follow` parameter is not supported.
+* Headers passed as `extra` keyword arguments should not have the `HTTP_` prefix required by the synchronous client (see [`Client.get()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#getpath-datanone-followfalse-securefalse-extra)). For example, here is how to set an HTTP `Accept` header:
+    ```
+    >>> c = AsyncClient()
+    >>> c.get(
+    ...     '/customers/details/',
+    ...     {'name': 'fred', 'age': 7},
+    ...     ACCEPT='application/json'
+    ... )
+    ```
+
+Using `AsyncClient`, any method that makes a request must be awaited:
+```
+async def test_my_thing(self):
+    response = await self.async_client.get('/some-url/')
+    self.assertEqual(response.status_code, 200)
+```
+The asynchronous client can also call synchronous views; it runs through Django's [asynchronous request path](https://docs.djangoproject.com/en/4.0/topics/async/), which supports both. Any view called through the `AsyncClient` will get an `ASGIRequest` object for its `request` rather than the `WSGIRequest` that the normal client creates.
+
+<hr>
+
+:warning: **Warning**: If you are using test decorators, they must be async-compatible to ensure they work correctly. Django's built-in decorators will behave correctly, but third-party ones may appear to not execute (they will "wrap" the wrong part of the execution flow and not your test).
+
+If you need to use these decorators, then you should decorate your test methods with [`async_to_sync()`]() *inside* of them instead:
+```
+from asgiref.sync import async_to_sync
+from django.test import TestCase
+
+class MyTests(TestCase):
+
+    @mock.patch(...)
+    @async_to_sync
+    async def test_my_thing(self):
+        ...
+```
+
+<hr>
