@@ -352,7 +352,7 @@ Specifically, a `Response` object has the following attributes:
 
 * `resolver_match`
 
-    An instance of [`ResolverMatch`](https://docs.djangoproject.com/en/4.0/ref/urlresolvers/#django.urls.ResolverMatch) for the reponse. You can use the [`func`](https://docs.djangoproject.com/en/4.0/ref/urlresolvers/#django.urls.ResolverMatch.func) attribute, for example, to verify the view that server the response:
+    An instance of [`ResolverMatch`](https://docs.djangoproject.com/en/4.0/ref/urlresolvers/#django.urls.ResolverMatch) for the response. You can use the [`func`](https://docs.djangoproject.com/en/4.0/ref/urlresolvers/#django.urls.ResolverMatch.func) attribute, for example, to verify the view that server the response:
     ```
     # my_view here is a function-based view
     self.assertEqual(response.resolver_match.func, my_view)
@@ -369,7 +369,7 @@ As with a normal response, you can also access the headers through [`HttpRespons
 
 If you point the test client at a view that raises an exception and `Client.raise_request_exception` is `True`, that exception will be visible in the test case. You can then use a standard `try ... except` block or [`assertRaises()`](https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertRaises) to test for exceptions.
 
-The only exceptions that are not visible to the test client are [`Http404`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Writing_Views#class-djangohttphttp404), [`PermissionDenied`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.PermissionDenied), [`SystemExit`](https://docs.python.org/3/library/exceptions.html#SystemExit), and [`SuspiciousOperation`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.SuspiciousOperation). Django catches these exceptions internally and converts them into the appropriate HTTP response codes. In these cases, you can check `reponse.status_code` in your test.
+The only exceptions that are not visible to the test client are [`Http404`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Writing_Views#class-djangohttphttp404), [`PermissionDenied`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.PermissionDenied), [`SystemExit`](https://docs.python.org/3/library/exceptions.html#SystemExit), and [`SuspiciousOperation`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.SuspiciousOperation). Django catches these exceptions internally and converts them into the appropriate HTTP response codes. In these cases, you can check `response.status_code` in your test.
 
 If `Client.raise_request_exception` is `False`, the test client will return a 500 response as would be returned to a browser. The response has the attribute [`exc_info`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#exc_info) to provide information about the unhandled exception.
 
@@ -425,7 +425,7 @@ from django.utils import translation
 def test_language_using_override(self):
     with translation.override('fr'):
         response = self.client.get('/')
-    self.assertEqual(reponse.content, b"Bienvenue sur mon site.")
+    self.assertEqual(response.content, b"Bienvenue sur mon site.")
 ```
 More details are in [Explicitly setting the active language](https://docs.djangoproject.com/en/4.0/topics/i18n/translation/#explicitly-setting-the-active-language).
 
@@ -931,3 +931,181 @@ We do not recommend altering the [`DATABASES`](https://docs.djangoproject.com/en
 Finally, avoid aliasing your settings as module-level constants as `override_settings()` won't work on such values since they are only evaluated the first time the module is imported.
 
 <hr>
+
+You can also simulate the absence of a setting by deleting it after settings have been overridden, like this:
+```
+@override_settings()
+def test_seomthing(self):
+    del settings.LOGIN_URL
+    ...
+```
+When overriding settings, make sure to handle the cases in which your app's code uses a cache or similar feature that retains state even if the setting is changed. Django provides the [`django.test.signals.setting_changed`]() signal that lets you register callbacks to clean up and otherwise reset state when settings are changed.
+
+Django itself uses this signal to reset various data:
+
+| Overridden settings | Data reset |
+| --- | --- |
+| `USE_TZ`, `TIME_ZONE` | Databases timezone |
+| `TEMPLATES` | Template engines |
+| `SERIALIZATION_MODULES` | Serializers cache |
+| `LOCALE_PATHS`, `LANGUAGE_CODE` | Default translation and loaded translations |
+| `MEDIA_ROOT`, `DEFAULT_FILE_STORAGE` | Default file storage |
+
+### Emptying the test outbox
+
+If you use any of Django's custom `TestCase` classes, the test runner will clear the contents of the test email outbox at the start of each test case.
+
+For more detail on email services during tests, see [Email services]() below.
+
+### Assertions
+
+As Python's normal [`unittest.TestCase`]() class implements assertion methods such as [`assertTrue()`]() and [`assertEqual()`](), Django's custom [`TestCase`]() class provides a number of custom assertion methods that are useful for testing web applications:
+
+The failure messages given by mostof these assertion methods can be customized with the `msg_prefix` argument. This string will be prefixed to any failure message generated by the assertion. This allows you to provide additional details that may help you to identify the location and cause of a failure in your test suite.
+
+##### `SimpleTestCase.assertRaisesMessage(expected_exception, expected_message, callable, *args, **kwargs)`
+##### `SimpleTestCase.assertRaisesMessage(expected_exception, expected_message)`
+
+Asserts that execution of `callable` raises `expected_exception` and that `expected_message` is found in the exception's message. Any other outcome is reported as a failure. It's a simpler version of [`unittest.TestCase.assertRaisesRegex()`](https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertRaisesRegex) with the difference that `expected_message` isn't treated as a regular expression.
+
+If only the `expected_exception` and `expected_message` parameters are given, returns a context manager so that the code being tested can be written inline rather than as a function:
+```
+with self.assertRaisesMessage(ValueError, 'invalid literal for int()`):
+    int('a')
+```
+
+##### `SimpleTestCase.assertWarnsMessage(expected_exception, expected_message, callable, *args, **kwargs)`
+##### `SimpleTestCase.assertWarnsMessage(expected_exception, expected_message)`
+
+Analogous to [`SimpleTestCase.assertRaisesMessage()`]() but for [`assertWarnsRegex()`](https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertWarnsRegex) instead of [`assertRaisesRegex()`](https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertRaisesRegex).
+
+##### `SimpleTestCase.assertFieldOutput(fieldclass, valid, invalid, field_args=None, field_kwargs=None, empty_value='')`
+
+Asserts that a form field behaves correctly with various inputs.
+
+**Parameters**:
+                
+* `fieldclass` - the class of the field to be tested.
+* `valid` - a dictionary mapping valid inputs to their expected cleaned values.
+* `invalid` - a dictionary mapping invalid inputs to one or more raised error messages.
+* `field_args` - the args passed to instantiate the field.
+* `field_kwargs` - the kwargs passed to instantiate the field.
+* `empty_value` - the expected clean output for inputs in `empty_values`.
+
+For example, the following code tests that an `EmailField` accepts `a@a.com` as a valid email address, but rejects `aaa` with a reasonable error message:
+```
+self.assertFieldOutput(EmailField, {'a@a.com': 'a@a.com'}, {'aaa': ['Enter a valid email address.']})
+```
+
+##### `SimpleTestCase.assertFormError(response, form, field, errors, msg_prefix='')`
+
+Asserts that a field on a form raises the provided list of errors when rendered on the form.
+
+`response` must be a response instance returned by the [`test client`](https://docs.djangoproject.com/en/4.0/topics/testing/tools/#django.test.Response).
+
+`form` is the name the `Form` instance was given in the template context of the response.
+
+`field` is the name of the field on the form to check. If `field` has a value of `None`, non-field errors (errors you can access via [`form.non_field_errors()`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.non_field_errors)) will be checked.
+
+`errors` is an error string, or a list of error strings, that are expected as a result of form validation.
+
+##### `SimpleTestCase.assertFormsetError(response, formset, form_index, field, errors, msg_prefix='')`
+
+Asserts that the `formset` raises the provided list of errors when rendered.
+
+`response` must be a response instance returned by the [`test client`](https://docs.djangoproject.com/en/4.0/topics/testing/tools/#django.test.Response).
+
+`formset` is the name the `Formset` instance was given in the template context of the response.
+
+`form_index` is the number of the form within the `Formset`. If `form_index` has a value of `None`, non-form errors (errors you can access via `formset.non_form_errors()`) will be checked.
+
+`field` is the name of the field on the form to check. If `field` has a value of `None`, non-field errors (errors you can access via [`form.non_field_errors()`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form.non_field_errors)) will be checked.
+
+`errors` is an error string, or a list of error strings, that are expected as a result of form validation.
+
+##### `SimpleTestCase.assertContains(response, text, count=None, status_code=200, msg_prefix='', html=False)`
+
+Asserts that a [`response`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse) produced the given [`status_code`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse.status_code) and that `text` appears in its [`content`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse.content). If `count` is provided, `text` must occur exactly `count` times in the response.
+
+Set `html` to `True` to handle `text` as HTML. The comparison with the response content will be based on HTML semantics instead of character-by-character equality. Whitespace is ignored in most cases, attribute ordering is not significant. See [`assertHTMLEqual()`]() for more details. <!-- below -->
+
+##### `SimpleTestCase.assertNotContains(response, text, status_code=200, msg_prefix='', html=False)`
+
+Asserts that a [`response`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse) produced the given [`status_code`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse.status_code) and that `text` does *not* appear in its [`content`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse.content).
+
+Set `html` to `True` to handle `text` as HTML. The comparison with the response content will be based on HTML semantics instead of character-by-character equality. Whitespace is ignored in most cases, attribute ordering is not significant. See [`assertHTMLEqual()`]() for more details. <!-- below -->
+
+##### `SimpleTestCase.assertTemplateUsed(response, template_name, msg_prefix='', count=None)`
+
+Asserts that the template with the given name was used in rendering the response.
+
+`response` must be a response instance returned by the [`test client`](https://docs.djangoproject.com/en/4.0/topics/testing/tools/#django.test.Response).
+
+`template_name` should be a string such as `'admin/index.html'`.
+
+The `count` argument is an integer indicating the number of times the template should be rendered. Default is `None`, meaning that the template should be rendered one or more times.
+
+You can use this as a context manager, like this:
+```
+with self.assertTemplateUsed('index.html'):
+    render_to_string('index.html')
+with self.assertTemplateUsed(template_name='index.html'):
+    render_to_string('index.html')
+```
+
+##### `SimpleTestCase.assertTemplateNotUsed(response, template_name, msg_prefix='')`
+
+Asserts that the template with the given name was *not* used in rendering the response.
+
+You can use this as a context manager in the same way as [`assertTemplateUsed`](). <!-- directly above -->
+
+##### `SimpleTestCase.assertURLEqual(url1, url2, msg_prefix='')`
+
+Asserts that two URLs are the same, ignoring the order of query string parameters except for parameters with the same name. For example, `/path/?x=1&y=2` is equal to `/path/?y=2&x=1`, but `/path/?a=1&a=2` isn't equal to `/path/?a=2&a=1`.
+
+##### `SimpleTestCase.assertRedirects(response, expected_url, status_code=302, target_status_code=200, msg_prefix='', fetch_redirect_response=True)`
+
+Assert that the [`response`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse) returned a [`status_code`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse.status_code) redirect status, redirected to `expected_url` (including any `GET` data), and that the final page was received with `target_status_code`.
+
+If your request used the `follow` argument, the `expected_url` and `target_status_code` will be the URL and status code for the final point of the redirect chain.
+
+If `fetch_redirect_response` is `False`, the final page won't be loaded. Since the test client can't fetch external URLs, this is particularly useful if `expected_url` isn't part of your Django app.
+
+Scheme is handled correctly when making comparisons between two URLs. If there isn't any scheme specified in the location where we are redirected to, the original request's scheme is used. If present, the scheme in `expected_url` is the one used to make the comparisons to.
+
+##### `SimpleTestCase.assertHTMLEqual(html1, html2, msg=None)`
+
+Asserts that the strings `html1` and `html2` are equal. The comparison is based on HTML semantics. The comparison takes following things into account:
+
+* Whitespace before and after HTML tags is ignored.
+* All types of whitespace are considered equivalent.
+* All open tags are closed implicitly, e.g. when a surrounding tag is closed or the HTML document ends.
+* Empty tags are equivalent to their self-closing version.
+* The ordering of attributes of an HTML element is not significant.
+* Boolean attributes (like `checked`) without an argument are equal to attributes that equal in name and value (see the examples).
+* Text, character references, and entity references that refer to the same character are equivalent.
+
+The following examples are valid test and don't raise any `AssertionError`:
+```
+self.assertHTMLEqual(
+    '<p>Hello <b>&#x27;world&#x27;!</p>',
+    '''<p>
+        Hello   <b>&#39;world&39;! </b>
+    </p>'''
+)
+self.assertHTMLEqual(
+    '<input type="checkbox" checked="checked" id="id_accept_terms" />',
+    '<input id="id_accept_terms" type="checkbox" checked>'
+)
+```
+`html1` and `html2` must contain HTML. An `AssertionError` will be raised if one of them cannot be parsed.
+
+Output in case of error can be customized with the `msg` argument.
+
+##### `SimpleTestCase.assertHTMLNotEqual(html1, html2, msg=None)`
+
+Asserts that the strings `html1` and `html2` are *not* equal. The comparison is based on HTML semantics. See [`assertHTMLEqual()`]() for details. <!-- directly above -->
+
+`html1` and `html2` must contain HTML. An `AssertionError` will be raised if one of them cannot be parsed.
+
+Output in case of error can be customized with the `msg` argument.
