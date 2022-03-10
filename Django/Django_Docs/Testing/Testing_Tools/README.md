@@ -1267,7 +1267,7 @@ The asynchronous client can also call synchronous views; it runs through Django'
 
 :warning: **Warning**: If you are using test decorators, they must be async-compatible to ensure they work correctly. Django's built-in decorators will behave correctly, but third-party ones may appear to not execute (they will "wrap" the wrong part of the execution flow and not your test).
 
-If you need to use these decorators, then you should decorate your test methods with [`async_to_sync()`]() *inside* of them instead:
+If you need to use these decorators, then you should decorate your test methods with [`async_to_sync()`](https://docs.djangoproject.com/en/4.0/topics/async/#asgiref.sync.async_to_sync) *inside* of them instead:
 ```
 from asgiref.sync import async_to_sync
 from django.test import TestCase
@@ -1281,3 +1281,96 @@ class MyTests(TestCase):
 ```
 
 <hr>
+
+## Email services
+
+If any of your Django views send email using [Django's email functionality](https://docs.djangoproject.com/en/4.0/topics/email/), you probably don't want to send email each time you run a test using that view. For this reason, Django's test runner automatically redirects all Django-sent email to a dummy outbox. This lets you test every aspect of sending email -- from the number of messages sent to the contents of each message -- without actually sending the messages.
+
+The test runner accomplishes this by transparently replacing the normal email backend with a testing backend. (Don't worry -- this has no effecton any other email senders outside of Django, such as your machine's mail server, if you're running one.)
+
+##### `django.core.mail.outbox`
+
+During test running, each ongoing email is saved in `django.core.mail.outbox`. This is a list of all [`EmailMessage`](https://docs.djangoproject.com/en/4.0/topics/email/#django.core.mail.EmailMessage) instances that have been sent. The `outbox` attribute is a special attribute that is created *only* when the `locmem` email backend is used. It doesn't normally exist as part of the [`django.core.email`](https://docs.djangoproject.com/en/4.0/topics/email/#module-django.core.mail) module and you can't import it directly. The code below shows how to access this attribute correctly.
+
+Here's an example test that examines `django.core.mail.outbox` for length and contents:
+```
+from django.core import mail
+from django.test import TestCase
+
+class EmailTest(TestCase):
+    def test_send_email(self):
+        # Send message.
+        mail.send_mail(
+            'Subject here', 'Here is the message.',
+            'from@example.com', ['to@example.com'],
+            fail_silently=False,
+        )
+
+        # Test that one message has been sent.
+        self.assertEqual(len(mail.outbox), 1)
+
+        # Verify that the subject of the first message is correct.
+        self.assertEqual(mail.outbox[0].subject, 'Subject here')
+```
+As noted [previously](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#emptying-the-test-outbox), the test outbox is emptied at the start of every test in a Django `*TestCase`. To empty the outbox manually, assign the empty list to `mail.outbox`:
+```
+from django.core import mail
+
+# Empty the test outbox
+mail.outbox = []
+```
+
+## Management commands
+
+Management commands can be tested with the [`call_command()`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django.core.management.call_command) function. The output can be redirected into a `StringIO` instance:
+```
+from io import StringIO
+from django.core.management import call_command
+from django.test import TestCase
+
+class ClosepollTest(TestCase):
+    def test_command_output(self):
+        out = StringIO()
+        call_command('closepoll', stdout=out)
+        self.assertIn('Expected output', out.getvalue())
+```
+
+## Skipping tests
+
+The `unittest` library provides the [`@skipIf`](https://docs.python.org/3/library/unittest.html#unittest.skipIf) and [`@skipUnless`](https://docs.python.org/3/library/unittest.html#unittest.skipUnless) decorators to allow you to skip tests if you know ahead of time that those tests are going to fail under certain conditions.
+
+For example, if your test requires a particular optional library in order to succeed, you could decorate the test case with [`@skipIf`](https://docs.python.org/3/library/unittest.html#unittest.skipIf). Then, the test runner will report that the test wasn't executed and why, instead of failing the test or omitting the test altogether.
+
+To supplement these test skipping behaviors, Django provides two additional skip decorators. Instead of testing a generic Boolean, these decorators check the capabilities of the database, and skip the test if the database doesn't support a specific named feature.
+
+The decorators use a string identifier to describe database features. This string corresponds to attributes of the database connection features class. See the [`django.db.backends.base.features.BaseDatabaseFeatures` class](https://github.com/django/django/blob/main/django/db/backends/base/features.py) for a full list of database features that can be used as a basis for skipping tests.
+
+##### `skipIfDBFeature(*feature_name_strings)`
+
+Skip the decorated test or `TestCase` if all of the named database features are supported.
+
+For example, the following test will not be executed if the database supports transactions (e.g., it would *not* run under PostgreSQL, but it would under MySQL with MyISAM tables):
+```
+class MyTests(TestCase):
+    @skipIfDBFeature('supports_transactions')
+    def test_transaction_behavior(self):
+        # ... conditional test code
+        pass
+```
+
+##### `skipUnlessDbFeature(*feature_name_strings)`
+
+Skip the decorated test or `TestCase` if any of the named database features are *not* supported.
+
+For example, the following test will only be executed if the database supports transactions (e.g. it would run under PostgreSQL, but *not* under MySQL with MyISAM tables):
+```
+class MyTests(TestCase):
+    @skipUnlessDBFeature('supports_transactions')
+    def test_transaction_behavior(self):
+        # ... conditional test code
+        pass
+```
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Writing_Running_Tests#writing-and-running-tests) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#testing-tools) - [[Next page]]()
