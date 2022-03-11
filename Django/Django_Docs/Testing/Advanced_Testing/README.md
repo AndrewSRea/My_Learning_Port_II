@@ -220,3 +220,102 @@ Since the database isn't fully flushed, if a test created instances of models no
 Since `post_migrate` isn't emitted after flushing the database, its state after a `TransactionTestCase` isn't the same as after a `TestCase`: it's missing the rows created by listeners to `post_migrate`. Considering the [order in which tests are executed](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Writing_Running_Tests#order-in-which-tests-are-executed), this isn't an issue, provided either all `TransactionTestCase` in a given test suite declare `available_apps`, or none of them.
 
 `available_apps` is mandatory in Django's own test suite.
+
+##### `TransactionTestCase.reset_sequences`
+
+Setting `reset_sequences = True` on a `TransactionTestCase` will make sure sequences are always reset before the test run:
+```
+class TestsThatDependsOnPrimaryKeySequences(TransactionTestCase):
+    reset_sequences = True
+
+    def test_animal_pk(self):
+        lion = Animal.objects.create(name="lion", sound="roar")
+        # lion.pk is guaranteed to always be 1
+        self.assertEqual(lion.pk, 1)
+```
+Unless you are explicitly testing primary keys sequence numbers, it is recommended that you do not hard code primary key values in tests.
+
+Using `reset_sequences = True` will slow down the test, since the primary key reset is a relatively expensive database operation.
+
+## Enforce running test classes sequentially
+
+If you have test classes that cannot be run in parallel (e.g. because they share a common resource), you can use `django.test.testcases.SerializeMixin` to run them sequentially. This mixin uses a filesystem `lockfile`.
+
+For example, you can use `__file__` to determine that all test classes in the same file that inherit from `SerializeMixin` will run sequentially:
+```
+import os
+
+from django.test import TestCase
+from django.test.testcases import SerializeMixin
+
+class ImageTestCaseMixin(SerializeMixin):
+    lockfile = __file__
+
+    def setUp(self):
+        self.filename = os.path.join(temp_storage_dir, 'my_file.png')
+        self.file = create_file(self.filename)
+
+class RemoveImageTests(ImageTestCaseMixin, TestCase):
+    def test_remove_image(self):
+        os.remove(self.filename)
+        self.assertFalse(os.path.exists(self.filename))
+
+class ResizeImageTests(ImageTestCaseMixin, TestCase):
+    def test_resize_image(self):
+        resize_image(self.file, (48, 48))
+        self.assertEqual(get_image_size(self.file), (48, 48))
+```
+
+## Using the Django test runner to test reusable applications
+
+If you are writing a [reusable application](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Getting_Started/Tutorial_8#advanced-tutorial-how-to-write-reusable-apps), you may want to use the Django test runner to run your own test suite and thus benefit from the Django testing infrastructure.
+
+A common practice is a *tests* directory next to the application code, with the following structure:
+```
+runtests.py
+polls/
+    __init__.py
+    models.py
+    ...
+tests/
+    __init__.py
+    models.py
+    test_settings.py
+    tests.py
+```
+Let's take a look inside a couple of those files:
+```
+# runtests.py
+
+#!/usr/bin/env python
+import os
+import sys
+
+import django
+from django.conf import settings
+from django.test.utils import get_runner
+
+if __name__ == "__main__":
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'tests.test_settings'
+    django.setup()
+    TestRunner = get_runner(settings)
+    test_runner = TestRunner()
+    failures = test_runner.run_tests(["tests"])
+    sys.exit(bool(failures))
+```
+This is the script that you invoke to run the test suite. It sets up the Django environment, creates the test database, and runs the tests.
+
+For the sake of clarity, this example contains only the bare minimum necessary to use the Django test runner. You may want to add command-line options for controlling verbosity, passing in specific test labels to run, etc.
+```
+# tests/test_settings.py
+
+SECRET_KEY = 'fake-key'
+INSTALLED_APPS = [
+    "tests",
+]
+```
+This file contains the [Django settings](https://docs.djangoproject.com/en/4.0/topics/settings/) required to run your app's tests.
+
+Again, this is a minimal example; your tests may require additional settings to run.
+
+Sonce the *tests* package is included in [`INSTALLED_APPS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-INSTALLED_APPS) when running your tests, you can define test-only models in its `models.py` file.
