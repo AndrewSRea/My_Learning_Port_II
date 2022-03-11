@@ -120,3 +120,103 @@ class MultiDomainTestCase(TestCase):
         response = self.client.get('http://otherserver/foo/bar/')
 ```
 Disabling `ALLOWED_HOSTS` checking (`ALLOWED_HOSTS = ['*']`) when running tests prevents the test client from raising a helpful error message if you follow a redirect to an external URL.
+
+## Tests and multiple databases
+
+### Testing primary/replica configurations
+
+If you're testing a multiple database configuration with primary/replica (referred to as master/slave by some databases) replication, this strategy of creating test databases poses a problem. When the test databases are created, there won't be any replication, and as a result, data created on the primary won't be seen on the replica.
+
+To compensate for this, Django allows you to define that a database is a *test mirror*. Consider the following (simplified) example database configuration:
+```
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'myproject',
+        'HOST': 'dbprimary',
+        # ... plus some other settings
+    },
+    'replica': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'myproject',
+        'HOST': 'dbreplica',
+        'TEST': {
+            'MIRROR': 'default',
+        },
+        # ... plus some other settings
+    }
+}
+```
+In this setup, we have two database servers: `dbprimary`, described by the database alias `default`, and `dbreplica`, described by the alias `replica`. As you might expect, `dbreplica` has been configured by the database administrator as a read replica of `dbprimary`, so in normal activity, any write to `default` will appear on `replica`.
+
+If Django created two independent test databases, this would break any tests that expected replication to occur. However, the `replica` database has been configured as a test mirror (using the [`MIRROR`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEST_MIRROR) test setting), indicating that under testing, `replica` should be treated as a mirror of `default`.
+
+When the test environment is configured, a test version of `replica` will *not* be created. Instead the connection to `replica` will be redirected to point at `default`. As a result, writes to `default` will appear on `replica` -- but because they are actually the same database, not because there is data replication between the two databases.
+
+### Controlling creation order for test databases
+
+By default, Django will assume all databases depend on the `default` database and therefore always create the `default` database first. However, no guarantees are made on the creation order of any other databases in your test setup.
+
+If your database configuration requires a specific creation order, you can specify the dependencies that exist using the [`DEPENDENCIES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEST_DEPENDENCIES) test setting. Consider the following (simplified) example database configuration:
+```
+DATABASES = {
+    'default': {
+        # ... db settings
+        'TEST': {
+            'DEPENDENCIES': ['diamonds'],
+        },
+    },
+    'diamonds': {
+        # ... db settings
+        'TEST': {
+            'DEPENDENCIES': [],
+        },
+    },
+    'clubs': {
+        # ... db settings
+        'TEST': {
+            'DEPENDENCIES': ['diamonds'],
+        },
+    },
+    'spades': {
+        # ... db settings
+        'TEST': {
+            'DEPENDENCIES': ['diamonds', 'hearts'],
+        },
+    },
+    'hearts': {
+        # ... db settings
+        'TEST': {
+            'DEPENDENCIES': ['diamonds', 'clubs'],
+        },
+    }
+}
+```
+Under this configuration, the `diamonds` database will be created first, as it is the only database alias without dependencies. The `default` and `clubs` alias will be created next (although the order of creation of this pair is not guaranteed), then `hearts`, and finally `spades`.
+
+If there are any circular dependencies in the [`DEPENDENCIES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEST_DEPENDENCIES) definition, an [`ImproperlyConfigured`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.ImproperlyConfigured) exception will be raised.
+
+## Advanced features of `TransactionTestCase`
+
+##### `TransactionTestCase.available_apps`
+
+<hr>
+
+:warning: **Warning**: This attribute is a private API. It may be changed or removed without a deprecation period in the future, for instance to accommodate changes in application loading.
+
+It's used to optimize Django's own test suite, which contains hundereds of models but no relations between models in different applications.
+
+<hr>
+
+By default, `available_apps` is set to `None`. After each test, Django calls [`flush`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-flush) to reset the database state. This empties all tables and emits the [`post_migrate`](https://docs.djangoproject.com/en/4.0/ref/signals/#django.db.models.signals.post_migrate) signal, which recreates one content type and four permissions for each model. This operation gets expensive proportionally to the number of models.
+
+Setting `available_apps` to a list of applications instructs Django to behave as if only the models from these applications were available. The behavior of `TransactionTestCase` changes as follows:
+
+* [`post_migrate`](https://docs.djangoproject.com/en/4.0/ref/signals/#django.db.models.signals.post_migrate) is fired before each test to create the content types and permissions for each model in available apps, in case they're missing.
+* After each test, Django empties only tables corresponding to models in available apps. However, at the database level, truncation may cascade to related models in unavilable apps. Furthermore, `post_migrate` isn't fired; it will be fired by the next `TransactionTestCase`, after the correct set of applications is selected.
+
+Since the database isn't fully flushed, if a test created instances of models not included in `available_apps`, they will leak and they may cause unrelated tests to fail. Be careful with tests that use sessions; the default session engine stores them in the database.
+
+Since `post_migrate` isn't emitted after flushing the database, its state after a `TransactionTestCase` isn't the same as after a `TestCase`: it's missing the rows created by listeners to `post_migrate`. Considering the [order in which tests are executed](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Writing_Running_Tests#order-in-which-tests-are-executed), this isn't an issue, provided either all `TransactionTestCase` in a given test suite declare `available_apps`, or none of them.
+
+`available_apps` is mandatory in Django's own test suite.
