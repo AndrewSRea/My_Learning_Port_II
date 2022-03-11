@@ -456,7 +456,7 @@ class SimpleTest(unittest.TestCase):
 
 **See also**
 
-[`django.test.RequestFactory`]() <!-- next module: "class RequestFactory" -->
+[`django.test.RequestFactory`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Advanced_Testing#class-requestfactory)
 
 <hr>
 
@@ -477,18 +477,18 @@ You can convert a normal `unittest.TestCase` to any of the subclasses: change th
 A subclass of [`unittest.TestCase`](https://docs.python.org/3/library/unittest.html#unittest.TestCase) that adds this functionality:
 
 * Some useful assertions like:
-    - Checking that a callable [raises a certain exception](). <!-- all below (?) -->
-    - Checking that a callable [triggers a certain warning]().
-    - Testing form field [rendering and error treatment]().
-    - Testing [HTML responses for the presence/lack of a given fragment]().
-    - Verifying that a template [has/hasn't been used to generate a given response content]().
-    - Verifying that two [URLs]() are equal.
-    - Verifying an HTTP [`redirect`]() is performed by the app.
-    - Robustly testing two [HTML fragments]() for equality/inequality or [containment]().
-    - Robustly testing two [XML fragments]() for equality/inequality.
-    - Robustly testing two [JSON fragments]() for equality.
-* The ability to run tests with [modified settings]().
-* Using the [`client`]() [`Client`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-clientenforce_csrf_checksfalse-json_encoderdjangojsonencoder-defaults).
+    - Checking that a callable [raises a certain exception](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseassertraisesmessageexpected_exception-expected_message-callable-args-kwargs).
+    - Checking that a callable [triggers a certain warning](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseassertwarnsmessageexpected_exception-expected_message-callable-args-kwargs).
+    - Testing form field [rendering and error treatment](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseassertfieldoutputfieldclass-valid-invalid-field_argsnone-field_kwargsnone-empty_value).
+    - Testing [HTML responses for the presence/lack of a given fragment](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseassertcontainsresponse-text-countnone-status_code200-msg_prefix-htmlfalse).
+    - Verifying that a template [has/hasn't been used to generate a given response content](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseasserttemplateusedresponse-template_name-msg_prefix-countnone).
+    - Verifying that two [URLs](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseasserturlequalurl1-url2-msg_prefix) are equal.
+    - Verifying an HTTP [`redirect`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseassertredirectsresponse-expected_url-status_code302-target_status_code200-msg_prefix-fetch_redirect_responsetrue) is performed by the app.
+    - Robustly testing two [HTML fragments](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseasserthtmlequalhtml1-html2-msgnone) for equality/inequality or [containment](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseassertinhtmlneedle-haystack-countnone-msg_prefix).
+    - Robustly testing two [XML fragments](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseassertxmlequalxml1-xml2-msgnone) for equality/inequality.
+    - Robustly testing two [JSON fragments](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseassertjsonequalraw-expected_data-msgnone) for equality.
+* The ability to run tests with [modified settings](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#overriding-settings).
+* Using the [`client`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseclient) [`Client`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-clientenforce_csrf_checksfalse-json_encoderdjangojsonencoder-defaults).
 
 If your tests make any database queries, use subclasses [`TransactionTestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-transactiontestcase) or [`TestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-testcase).
 
@@ -512,7 +512,7 @@ class MyTestCase(TestCase):
         ...
         super().tearDownClass()
 ```
-Be sure to account for Python's behavior if an exception is raised during `setUpClass()`. If that happens, neither the tests in the class nor `tearDownClass()` are run. In the case of [`django.test.TestCase`](), <!-- below --> this will leak the transaction created in `super()` which results in various symptoms including a segmentation fault on some platforms (reported on macOS). If you want to intentionally raise an exception such as [`unittest.SkipTest`](https://docs.python.org/3/library/unittest.html#unittest.SkipTest) in `setUpClass()`, be sure to do it before calling `super()` to avoid this.
+Be sure to account for Python's behavior if an exception is raised during `setUpClass()`. If that happens, neither the tests in the class nor `tearDownClass()` are run. In the case of [`django.test.TestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-testcase), this will leak the transaction created in `super()` which results in various symptoms including a segmentation fault on some platforms (reported on macOS). If you want to intentionally raise an exception such as [`unittest.SkipTest`](https://docs.python.org/3/library/unittest.html#unittest.SkipTest) in `setUpClass()`, be sure to do it before calling `super()` to avoid this.
 
 <hr>
 
@@ -523,11 +523,11 @@ Be sure to account for Python's behavior if an exception is raised during `setUp
 `TransactionTestCase` inherits from [`SimpleTestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-simpletestcase) to add some database-specific features:
 
 * Resetting the database to a known state at the beginning of each test to ease testing and using the ORM.
-* Database [`fixtures`]().
-* Test [skipping based on database backend features]().
-* The remaining specialized [`assert*`]() methods. <!-- all below -->
+* Database [`fixtures`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#transactiontestcasefixtures).
+* Test [skipping based on database backend features](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#skipping-tests).
+* The remaining specialized [`assert*`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#transactiontestcaseassertquerysetequalqs-values-transformnone-orderedtrue-msgnone) methods.
 
-Django's [`TestCase`]() <!-- below --> class is a more commonly used subclass of `TransactionTestCase` that makes use of database transaction facilities to speed up the process of resetting the database behaviors cannot be tested within a Django `TestCase` class. For instance, you cannot test that a block of code is executing within a transaction, as is required when using [`select_for_update()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.select_for_update). In those cases, you should use `TransactionTestCase`.
+Django's [`TestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-testcase) class is a more commonly used subclass of `TransactionTestCase` that makes use of database transaction facilities to speed up the process of resetting the database behaviors cannot be tested within a Django `TestCase` class. For instance, you cannot test that a block of code is executing within a transaction, as is required when using [`select_for_update()`](https://docs.djangoproject.com/en/4.0/ref/models/querysets/#django.db.models.query.QuerySet.select_for_update). In those cases, you should use `TransactionTestCase`.
 
 `TransactionTestCase` and `TestCase` are identical except for the manner in which the database is reset to a known state and the ability for test code to test the effects of commit and rollback:
 
@@ -622,7 +622,7 @@ To demonstrate how to use `LiveServerTestCase`, let's write a Selenium test. Fir
 ```
 $ python -m pip install selenium
 ```
-Then, add a `LiveServerTestCase`-based test to your app's tests module (for example: `myapp/tests.py`). For this example, we'll assume you're using the [`staticfiles`](https://docs.djangoproject.com/en/4.0/ref/contrib/staticfiles/#module-django.contrib.staticfiles) app and want to have static files served during the execution of your tests similar to what we get at development time with `DEBUG=True`, i.e. without having to collect them using [`collectstatic`](). We'll use the [`StaticLiveServerTestCase`](https://docs.djangoproject.com/en/4.0/ref/contrib/staticfiles/#django.contrib.staticfiles.testing.StaticLiveServerTestCase) subclass which provides that functionality. Replace it with `django.test.LiveServerTestCase` if you don't need that.
+Then, add a `LiveServerTestCase`-based test to your app's tests module (for example: `myapp/tests.py`). For this example, we'll assume you're using the [`staticfiles`](https://docs.djangoproject.com/en/4.0/ref/contrib/staticfiles/#module-django.contrib.staticfiles) app and want to have static files served during the execution of your tests similar to what we get at development time with `DEBUG=True`, i.e. without having to collect them using [`collectstatic`](https://docs.djangoproject.com/en/4.0/ref/contrib/staticfiles/#django-admin-collectstatic). We'll use the [`StaticLiveServerTestCase`](https://docs.djangoproject.com/en/4.0/ref/contrib/staticfiles/#django.contrib.staticfiles.testing.StaticLiveServerTestCase) subclass which provides that functionality. Replace it with `django.test.LiveServerTestCase` if you don't need that.
 
 The code for this test may look as follows:
 ```
@@ -764,7 +764,7 @@ Here's specifically what will happen:
 
 For performance reasons, [`TestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-testcase) loads fixtures once for the entire test class, before [`setUpTestData()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#classmethod-testcasesetuptestdata), instead of before each test, and it uses transactions to clean the database before each test. In any case, you can be certain that the outcome of a test will not be affected by another test or by the order of test execution.
 
-By default, fixtures are only loaded into the `default` database. If you are using multiple databases and set [`TransactionTestCase.databases`](), <!-- below --> fixtures will be loaded into all specified databases.
+By default, fixtures are only loaded into the `default` database. If you are using multiple databases and set [`TransactionTestCase.databases`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#transactiontestcasedatabase), fixtures will be loaded into all specified databases.
 
 ### URLconf configuration
 
@@ -920,7 +920,7 @@ class MiddlewareTestCase(TestCase):
 
 <hr>
 
-**Note**: When given a class, these decorators modify the class directly and return it; they don't create and return a modified copy of it. So if you try to tweak the above examples to assign the return value to a different name than `LoginTestCase` or `MiddlewareTestCase`, you may be surprised to find that the original test case classes are still equally affected by the decorator. For a given class, [`modify_settings()`]() is always applied after [`override_settings()`]().
+**Note**: When given a class, these decorators modify the class directly and return it; they don't create and return a modified copy of it. So if you try to tweak the above examples to assign the return value to a different name than `LoginTestCase` or `MiddlewareTestCase`, you may be surprised to find that the original test case classes are still equally affected by the decorator. For a given class, [`modify_settings()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#modify_settingsargs-kwargs) is always applied after [`override_settings()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#override_settingskwargs).
 
 <hr>
 
@@ -939,7 +939,7 @@ def test_seomthing(self):
     del settings.LOGIN_URL
     ...
 ```
-When overriding settings, make sure to handle the cases in which your app's code uses a cache or similar feature that retains state even if the setting is changed. Django provides the [`django.test.signals.setting_changed`]() signal that lets you register callbacks to clean up and otherwise reset state when settings are changed.
+When overriding settings, make sure to handle the cases in which your app's code uses a cache or similar feature that retains state even if the setting is changed. Django provides the [`django.test.signals.setting_changed`](https://docs.djangoproject.com/en/4.0/ref/signals/#django.test.signals.setting_changed) signal that lets you register callbacks to clean up and otherwise reset state when settings are changed.
 
 Django itself uses this signal to reset various data:
 
@@ -955,11 +955,11 @@ Django itself uses this signal to reset various data:
 
 If you use any of Django's custom `TestCase` classes, the test runner will clear the contents of the test email outbox at the start of each test case.
 
-For more detail on email services during tests, see [Email services]() below.
+For more detail on email services during tests, see [Email services](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#email-services) below.
 
 ### Assertions
 
-As Python's normal [`unittest.TestCase`]() class implements assertion methods such as [`assertTrue()`]() and [`assertEqual()`](), Django's custom [`TestCase`]() class provides a number of custom assertion methods that are useful for testing web applications:
+As Python's normal [`unittest.TestCase`](https://docs.python.org/3/library/unittest.html#unittest.TestCase) class implements assertion methods such as [`assertTrue()`](https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertTrue) and [`assertEqual()`](https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertEqual), Django's custom [`TestCase`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#class-testcase) class provides a number of custom assertion methods that are useful for testing web applications:
 
 The failure messages given by mostof these assertion methods can be customized with the `msg_prefix` argument. This string will be prefixed to any failure message generated by the assertion. This allows you to provide additional details that may help you to identify the location and cause of a failure in your test suite.
 
@@ -977,7 +977,7 @@ with self.assertRaisesMessage(ValueError, 'invalid literal for int()`):
 ##### `SimpleTestCase.assertWarnsMessage(expected_exception, expected_message, callable, *args, **kwargs)`
 ##### `SimpleTestCase.assertWarnsMessage(expected_exception, expected_message)`
 
-Analogous to [`SimpleTestCase.assertRaisesMessage()`]() but for [`assertWarnsRegex()`](https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertWarnsRegex) instead of [`assertRaisesRegex()`](https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertRaisesRegex).
+Analogous to [`SimpleTestCase.assertRaisesMessage()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseassertraisesmessageexpected_exception-expected_message-callable-args-kwargs) but for [`assertWarnsRegex()`](https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertWarnsRegex) instead of [`assertRaisesRegex()`](https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertRaisesRegex).
 
 ##### `SimpleTestCase.assertFieldOutput(fieldclass, valid, invalid, field_args=None, field_kwargs=None, empty_value='')`
 
@@ -1033,7 +1033,7 @@ Set `html` to `True` to handle `text` as HTML. The comparison with the response 
 
 Asserts that a [`response`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse) produced the given [`status_code`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse.status_code) and that `text` does *not* appear in its [`content`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse.content).
 
-Set `html` to `True` to handle `text` as HTML. The comparison with the response content will be based on HTML semantics instead of character-by-character equality. Whitespace is ignored in most cases, attribute ordering is not significant. See [`assertHTMLEqual()`]() for more details. <!-- below -->
+Set `html` to `True` to handle `text` as HTML. The comparison with the response content will be based on HTML semantics instead of character-by-character equality. Whitespace is ignored in most cases, attribute ordering is not significant. See [`assertHTMLEqual()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseasserthtmlequalhtml1-html2-msgnone) for more details.
 
 ##### `SimpleTestCase.assertTemplateUsed(response, template_name, msg_prefix='', count=None)`
 
@@ -1057,7 +1057,7 @@ with self.assertTemplateUsed(template_name='index.html'):
 
 Asserts that the template with the given name was *not* used in rendering the response.
 
-You can use this as a context manager in the same way as [`assertTemplateUsed`](). <!-- directly above -->
+You can use this as a context manager in the same way as [`assertTemplateUsed`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseasserttemplateusedresponse-template_name-msg_prefix-countnone).
 
 ##### `SimpleTestCase.assertURLEqual(url1, url2, msg_prefix='')`
 
@@ -1104,7 +1104,7 @@ Output in case of error can be customized with the `msg` argument.
 
 ##### `SimpleTestCase.assertHTMLNotEqual(html1, html2, msg=None)`
 
-Asserts that the strings `html1` and `html2` are *not* equal. The comparison is based on HTML semantics. See [`assertHTMLEqual()`]() for details. <!-- directly above -->
+Asserts that the strings `html1` and `html2` are *not* equal. The comparison is based on HTML semantics. See [`assertHTMLEqual()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseasserthtmlequalhtml1-html2-msgnone) for details.
 
 `html1` and `html2` must contain HTML. An `AssertionError` will be raised if one of them cannot be parsed.
 
@@ -1112,7 +1112,7 @@ Output in case of error can be customized with the `msg` argument.
 
 ##### `SimpleTestCase.assertXMLEqual(xml1, xml2, msg=None)`
 
-Asserts that the strings `xml1` and `xml2` are equal. The comparison is based on XML semantics. Similarly to [`assertHTMLEqual()`](), <!-- above --> the comparison is made on parsed content, hence only semantic differences are considered, not syntax differences. When invalid XML is passed in any parameter, an `AssertionError` is always raised, even if both strings are identical.
+Asserts that the strings `xml1` and `xml2` are equal. The comparison is based on XML semantics. Similarly to [`assertHTMLEqual()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseasserthtmlequalhtml1-html2-msgnone), the comparison is made on parsed content, hence only semantic differences are considered, not syntax differences. When invalid XML is passed in any parameter, an `AssertionError` is always raised, even if both strings are identical.
 
 XML declaration, document type, processing instructions, and comments are ignored. Only the root element and its children are compared.
 
@@ -1120,7 +1120,7 @@ Output in case of error can be customized with the `msg` argument.
 
 ##### `SimpleTestCase.assertXMLNotEqual(xml1, xml2, msg=None)`
 
-Asserts that the strings `xml1` and `xml2` are *not* equal. The comparison is based on XML semantics. See [`assertXMLEqual()`]() for details. <!-- directly above -->
+Asserts that the strings `xml1` and `xml2` are *not* equal. The comparison is based on XML semantics. See [`assertXMLEqual()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseassertxmlequalxml1-xml2-msgnone) for details.
 
 Output in case of error can be customized with the `msg` argument.
 
@@ -1130,7 +1130,7 @@ Asserts that the HTML fragment `needle` is contained in the `haystack` one.
 
 If the `count` integer argument is specified, then additionally the number of `needle` occurrences will be strictly verified.
 
-Whitespace in most cases is ignored, and attribute ordering is not significant. See [`assertHTMLEqual()`]() for more details. <!-- above -->
+Whitespace in most cases is ignored, and attribute ordering is not significant. See [`assertHTMLEqual()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseasserthtmlequalhtml1-html2-msgnone) for more details.
 
 ##### `SimpleTestCase.assertJSONEqual(raw, expected_data, msg=None)`
 
@@ -1140,7 +1140,7 @@ Output in case of error can be customized with the `msg` argument.
 
 ##### `SimpleTestCase.assertJSONNotEqual(raw, expected_data, msg=None)`
 
-Asserts that the JSON fragments `raw` and `expected_data` are *not* equal. See [`assertJSONEqual()`]() for further details. <!-- directly above -->
+Asserts that the JSON fragments `raw` and `expected_data` are *not* equal. See [`assertJSONEqual()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#simpletestcaseassertjsonequalraw-expected_data-msgnone) for further details.
 
 Output in case of error can be customized with the `msg` argument.
 
@@ -1373,4 +1373,4 @@ class MyTests(TestCase):
 
 <hr>
 
-[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Writing_Running_Tests#writing-and-running-tests) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#testing-tools) - [[Next page]]()
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Writing_Running_Tests#writing-and-running-tests) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#testing-tools) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Advanced_Testing#advanced-testing-topics)
