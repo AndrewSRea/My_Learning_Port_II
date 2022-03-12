@@ -319,3 +319,68 @@ This file contains the [Django settings](https://docs.djangoproject.com/en/4.0/t
 Again, this is a minimal example; your tests may require additional settings to run.
 
 Sonce the *tests* package is included in [`INSTALLED_APPS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-INSTALLED_APPS) when running your tests, you can define test-only models in its `models.py` file.
+
+## Using different testing frameworks
+
+Clearly, [`unittest`](https://docs.python.org/3/library/unittest.html#module-unittest) is not the only Python testing framework. While Django doesn't provide explicit support for alternative frameworks, it does provide a way to invoke tests constructed for an alternative framework as if they were normal Django tests.
+
+When you run `./manage.py test`, Django looks at the [`TEST_RUNNER`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEST_RUNNER) setting to determine what to do. By default, `TEST_RUNNER` points to `'django.test.runner.DiscoverRunner'`. This class defines the default Django testing behavior. This behavior involves:
+
+1. Performing global pre-test setup.
+2. Looking for tests in any file below the current directory whose name matches the pattern `test*.py`.
+3. Creating the test databases.
+4. Running `migrate` to install models and initial data into the test databases.
+5. Running the [system checks](https://docs.djangoproject.com/en/4.0/topics/checks/).
+6. Running the tests that were found.
+7. Destroying the test databases.
+8. Performing global post-test teardown.
+
+If you define your own test runner class and point [`TEST_RUNNER`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEST_RUNNER) at that class, Django will execute your test runner whenever you run `./manage.py test`. In this way, it is possible to use any test framework that can be executed from Python code, or to modify the Django test execution process to satisfy whatever testing requirements you may have.
+
+### Defining a test runner
+
+A test runner is a class defining a `run_tests()` method. Django ships with a `DiscoverRunner` class that defines the default Django testing behavior. This class defines the `run_tests()` entry point, plus a selection of other methods that are used by `run_tests()` to set up, execute, and tear down the test suite.
+
+##### `class DiscoverRunner(pattern='test*.py', top_level=None, verbosity=1, interactive=True, failfast=False, keepdb=False, reverse=False, debug_mode=False, debug_sql=False, parallel=0, tags=None, exclude_tags=None, test_name_patterns=None, pdb=False, buffer=False, enable_faulthandler=True, timing=True, shuffle=False, logger=None, **kwargs)`
+
+`DiscoverRunner` will search for tests in any file matching `pattern`.
+
+`top_level` can be used to specify the directory containing your top-level Python modules. Usually Django can figure this out automatically, so it's not necessary to specify this option. If specified, it should generally be the directory containing your `manage.py` file.
+
+`verbosity` determines the amount of notification and debug information that will be printed to the console; `0` is no output, `1` is normal output, and `2` is verbose ouput.
+
+If `interactive` is `True`, the test suite has permission to ask the user for instructions when the test suite is executed. An example of this behavior would be asking for permission to delete an existing test database. If `interactive` is `False`, the test suite must be able to run without any manual intervention.
+
+If `failfast` is `True`, the test suite will stop running after the first test failure is detected.
+
+If `keepdb` is `True`, the test suite will use the existing database, or create one if necessary. If `False`, a new database will be created, prompting the user to remove the existing one, if present.
+
+If `reverse` is `True`, test cases will be executed in the opposite order. This could be useful to debug tests that aren't properly isolated and have side effects. [Grouping by test class](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Writing_Running_Tests#order-in-which-tests-are-executed) is preserved when using this option. This option can be used in conjunction with `--shuffle` to reverse the order for a particular random seed.
+
+`debug_mode` specifies what the [`DEBUG`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DEBUG) setting should be set to prior to running tests.
+
+`parallel` specifies the number of processes. If `parallel` is greater than `1`, the test suite will run in `parallel` processes. If there are fewer test cases than configured processes, Django will reduce the number of processes accordingly. Each process gets its own database. This option requires the third-party `tblib` package to display tracebacks correctly.
+
+`tags` can be used to specify a set of [tags for filtering tests](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#tagging-tests). May be combined with `exclude_tags`.
+
+`exclude_tags` can be used to specify a set of [tags for excluding tests](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#tagging-tests). May be combined with `tags`.
+
+If `debug_sql` is `True`, failing test cases will output SQL queries logged to the [`django.db.backends` logger](https://docs.djangoproject.com/en/4.0/ref/logging/#django-db-logger) as well as the traceback. If `verbosity` is `2`, then queries in all tests are output.
+
+`test_name_patterns` can be used to specify a set of patterns for filtering test methods and classes by their names.
+
+If `pdb` is `True`, a debugger (`pdb` or `ipdb`) will be spawned at each test error or failure.
+
+If `buffer` is `True`, outputs from passing tests will be discarded.
+
+If `enable_faulthandler` is `True`, [`faulthandler`](https://docs.python.org/3/library/faulthandler.html#module-faulthandler) will be enabled.
+
+If `timing` is `True`, test timings, including database setup and total run time, will be shown.
+
+If `shuffle` is an integer, test cases will be shuffled in a random order prior to execution, using the integer as a random seed. If `shuffle` is `None`, the seed will be generated randomly. In both cases, the seed will be logged and set to `self.shuffle_seed` prior to running tests. This option can be used to help detect tests that aren't properly isolated. [Grouping by test class](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Writing_Running_Tests#order-in-which-tests-are-executed) is preserved when using this option.
+
+`logger` can be used to pass a Python [`Logger` object](https://docs.python.org/3/library/logging.html#logger). If provided, the logger will be used to log messages instead of printing to the console. The logger object will respect its logging level rather than the `verbosity`.
+
+Django may, from time to time, extend the capabilities of the test runner by adding new arguments. The `**kwargs` declaration allows for this expansion. If you subclass `DiscoverRunner` or write your own test runner, ensure it accepts `**kwargs`.
+
+Your test runner may also define additional command-line options. Create or override an `add_arguments(cls, parser)` class method and add custom arguments by calling `parser.add_argument()` inside the method, so that the [`test`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-test) command will be able to use those arguments.
