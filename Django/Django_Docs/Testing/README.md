@@ -17,4 +17,4 @@ You can also use any *other* Python test framework; Django provides an API and t
 
 <hr>
 
-[[Previous module: Managing files]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Managing_Files#managing-files) - [[Next module: User authentication in Django]]()
+[[Previous module: Managing files]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Managing_Files#managing-files) - [[Next module: User authentication in Django]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication#user-authentication-in-django)
