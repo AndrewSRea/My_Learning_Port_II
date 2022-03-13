@@ -477,3 +477,68 @@ Computes and returns a return code based on a test suite, and the result from th
 ##### `DiscoverRunner.log(msg, level=None)`
 
 If a `logger` is set, logs the message at the given integer [logging level](https://docs.python.org/3/library/logging.html#levels) (e.g., `logging.DEBUG`, `logging.INFO`, or `logging.WARNING`). Otherwise, the message is printed to the console, respecting the current `verbosity`. For example, no message will be printed if the `verbosity` is 0, `INFO` and above will be printed if the `verbosity` is at least 1, and `DEBUG` will be printed if it is at least 2. The `level` defaults to `logging.INFO`.
+
+### Testing utilities
+
+#### `django.test.utils`
+
+To assist in the creation of your own test runner, Django provides a number of utility methods in the `django.test.utils` module.
+
+##### `setup_test_environment(debug=None)`
+
+Performs global pre-test setup, such as installing instrumentation for the template rendering system and setting up the dummy email outbox.
+
+If `debug` isn't `None`, the [`DEBUG`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DEBUG) setting is updated to its value.
+
+##### `teardown_test_environment()`
+
+Performs global post-test teardown, such as removing instrumentation from the template system and restoring normal email services.
+
+##### `setup_databases(verbosity, interactive, *, time_keeper=None, keepdb=False, debug_sql=False, parallel=0, aliases=None, serialized_aliases=None, **kwargs)`
+
+Creates the test databases.
+
+Returns a data structure that provides enough detail to undo the changes that have been made. This data will be provided to the [`teardown_databases()`]() <!-- below --> function at the conclusion of testing.
+
+The `aliases` argument determines which [`DATABASES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASES) aliases test databases should be set up for. If it's not provided, it defaults to all of `DATABASES` aliases.
+
+The `serialized_aliases` argument determines what subset of `aliases` test databases should have their state serialized to allow usage of [`serialized_rollback`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Writing_Running_Tests#rollback-emulation) feature. If it's not provided, it defaults to `aliases`.
+
+##### `teardown_databases(old_config, parallel=0, keepdb=False)`
+
+Destroys the test databases, restoring pre-test conditions.
+
+`old_config` is a data structure defining the changes in the database configuration that need to be reversed. It's the return value of the [`setup_databases()`]() <!-- above --> method.
+
+#### `django.db.connection.creation`
+
+The creation module of the database backend also provides some utilities that can be useful during testing.
+
+##### `create_test_db(verbosity=1, autoclobber=False, serialize=True, keepdb=False)`
+
+Creates a new test database and runs `migrate` against it.
+
+`verbosity` has the same behavior as in `run_tests()`.
+
+`autoclobber` describes the behavior that will occur if a database with the same name as the test database is discovered:
+
+* If `autoclobber` is `False`, the user will be asked to approve destroying the existing database. `sys.exit` is called if the user does not approve.
+* If `autoclobber` is `True`, the database will be destroyed without consulting the user.
+
+`serialize` determines if Django serializes the database into an in-memory JSON string before running tests (used to restore the database state between tests if you don't have transactions). You can set this to `False` to speed up creation time if you don't have any test classes with [`serialized_rollback=True`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Writing_Running_Tests#rollback-emulation).
+
+If you are using the default test runner, you can control this with the [`SERIALIZE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TEST_SERIALIZE) entry in the [`TEST`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASE-TEST) dictionary.
+
+`keepdb` determines if the test run should use an existing database, or create a new one. If `True`, the existing database will be used, or created if not present. If `False`, a new database will be created, prompting the user to remove the existing one, if present.
+
+Returns the name of the test database that it created.
+
+`create_test_db()` has the side effect of modifying the value of [`NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-NAME) in [`DATABASES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASES) to match the name of the test database.
+
+##### `destroy_test_db(old_database_name, verbosity=1, keepdb=False)`
+
+Destroys the database whose name is the value of [`NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-NAME) in [`DATABASES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASES), and sets `NAME` to the value of `old_database_name`.
+
+The `verbosity` argument has the same behavior as for [`DiscoverRunner`](). <!-- above -->
+
+If the `keepdb` argument is `True`, then the connection to the database will be closed, but the database will not be destroyed.
