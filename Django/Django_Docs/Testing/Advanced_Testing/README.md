@@ -405,7 +405,7 @@ This is the class that loads tests, whether from TestCases or modules or otherwi
 
 Run the test suite.
 
-`test_labels` allows you to specify which tests to run and supports several formats (see [`DiscoverRunner.build_suite()`]() <!-- below --> for a list of supported formats).
+`test_labels` allows you to specify which tests to run and supports several formats (see [`DiscoverRunner.build_suite()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Advanced_Testing#discoverrunnerbuild_suitetest_labelsnone-kwargs) for a list of supported formats).
 
 <hr>
 
@@ -421,7 +421,7 @@ Override this class method to add custom arguments accepted by the [`test`](http
 
 ##### `DiscoverRunner.setup_test_environment(**kwargs)`
 
-Sets up the test environment by calling [`setup_test_environment()`]() <!-- below --> and setting [`DEBUG`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DEBUG) to `self.debug_mode` (defaults to `False`).
+Sets up the test environment by calling [`setup_test_environment()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Advanced_Testing#setup_test_environmentdebugnone) and setting [`DEBUG`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DEBUG) to `self.debug_mode` (defaults to `False`).
 
 ##### `DiscoverRunner.build_suite(test_labels=None, **kwargs)`
 
@@ -446,7 +446,7 @@ Returns a `TestSuite` instance ready to be run.
 
 ##### `DiscoverRunner.setup_databases(**kwargs)`
 
-Creates the test databases by calling [`setup_databases()`](). <!-- below -->
+Creates the test databases by calling [`setup_databases()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Advanced_Testing#setup_databasesverbosity-interactive--time_keepernone-keepdbfalse-debug_sqlfalse-parallel0-aliasesnone-serialized_aliasesnone-kwargs).
 
 ##### `DiscoverRunner.run_checks(databases)`
 
@@ -464,7 +464,7 @@ Returns the keyword arguments to instantiate the `DiscoverRunner.test_runner` wi
 
 ##### `DiscoverRunner.teardown_databases(old_config, **kwargs)`
 
-Destroys the test databases, restoring pre-test conditions by calling [`teardown_databases()`](). <!-- below -->
+Destroys the test databases, restoring pre-test conditions by calling [`teardown_databases()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Advanced_Testing#teardown_databasesold_config-parallel0-keepdbfalse).
 
 ##### `DiscoverRunner.teardown_test_environment(**kwargs)`
 
@@ -498,7 +498,7 @@ Performs global post-test teardown, such as removing instrumentation from the te
 
 Creates the test databases.
 
-Returns a data structure that provides enough detail to undo the changes that have been made. This data will be provided to the [`teardown_databases()`]() <!-- below --> function at the conclusion of testing.
+Returns a data structure that provides enough detail to undo the changes that have been made. This data will be provided to the [`teardown_databases()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Advanced_Testing#teardown_databasesold_config-parallel0-keepdbfalse) function at the conclusion of testing.
 
 The `aliases` argument determines which [`DATABASES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASES) aliases test databases should be set up for. If it's not provided, it defaults to all of `DATABASES` aliases.
 
@@ -508,7 +508,7 @@ The `serialized_aliases` argument determines what subset of `aliases` test datab
 
 Destroys the test databases, restoring pre-test conditions.
 
-`old_config` is a data structure defining the changes in the database configuration that need to be reversed. It's the return value of the [`setup_databases()`]() <!-- above --> method.
+`old_config` is a data structure defining the changes in the database configuration that need to be reversed. It's the return value of the [`setup_databases()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Advanced_Testing#setup_databasesverbosity-interactive--time_keepernone-keepdbfalse-debug_sqlfalse-parallel0-aliasesnone-serialized_aliasesnone-kwargs) method.
 
 #### `django.db.connection.creation`
 
@@ -539,6 +539,26 @@ Returns the name of the test database that it created.
 
 Destroys the database whose name is the value of [`NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-NAME) in [`DATABASES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATABASES), and sets `NAME` to the value of `old_database_name`.
 
-The `verbosity` argument has the same behavior as for [`DiscoverRunner`](). <!-- above -->
+The `verbosity` argument has the same behavior as for [`DiscoverRunner`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Advanced_Testing#class-discoverrunnerpatterntestpy-top_levelnone-verbosity1-interactivetrue-failfastfalse-keepdbfalse-reversefalse-debug_modefalse-debug_sqlfalse-parallel0-tagsnone-exclude_tagsnone-test_name_patternsnone-pdbfalse-bufferfalse-enable_faulthandlertrue-timingtrue-shufflefalse-loggernone-kwargs).
 
 If the `keepdb` argument is `True`, then the connection to the database will be closed, but the database will not be destroyed.
+
+## Integration with `coverage.py`
+
+Code coverage describes how much source code has been tested. It shows which parts of your code are being exercised by tests and which are not. It's an important part of testing applications, so it's strongly recommended to check the coverage of your tests.
+
+Django can be easily integrated with [`coverage.py`](https://coverage.readthedocs.io/en/6.3.2/), a tool for measuring code coverage of Python programs. First, [install `coverage.py`](https://pypi.org/project/coverage/). Next. run the following from your project folder containing `manage.py`:
+```
+coverage run --source='.' manage.py test myapp
+```
+This runs your tests and collects coverage data of the executed files in your project. You can see a report of this data by typing following command:
+```
+coverage report
+```
+Note that some Django code was executed while running tests, but it is not listed here because of the `source` flag passed to the previous command.
+
+For more options like annotated HTML listings detailing missed lines, see the [`coverage.py`](https://coverage.readthedocs.io/en/6.3.2/) docs.
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#testing-tools) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Advanced_Testing#advanced-testing-topics) - [[Back to the Testing opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing#testing-in-django) - [[Next module: User authentication in Django]]()
