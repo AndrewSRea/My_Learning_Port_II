@@ -384,3 +384,96 @@ If `shuffle` is an integer, test cases will be shuffled in a random order prior 
 Django may, from time to time, extend the capabilities of the test runner by adding new arguments. The `**kwargs` declaration allows for this expansion. If you subclass `DiscoverRunner` or write your own test runner, ensure it accepts `**kwargs`.
 
 Your test runner may also define additional command-line options. Create or override an `add_arguments(cls, parser)` class method and add custom arguments by calling `parser.add_argument()` inside the method, so that the [`test`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-test) command will be able to use those arguments.
+
+#### Attributes
+
+##### `DiscoverRunner.test_suite`
+
+The class used to build the test suite. By default, it is set to `unittest.TestSuite`. This can be overridden if you wish to implement different logic for collecting tests.
+
+##### `DiscoverRunner.test_runner`
+
+This is the class of the low-level test runner which is used to execute the individual tests and format the results. By default, it is set to `unittest.TextTestRunner`. Despite the unfortunate similarity in naming conventions, this is not the same type of class as `DiscoverRunner`, which covers a broader set of responsibilities. You can override this attribute to modify the way tests are run and reported.
+
+##### `DiscoverRunner.test_loader`
+
+This is the class that loads tests, whether from TestCases or modules or otherwise, and bundles them into test suites for the runner to execute. By default, it is set to `unittest.defaultTestLoader`. You can override this attribute if your tests are going to be loaded in unusual ways.
+
+#### Methods
+
+##### `DiscoverRunner.run_tests(test_labels, **kwargs)`
+
+Run the test suite.
+
+`test_labels` allows you to specify which tests to run and supports several formats (see [`DiscoverRunner.build_suite()`]() <!-- below --> for a list of supported formats).
+
+<hr>
+
+**Deprecated since version 4.0**: `extra_tests` is a list of extra `TestCase` instances to add to the suite that is executed by the test runner. These extra tests are run in addition to those discovered in the modules listed in `test_labels`.
+
+<hr>
+
+This method should return the number of tests that failed.
+
+##### `classmethod DiscoverRunner.add_arguments(parser)`
+
+Override this class method to add custom arguments accepted by the [`test`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-test) management command. See [`argparse.ArgumentParser.add_argument()`](https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.add_argument) for details about adding arguments to a parser.
+
+##### `DiscoverRunner.setup_test_environment(**kwargs)`
+
+Sets up the test environment by calling [`setup_test_environment()`]() <!-- below --> and setting [`DEBUG`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DEBUG) to `self.debug_mode` (defaults to `False`).
+
+##### `DiscoverRunner.build_suite(test_labels=None, **kwargs)`
+
+Constructs a test suite that matches the test labels provided.
+
+`test_labels` is a list of strings describing the tests to be run. A test label can take one of four forms:
+
+* `path.to.test_module.TestCase.test_method` - Run a single test method in a test case.
+* `path.to.test_module.TestCase` - Run all the test methods in a test case.
+* `path.to.module` - Search for and run all tests in the named Python package or module.
+* `path/to/directory` - Search for and run all tests below the named directory.
+
+If `test_labels` has a value of `None`, the test runner will search for tests in all files below the current directory whose names match its `pattern` (see above).
+
+<hr>
+
+**Deprecated since version 4.0**: `extra_tests` is a list of extra `TestCase` instances to add to the suite that is executed by the test runner. These extra tests are run in addition to those discovered in the modules listed in `test_labels`.
+
+<hr>
+
+Returns a `TestSuite` instance ready to be run.
+
+##### `DiscoverRunner.setup_databases(**kwargs)`
+
+Creates the test databases by calling [`setup_databases()`](). <!-- below -->
+
+##### `DiscoverRunner.run_checks(databases)`
+
+Runs the [system checks](https://docs.djangoproject.com/en/4.0/topics/checks/) on the test `databases`.
+
+##### `DiscoverRunner.run_suite(suite, **kwargs)`
+
+Runs the test suite.
+
+Returns the result produced by running the test suite.
+
+##### `DiscoverRunner.get_test_runner_kwargs()`
+
+Returns the keyword arguments to instantiate the `DiscoverRunner.test_runner` with.
+
+##### `DiscoverRunner.teardown_databases(old_config, **kwargs)`
+
+Destroys the test databases, restoring pre-test conditions by calling [`teardown_databases()`](). <!-- below -->
+
+##### `DiscoverRunner.teardown_test_environment(**kwargs)`
+
+Restores the pre-test environment.
+
+##### `DiscoverRunner.suite_result(suite, result, **kwargs)`
+
+Computes and returns a return code based on a test suite, and the result from that test suite.
+
+##### `DiscoverRunner.log(msg, level=None)`
+
+If a `logger` is set, logs the message at the given integer [logging level](https://docs.python.org/3/library/logging.html#levels) (e.g., `logging.DEBUG`, `logging.INFO`, or `logging.WARNING`). Otherwise, the message is printed to the console, respecting the current `verbosity`. For example, no message will be printed if the `verbosity` is 0, `INFO` and above will be printed if the `verbosity` is at least 1, and `DEBUG` will be printed if it is at least 2. The `level` defaults to `logging.INFO`.
