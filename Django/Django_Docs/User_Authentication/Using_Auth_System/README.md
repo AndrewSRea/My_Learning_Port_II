@@ -293,3 +293,82 @@ def logout_view(request):
 Note that `logout()` doesn't throw any errors if the user wasn't logged in.
 
 When you call `logout()`, the session data for the current request is completely cleaned out. All existing data is removed. This is to prevent another person from using the same web browser to log in and have access to the previous user's session data. If you want to put anything into the session that will be available to the user immediately after logging out, do that *after* calling [`django.contrib.auth.logout()`](). <!-- above -->
+
+### Limiting access to logged-in users
+
+#### The raw way
+
+The raw way to limit access to pages is to check [`request.user.is_authenticated`]() and either redirect to a login page:
+```
+from django.conf import settings
+from django.shortcuts import redirect
+
+def my_view(request):
+    if not request.user.is_authenticated:
+        return redirect('%s?next=%s' % (settings.LOGIN_URL, request.path))
+    # ...
+```
+...or display an error message:
+```
+from django.shortcuts import render
+
+def my_view(request):
+    if not request.user.is_authenticated:
+        return render(request, 'myapp/login_error.html')
+    # ...
+```
+
+#### The `login_required` decorator
+
+##### `login_required(redirect_field_name='next', login_url=None)`
+
+As a shortcut, you can use the convenient `login_required()` decorator:
+```
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def my_view(request):
+    ...
+```
+`login_required()` does the following:
+
+* If the user isn't logged in, redirect to [`settings.LOGIN_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_URL), passing the current absolute path in the query string. Example: `/accounts/login/?next=/polls/3/`.
+* If the user is logged in, execute the view normally. The view code is free to assume the user is logged in.
+
+By default, the path that the user should be redirected to upon successful authentication is stored in a query string parameter called `"next"`. If you would prefer to use a different name for this parameter, [`login_required()`]() <!-- directly above --> takes an optional `redirect_field_name` parameter:
+```
+from django.contrib.auth.decorators import login_required
+
+@login_required(redirect_field_name='my_redirect_field')
+def my_view(request):
+    ...
+```
+Note that if you provide a value to `redirect_field_name`, you will most likely need to customize your login template as well, since the template context variable which stores the redirect path will use the value of `redirect_field_name` as its key rather than `"next"` (the default).
+
+[`login_required()`]() <!-- directly above --> also takes an optional `login_url` parameter. Example:
+```
+from django.contrib.auth.decorators import login_required
+
+@login_required(login_url='/accounts/login/')
+def my_view(request):
+    ...
+```
+Note that if you don't specify the `login_url` parameter, you'll need to ensure that the [`settings.LOGIN_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_URL) and your login view are properly associated. For example, using the defaults, add the following lines to your URLconf:
+```
+from django.contrib.auth import views as auth_views
+
+path('accounts/login/', auth_views.LoginView.as_view()),
+```
+The `settings.LOGIN_URL` also accepts view function names and [named URL patterns](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/URL_Dispatcher#naming-url-patterns). This allows you to freely remap your login view within your URLconf without having to update the setting.
+
+<hr>
+
+**Note**: The `login_required` decorator does NOT check the `is_active` flag on a user, but the default [`AUTHENTICATION_BACKENDS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTHENTICATION_BACKENDS) reject insactive users.
+
+<hr>
+
+**See also**
+
+If you are writing custom views for Django's admin (or need the same authorization check that the built-in views use), you may find the [`django.contrib.admin.views.decorators.staff_member_required()`](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#django.contrib.admin.views.decorators.staff_member_required) decorator a useful alternative to `login_required()`.
+
+<hr>
