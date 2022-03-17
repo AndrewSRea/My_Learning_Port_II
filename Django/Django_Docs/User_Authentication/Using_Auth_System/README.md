@@ -372,3 +372,144 @@ The `settings.LOGIN_URL` also accepts view function names and [named URL pattern
 If you are writing custom views for Django's admin (or need the same authorization check that the built-in views use), you may find the [`django.contrib.admin.views.decorators.staff_member_required()`](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#django.contrib.admin.views.decorators.staff_member_required) decorator a useful alternative to `login_required()`.
 
 <hr>
+
+#### The `LoginRequired` mixin
+
+When using [class-based views](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views#class-based-views), you can achieve the same behavior as with `login_required` by using the `LoginRequiredMixin`. This mixin should be at the leftmost position in the inheritance list.
+
+##### `class LoginRequiredMixin`
+
+If a view is using this mixin, all requests by non-authenticated users will be redirected to the login page or shown an HTTP 403 Forbidden error, depending on the [`raise_exception`](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.mixins.AccessMixin.raise_exception) parameter.
+
+You can set any of the parameters of [`AccessMixin`](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.mixins.AccessMixin) to customize the handling of unauthorized users:
+```
+from django.contrib.auth.mixins import LoginRequiredMixin
+
+class MyView(LoginRequiredMixin, View):
+    login_url = '/login/'
+    redirect_field_name = 'redirect_to'
+```
+
+<hr>
+
+**Note**: Just as the `login_required` decorator, this mixin does NOT check the `is_active` flag on a user, but the default [`AUTHENTICATION_BACKENDS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTHENTICATION_BACKENDS) reject inactive users.
+
+<hr>
+
+#### Limiting access to logged-in users that pass a test
+
+To limit access based on certain permissions or some other test, you'd do essentially the same thing as described in the previous section.
+
+You can run your test on [`request.user`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest.user) in the view directly. For example, this view checks to make sure the user has an email in the desired domain and if not, redirects to the login page:
+```
+from django.shortcuts import redirect
+
+def my_view(request):
+    if not request.user.email.endswith('@example.com')
+        return redirect('/login/?next=%s' % request.path)
+    # ...
+```
+
+##### `user_passes_test(test_func, login_url=None, redirect_field_name='next')`
+
+As a shortcut, you can use the convenient `user_passes_test` decorator which performs a redirect when the callable returns `False`:
+```
+from django.contrib.auth.decorators import user_passes_test
+
+def email_check(user):
+    return user.email.endwith('@example.com')
+
+@user_passes_test(email_check)
+def my_view(request):
+    ...
+```
+`user_passes_test()` takes a required argument: a callable that takes a [`User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User) object and returns `True` if the user is allowed to view the page. Note that `user_passes_test()` does not automatically check that the `User` is not anonymous.
+
+`user_passes_test()` takes two optional arguments:
+
+* `login_url`: Lets you specify the URL that users who don't pass the test will be redirected to. It may be a login page and defaults to [`settings.LOGIN_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_URL) if you don't specify one.
+* `redirect_field_name`: Same as for [`login_required()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#login_requiredredirect_field_namenext-login_urlnone). Setting it to `None` removes it from the URL, which you may want to do if you are redirecting users that don't pass the test to a non-login page where there's no "next page".
+
+For example:
+```
+@user_passes_test(email_check, login_url='/login/')
+def my_view(request):
+    ...
+```
+
+##### `class UserPassesTestMixin`
+
+When using [class-based views](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views#class-based-views), you can use the `UserPassesTestMixin` to do this.
+
+* `test_func()`: You have to override the `test_func()` method of the class to provide the test that is performed. Furthermore, you can set any of the parameters of [`AccessMixin`](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.mixins.AccessMixin) to customize the handling of unauthorized users:
+
+    ```
+    from django.contrib.auth.mixins import UserPassesTestMixin
+
+    class MyView(UserPassesTestMixin, View):
+
+        def test_func(self):
+            return self.request.user.email.endswith('@example.com')
+    ```
+
+* `get_test_func()`: You can also override the `get_test_func()` method to have the mixin use a differently named function for its checks (instead of `test_func()`).
+
+<hr>
+
+**Stacking `UserPassesTestMixin`**
+
+Due to the way `UserPassesTestMixin` is implemented, you cannot stack them in your inheritance list. The following does NOT work:
+```
+class TestMixin1(UserPassesTestMixin):
+    def test_func(self):
+        return self.request.user.email.endswith('@example.com')
+
+class TestMixin2(UserPassesTestMixin):
+    def test_func(self):
+        return self.request.user.username.startswith('django')
+
+class MyView(TestMixin1, TestMixin2, View):
+    ...
+```
+If `TestMixin1` would call `super()` and take that result into account, `TestMixin1` wouldn't work standalone anymore.
+
+<hr>
+
+#### The `permission_required` decorator
+
+##### `permission_required(perm, login_url=None, raise_exception=False)`
+
+It's a relatively common task to check whether a user has a particular permission. For that reason, Django provides a shortcut for that case: the `permission_required()` decorator:
+```
+from django.contrib.auth.decorators import permission_required
+
+@permission_required('polls.add_choice')
+def my_view(request):
+    ...
+```
+Just like the [`has_perm()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.has_perm) method, permission names take the form `"<app label>.<permission codename>"` (i.e., `polls.add_choice` for a permission on a model in the `polls` application).
+
+The decorator may also take an iterable of permissions, in which case the user must have all of the permissions in order to access the view.
+
+Note that `permission_required()` also takes an optional `login_url` parameter:
+```
+from django.contrib.auth.decorators import permission_required
+
+@permission_required('polls.add_choice', login_url='/loginpage/')
+def my_view(request):
+    ...
+```
+As in the [`login_required()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#login_requiredredirect_field_namenext-login_urlnone) decorator, `login_url` defaults to [`settings.LOGIN_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_URL).
+
+If the `raise_exception` parameter is given, the decorator will raise [`PermissionDenied`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.PermissionDenied), prompting [the 403 (HTTP Forbidden) view](https://docs.djangoproject.com/en/4.0/ref/views/#http-forbidden-view) instead of redirecting to the login page.
+
+If you want to use `raise_exception` but also give your users a chance to login first, you can add the [`login_required()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#login_requiredredirect_field_namenext-login_urlnone) decorator:
+```
+from django.contrib.auth.decorators import login_required, permission_required
+
+@login_required
+@permission_required('polls.add_choice', raise_exception=True)
+def my_view(request):
+    ...
+```
+This also avoids a redirect loop when [`LoginView`](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.views.LoginView)'s `redirect_authenticated_user=True` and the logged-in user doesn't have all of the required permissions.
