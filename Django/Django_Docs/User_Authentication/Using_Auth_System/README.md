@@ -160,3 +160,136 @@ content_type = ContentType.objects.get_for_model(BlogPostProxy, for_concrete_mod
 ```
 
 <hr>
+
+### Permission caching
+
+The [`ModelBackend`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.backends.ModelBackend) caches permissions on the user object after the first time they need to be fetched for a permissions check. This is typically fine for the request-response cycle since permissions aren't typically checked immediately after they are added (in the admin, for example). If you are adding permissions and checking them immediately afterward in a test or view for example, the easiest solution is to re-fetch the user from the database. For example:
+```
+from django.contrib.auth.models import Permission, User
+from django.contrib.contenttypes.models import ContentType
+from django.shortcuts import get_object_or_404
+
+from myapp.models import BlogPost
+
+def user_gains_perms(request, user_id):
+    user = get_object_or_404(User, pk=user_id)
+    # any permission check will cache the current set of permissions
+    user.has_perm('myapp.change_blogpost')
+
+    content_type = ContentType.objects.get_for_model(BlogPost)
+    permission = Permission.objects.get(
+        codename='change_blogpost',
+        content_type=content_type,
+    )
+    user.user_permissions.add(permission)
+
+    # Checking the cached permission set
+    user.has_perm('myapp.change_blogpost')   # False
+
+    # Request new instance of User
+    # Be aware that user.refresh_from_db() won't clear the cache.
+    user = get_object_or_404(User, pk=user_id)
+
+    # Permission cache is repopulated from the database
+    user.has_perm('myapp.change_blogpost')   # True
+
+    ...
+```
+
+### Proxy models
+
+Proxy models work exactly the same way as concrete models. Permissions are created using the own content type of the proxy model. Proxy models don't inherit the permissions of the concrete model they subclass:
+```
+class Person(models.Model):
+    class Meta:
+        permissions = [('can_eat_pizzas', 'Can eat pizzas')]
+
+class Student(Person):
+    class Meta:
+        proxy = True
+        permissions = [('can_deliver_pizzas', 'Can deliver pizzas')]
+
+>>> # Fetch the content type for the proxy model.
+>>> content_type = ContentType.objects.get_for_model(Student, for_concrete_model=False)
+>>> student_permissions = Permission.objects.filter(content_type=content_type)
+>>> [p.codename for p in student_permissions]
+['add_student', 'change_student', 'delete_student', 'view_student', 'can_deliver_pizzas']
+>>> for permission in student_permissions:
+...     user.user_permissions.add(permission)
+>>> user.has_perm('app.add_person')
+False
+>>> user.has_perm('app.can_eat_pizzas')
+False
+>>> user.has_perms(('app.add_student', 'app.can_deliver_pizzas'))
+True
+```
+
+## Authentication in web requests
+
+Django uses [sessions](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Sessions#how-to-use-sessions) and middleware to hook the authentication system into [`request` objects](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest).
+
+These provide a [`request.user`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest.user) attribute on every request which represents the current user. If the current user has not logged in, this attribute will be set to an instance of [`AnonymousUser`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.AnonymousUser), otherwise it will be an instance of [`User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User).
+
+You can tell them apart with [`is_authenticated`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.is_authenticated), like so:
+```
+if request.user.is_authenticated:
+    # Do something for authenticated users.
+    ...
+else:
+    # Do something for anonymous users.
+    ...
+```
+
+### How to log a user in
+
+If you have an authenticated user you want to attach to the current session -- this is done with a `login()` function.
+
+##### `login(request, user, backend=None)`
+
+To log a user in, from a view, use `login()`. It takes an [`HttpRequest`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest) object and a [`User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User) object. `login()` saves the user's ID in the session, using Django's session framework.
+
+Note that any data set during the anonymous session is retained in the session after a user logs in.
+
+This example shows how you might use both [`authenticate()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#authenticaterequestnone-credentials) and `login()`:
+```
+from django.contrib.auth import authenticate, login
+
+def my_view(request):
+    username = request.POST['username']
+    password = request.POST['password']
+    user = authenticate(request, username=username, password=password)
+    if user is not None:
+        login(request, user)
+        # Redirect to a success page.
+        ...
+    else:
+        # Return an 'invalid login' error message.
+        ...
+```
+
+#### Selecting the authentication backend
+
+When a user logs in, the user's ID and the backend that was used for authentication are saved in the user's session. This allows the same [authentication backend]() <!-- "Other authentication sources" section of the "Customizing authentication in Django" page --> to fetch the user's details on a future request. The authentication backend to save in the session is selected as follows:
+
+1. Use the value of the optional `backend` argument, if provided.
+2. Use the value of the `user.backend` attribute, if present. This allows pairing [`authenticate()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#authenticaterequestnone-credentials) and [`login()`](): `authenticate()` sets the `user.backend` attribute on the user object it returns. <!-- "login()" above -->
+3. Use the `backend` in [`AUTHENTICATION_BACKENDS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTHENTICATION_BACKENDS), if there is only one.
+4. Otherwise, raise an exception.
+
+In cases 1 and 2, the value of the `backend` argument or the `user.backend` attribute should be a dotted import path string (like that found in `AUTHENTICATION_BACKENDS`), not the actual backend class.
+
+### How to log a user out
+
+##### `logout(request)`
+
+To log out a user who has been logged in via [`django.contrib.auth.login()`](), use [`django.contrib.auth.logout()`]() <!-- both above --> within your view. It takes an [`HttpRequest`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest) object and has no return value. Example:
+```
+from django.contrib.auth import logout
+
+def logout_view(request):
+    logout(request)
+    # Redirect to a success page.
+```
+Note that `logout()` doesn't throw any errors if the user wasn't logged in.
+
+When you call `logout()`, the session data for the current request is completely cleaned out. All existing data is removed. This is to prevent another person from using the same web browser to log in and have access to the previous user's session data. If you want to put anything into the session that will be available to the user immediately after logging out, do that *after* calling [`django.contrib.auth.logout()`](). <!-- above -->
