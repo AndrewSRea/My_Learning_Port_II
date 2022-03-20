@@ -513,3 +513,139 @@ def my_view(request):
     ...
 ```
 This also avoids a redirect loop when [`LoginView`](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.views.LoginView)'s `redirect_authenticated_user=True` and the logged-in user doesn't have all of the required permissions.
+
+#### The `PermissionRequiredMixin` mixin
+
+To apply permission checks to [class-based views](https://docs.djangoproject.com/en/4.0/ref/class-based-views/), you can use the `PermissionRequiredMixin`:
+
+##### `class PermissionRequiredMixin`
+
+This mixin, just like the `permission_required` decorator, checks whether the user accessing a view has all given permissions. You should specify the permission (or an iterable of permissions) using the `permission_required` parameter:
+```
+from django.contrib.auth.mixins import PermissionRequiredMixin
+
+class MyView(PermissionRequiredMixin, View):
+    permission_required = 'polls.add_choice'
+    # Or multiple of permissions:
+    permission_required = ('polls.view_choice', 'polls.change_choice')
+```
+You can set any of the parameters of [`AccessMixin`](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.mixins.AccessMixin) to customize the handling of unauthorized users.
+
+You may also override these methods:
+
+* `get_permission_required()`: Returns an iterable of permission names used by the mixin. Defaults to the `permission_required` attribute, converted to a tuple if necessary.
+* `has_permission()`: Returns a Boolean denoting whether the current user has permission to execute the decorated view. By default, this returns the result of calling [`has_perms()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.has_perms) with the list of permissions returned by `get_permission_required()`.
+
+### Redirecting unauthorized requests in class-based views
+
+To ease the handling of access restrictions in [class-based views](https://docs.djangoproject.com/en/4.0/ref/class-based-views/), the `AccessMixin` can be used to configure the behavior of a view when access is denied. Authenticated users are denied access with an HTTP 403 Forbidden response. Anonymous users are redirected to the login page or shown an HTTP 403 Forbidden response, depending on the [`raise_exception`]() attribute. <!-- below -->
+
+#### `class AccessMixin`
+
+##### `login_url`
+
+Default return value for [`get_login_url()`](). Defaults to `None` in which case `get_login_url()` falls back to [`settings.LOGIN_URL`]().
+
+##### `permission_denied_message`
+
+Default return value for [`get_permission_denied_message()`](). Defaults to an empty string.
+
+##### `redirect_field_name`
+
+Default return value for [`get_redirect_field_name()`](). Defaults to `"next"`.
+
+##### `raise_exception`
+
+If this attribute is set to `True`, a [`PermissionDenied`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#permissiondenied) exception is raised when the conditions are not met. When `False` (the default), anonymous users are redirected to the login page.
+
+##### `get_login_url()`
+
+Returns the URL that users who don't pass the test will be redirected to. Returns [`login_url`]() <!-- above --> if set, or [`settings.LOGIN_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_URL) otherwise.
+
+##### `get_permission_denied_message()`
+
+When [`raise_exception`]() is `True`, this method can be used to control the error message passed to the error handler for display to the user. Returns the [`permission_denied_message`]() attribute by default.
+
+##### `get_redirect_field_name()`
+
+Returns the name of the query parameter that will contain the URL the user should be redirected to after a successful login. If you set this to `None`, a query parameter won't be added. Returns the [`redirect_field_name`]() <!-- above --> attribute by default.
+
+##### `handle_no_permission()`
+
+Depending on the value of `raise_exception`, the method either raises a [`PermissionDenied`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#permissiondenied) exception or redirects the user to the `login_url`, optionally including the `redirect_field_name` if it is set.
+
+#### Session invalidation on password change
+
+If your [`AUTH_USER_MODEL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTH_USER_MODEL) inherits from [`AbstractBaseUser`]() <!-- "Customizing auth in Django" / "Specifying a custom user model" / `class models.AbstractBaseUser` --> or implements its own [`get_session_auth_hash()`]() <!-- same as directly above, sub-subsection `get_session_auth_hash` --> method, authenticated sessions will include the hash returned by this function. In the `AbstractBaseUser` case, this is an HMAC of the password field. Django verifies that the hash in the session for each request matches the one that's computed during the request. This allows a user to log out all of their sessions by changing their password.
+
+The default password change views included with Django, [`PasswordChangeView`]() <!-- below --> and the `user_change_password` view in the [`django.contrib.auth`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/) admin, update the session with the new password hash so that a user changing their own password won't log themselves out. If you have a custom password change view and wish to have similar behavior, use the `update_session_auth_hash()` function.
+
+##### `update_session_auth_hash(request, user)`
+
+This function takes the current request and the updated user object from which the new session hash will be derived and updates the session hash appropriately. It also rotates the session key so that a stolen session cookie will be invalidated.
+
+Example usage:
+```
+from django.contrib.auth import update_session_auth_hash
+
+def password_change(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            form.save()
+            update_session_auth_hash(request, form.user)
+    else:
+        ...
+```
+
+<hr>
+
+**Note**: Since [`get_session_auth_hash()`]() <!-- above --> is based on [`SECRET_KEY`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SECRET_KEY), updating your site to use a new secret key will invalidate all existing sessions.
+
+<hr>
+
+### Authentication views
+
+Django provides several views that you can use for handling login, logout, and password management. These make use of the [stock auth forms]() <!-- "Built-in forms" below --> but you can pass in your own forms as well.
+
+Django provides no default template for the authentication views. You should create your own templates for the views you want to use. The template context is documented in each view. See [All authentication views](). <!-- "All authentication views" below -->
+
+#### Using the views
+
+There are different methods to implement these views in your project. The easiest way is to include the provided URLconf in `django.contrib.auth.urls` in your own URLconf. For example:
+```
+urlpatterns = [
+    path('accounts/', include('django.contrib.auth.urls')),
+]
+```
+This will include the following URL patterns:
+```
+accounts/login/ [name='login']
+accounts/logout/ [name='logout']
+accounts/password_change/ [name='password_change']
+accounts/password_change/done/ [name='password_change_done']
+accounts/password_reset/ [name='password_reset']
+accounts/password_reset/done/ [name='password_reset_done']
+accounts/reset/<uidb64>/<token>/ [name='password_reset_confirm']
+accounts/reset/done/ [name='password_reset_complete']
+```
+The views provide a URL name for easier reference. See [the URL documentation](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/URL_Dispatcher#url-dispatcher) for details on using named URL patterns.
+
+If you want more control over your URLs, you can reference a specific view in your URLconf:
+```
+from django.contrib.auth import views as auth_views
+
+urlpatterns = [
+    path('change-password/', auth_views.PasswordChangeView.as_view()),
+]
+```
+The views have optional arguments you can use to alter the behavior of the view. For example, if you want to change the template name a view uses, you can provide the `template_name` argument. A way to do this is to provide keyword arguments in the URLconf that will be passed on to the view. For example:
+```
+urlpatterns = [
+    path(
+        'change-password/',
+        auth_views.PasswordChangeView.as_view(template_name='change-password.html'),
+    ),
+]
+```
+All views are [class-based](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views#class-based-views), which allows you to easily customize them by subclassing.
