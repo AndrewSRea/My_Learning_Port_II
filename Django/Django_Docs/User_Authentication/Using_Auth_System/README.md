@@ -649,3 +649,75 @@ urlpatterns = [
 ]
 ```
 All views are [class-based](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Class-based_Views#class-based-views), which allows you to easily customize them by subclassing.
+
+#### All authentication views
+
+This is a list with all the views `django.contrib.auth` provides. For implementation details, see [Using the views](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#using-the-views).
+
+##### `class LoginView`
+
+**URL name: `login`**
+
+See [the URL documentation](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/URL_Dispatcher#url-dispatcher) for details on using named URL patterns.
+
+**Methods and Attributes**
+
+##### `template_name`
+
+The name of a template to display for the view used to log the user in. Defaults to `registration/login.html`.
+
+##### `next_page`
+
+The URL to redirect to after login. Defaults to [`LOGIN_REDIRECT_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_REDIRECT_URL).
+
+##### `redirect_field_name`
+
+The name of a `GET` field containing the URL to redirect to after login. Defaults to `next`. Overrides the [`get_default_redirect_url()`]() <!-- below --> URL if the given `GET` parameter is passed.
+
+##### `authentication_form`
+
+A callable (typically a form class) to use for authentication. Defaults to [`AuthenticationForm`](). <!-- "class AuthenticationForm" below -->
+
+##### `extra_context`
+
+A dictionary of context data that will be added to the default context data passed to the template.
+
+##### `redirect_authenticated_user`
+
+A Boolean that controls whether or not authenticated users accessing the login page will be redirected as if they has just successfully logged in. Defaults to `False`.
+
+<hr>
+
+:warning: **Warning**: If you enable `redirect_authenticated_user`, other websites will be able to determine if their visitors are authenticated on your site by requesting redirect URLs to image files on your website. To avoid this "[social media fingerprinting](https://robinlinus.github.io/socialmedia-leak/)" information leakage, host all images and your favicon on a separate domain. 
+
+Enabling `redirect_authenticated_user` can also result in a redirect loop when using the [`permission_required()`](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.decorators.permission_required) decorator unless the `raise_exception` parameter is used.
+
+<hr>
+
+##### `success_url_allowed_hosts`
+
+A [`set`](https://docs.python.org/3/library/stdtypes.html#set) of hosts, in addition to [`request.get_host()`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest.get_host), that are safe for redirecting after login. Defaults to an empty `set`.
+
+##### `get_default_redirect_url()`
+
+Returns the URL to redirect to after login. The default implementation resolves and returns [`next_page`]() <!-- above --> if set, or [`LOGIN_REDIRECT_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_REDIRECT_URL) otherwise.
+
+<hr>
+
+Here's what `LoginView` does:
+
+* If called via `GET`, it displays a login form that POSTs to the same URL. More on this in a bit.
+* If called via `POST` with user submitted credentials, it tries to log the user in. If login is successful, the view redirects to the URL specified in `next`. If `next` isn't provided, it redirects to [`settings.LOGIN_REDIRECT_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_REDIRECT_URL) (which defaults to `/accounts/profile/`). If login isn't successful, it redisplays the login form.
+
+It's your responsibility to provide the HTML for the login template, called `registration/login.html` by default. This template gets passed four template context variables:
+
+* `form`: A [`Form`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form) object representing the [`AuthenticationForm`](). <!-- below -->
+* `next`: The URL to redirect to after successful login. This may contain a query string, too.
+* `site`: The current [`Site`](https://docs.djangoproject.com/en/4.0/ref/contrib/sites/#django.contrib.sites.models.Site), according to the [`SITE_ID`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SITE_ID) setting. If you don't have the site framework installed, this will be set to an instance of [`RequestSite`](https://docs.djangoproject.com/en/4.0/ref/contrib/sites/#django.contrib.sites.requests.RequestSite), which derives the site name and domain from the current [`HttpRequest`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest).
+* `site_name`: An alias for `site.name`. If you dojn't have the site framework installed, this will be set to the value of [`request.META['SERVER_NAME']`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest.META). For more on sites, see [The "sites" framework](https://docs.djangoproject.com/en/4.0/ref/contrib/sites/).
+
+If you'd prefer not to call the template `registration/login.html`, you can pass the `template_name` parameter via the extra arguments to the `as_view` method in your URLconf. For example, this URLconf line would use `myapp/login.html` instead:
+```
+path('accounts/login/', auth_views.LoginView.as_view(template_name='myapp/login.html')),
+```
+You can also specify the name of the `GET` field which contains the URL to redirect to after login using `redirect_field_name`. By default, the field is called `next`.
