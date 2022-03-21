@@ -721,3 +721,164 @@ If you'd prefer not to call the template `registration/login.html`, you can pass
 path('accounts/login/', auth_views.LoginView.as_view(template_name='myapp/login.html')),
 ```
 You can also specify the name of the `GET` field which contains the URL to redirect to after login using `redirect_field_name`. By default, the field is called `next`.
+
+Here's a sample `registration/login.html` template you can use as a starting point. It assumes you have a `base.html` template that defines a `content` block:
+```
+{% extends "base.html" %}
+
+{% block content %}
+
+{% if form.errors %}
+    <p>Your username and password didn't match. Please try again.</p>
+{% endif %}
+
+{% if next %}
+    {% if user.is_authenticated %}
+        <p>Your account doesn't have access to this page. To proceed,
+        please login with an account that has access.</p>
+    {% else %}
+        <p>Please login to see this page.</p>
+    {% endif %}
+{% endif %}
+
+<form method="post" action="{% url 'login' %}">
+{% csrf_token %}
+    <table>
+        <tr>
+            <td>{{ form.username.label_tag }}</td>
+            <td>{{ form.username }}</td>
+        </tr>
+        <tr>
+            <td>{{ form.password.label_tag }}</td>
+            <td>{{ form.password }}</td>
+        </tr>
+    </table>
+
+    <input type="submit" value="login">
+    <input type="hidden" name="next" value="{{ next }}">
+</form>
+
+{# Assumes you set up the password_reset view in your URLconf #}
+<p><a href="{% url 'password_reset' %}">Lost password?</a></p>
+
+{% endblock %}
+```
+If you have customized authentication (see [Customizing Authentication]()), <!-- folder within the "User_Authentication" fodler --> you can use a custom authentication form by setting the `authentication_form` attribute. This form must accept a `request` keyword argument in its `__init__()` method and provide a `get_user()` method which returns the authenticated user object (this method is only ever called after successful form validation).
+
+<hr>
+
+##### `class LogoutView`
+
+Logs a user out.
+
+**URL name: `logout`**
+
+**Attributes:**
+
+##### `next_page`
+
+The URL to redirect to after logout. Defaults to [`LOGOUT_REDIRECT_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGOUT_REDIRECT_URL).
+
+##### `template_name`
+
+The full name of a template to display after logging the user out. Defaults to `registration/logged_out.html`.
+
+##### `redirect_field_name`
+
+The name of a `GET` field containing the URL to redirect to after log out. Defaults to `'next'`. Overrides the [`next_page`]() <!-- directly above --> URL if the given `GET` parameter is passed.
+
+##### `extra_context`
+
+A dictionary of context data that will be added to the default context data passed to the template.
+
+##### `success_url_allowed_hosts`
+
+A [`set`](https://docs.python.org/3/library/stdtypes.html#set) of hosts, in addition to [`request.get_host()`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest.get_host), that are safe for redirecting after logout. Defaults to an empty `set`.
+
+**Template context:**
+
+* `title`: The string "Logged out", localized.
+* `site`: The current [`Site`](https://docs.djangoproject.com/en/4.0/ref/contrib/sites/#django.contrib.sites.models.Site), according to the [`SITE_ID`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SITE_ID) setting. If you don't have the site framework installed, this will be set to an instance of [`RequestSite`](https://docs.djangoproject.com/en/4.0/ref/contrib/sites/#django.contrib.sites.requests.RequestSite), which derives the site name and domain from the current [`HttpRequest`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest).
+* `site_name`: An alias for `site.name`. If you don't have the site framework installed, this will be set to the value of [`request.META['SERVER_NAME']`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest.META). For more on sites, see [The "sites" framework](https://docs.djangoproject.com/en/4.0/ref/contrib/sites/).
+
+<hr>
+
+##### `logout_then_login(request, login_url=None)`
+
+Logs a user out, then redirects to the login page.
+
+**URL name:** No default URL provided
+
+**Optional arguments:**
+
+* `login_url`: The URL of the login page to redirect to. Defaults to [`settings.LOGIN_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_URL) if not supplied.
+
+<hr>
+
+##### `class PasswordChangeView`
+
+**URL name: `password change`**
+
+Allows a user to change their password.
+
+**Attributes:**
+
+##### `template_name`
+
+The full name of a template to use for displaying the password change form. Defaults to `registration/password_change_form.html` if not supplied.
+
+##### `success_url`
+
+The URL to redirect to after a successful password change. Defaults to `'password_change_done'`.
+
+##### `form_class`
+
+A custom "change password" form which must accept a `user` keyword argument. The form is responsible for actually changing the user's password. Defaults to [`PasswordChangeForm`](). <!-- below -->
+
+##### `extra_context`
+
+A dictionary of context data that will be added to the default context data passed to the template.
+
+**Template context:**
+
+* `form`: The password change form (see `form_class` above).
+
+<hr>
+
+##### `class PasswordChangeDoneView`
+
+**URL name: `password_change_done`**
+
+The page shown after a user has change their password.
+
+**Attributes:**
+
+##### `template_name`
+
+The full name of a template to use. Defaults to `registration/password_change_done.html` if not supplied.
+
+#### `extra_context`
+
+A dictionary of context data that will be added to the default context data passed to the template.
+
+<hr>
+
+##### `class PasswordResetView`
+
+**URL name: `password_reset`**
+
+Allows a user to reset their password by generating a one-time use link that can be used to reset the password, and sending that link to the user's registered email address.
+
+This view will send an email if the following conditions are met:
+
+* The email address provided exists in the system.
+* The requested user is active (`User.is_active` is `True`).
+* The requested user has a usable password. Users flagged with an unusable password (see [`set_unusable_password()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.set_unusable_password)) aren't allowed to request a password reset to prevent misuse when using an external authentication source like LDAP.
+
+If any of these conditions are *not* met, no email will be sent, but the user won't receive any error message either. This prevents information leaking to potential attackers. If you want to provide an error message in this case, you can subclass [`PasswordResetForm`]() <!-- above --> and use the `form_class` attribute.
+
+<hr>
+
+**Note**: Be aware that sending an email costs extra time, hence you may be vulnerable to an email address enumeration timing attack due to a difference between the duration of a reset request for an existing email address and the duration of a reset request for a nonexistent email address. To reduce the overhead, you can use a third party package that allows to send emails asynchronously, e.g. [django-mailer](https://pypi.org/project/django-mailer/).
+
+<hr>
