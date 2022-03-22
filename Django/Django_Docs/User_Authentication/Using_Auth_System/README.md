@@ -882,3 +882,142 @@ If any of these conditions are *not* met, no email will be sent, but the user wo
 **Note**: Be aware that sending an email costs extra time, hence you may be vulnerable to an email address enumeration timing attack due to a difference between the duration of a reset request for an existing email address and the duration of a reset request for a nonexistent email address. To reduce the overhead, you can use a third party package that allows to send emails asynchronously, e.g. [django-mailer](https://pypi.org/project/django-mailer/).
 
 <hr>
+
+**Attributes:**
+
+##### `template_name`
+
+The full name of a template to use for displaying the password reset form. Defaults to `registration/password_reset_form.html` if not supplied.
+
+##### `form_class`
+
+Form that will be used to get the email of the user to reset the password for. Defaults to [`PasswordResetForm`](). <!-- below -->
+
+##### `email_template_name`
+
+The full name of a template to use for generating the email with the reset password link. Defaults to `registration/password_reset_email.html` if not supplied.
+
+##### `subject_template_name`
+
+The full name of a template to use for the subject of the email with the reset password link. Defaults to `registration/password_reset_subject.txt` if not supplied.
+
+##### `token_generator`
+
+Instance of the class to check the one time link. This will default to `default_token_generator`, it's an instance of `django.contrib.auth.tokens.PasswordResetTokenGenerator`.
+
+##### `success_url`
+
+The URL to redirect to after a successful password reset request. Defaults to `'password_reset_done'`.
+
+##### `from_email`
+
+A valid email address. By default, Django uses the [`DEFAULT_FROM_EMAIL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DEFAULT_FROM_EMAIL).
+
+##### `extra_context`
+
+A dictionary of context data that will be added to the default context data passed to the template.
+
+##### `html_email_template_name`
+
+The full name of a template to use for generating a *text/html* multipart email with the password reset link. By default, HTML email is not sent.
+
+##### `extra_email_context`
+
+A dictionary of context data that will be available in the email template. It can be used to override default template context values listed below, e.g. `domain`.
+
+**Template context:**
+
+* `form`: The form (see `form_class` above) for resetting the user's password.
+
+**Email template content:**
+
+* `email`: An alias for `user.email`.
+* `user`: The current [`User`](), according to the `email` form field. Only active users are able to reset their passwords (`User.is_active is True`).
+* `site_name`: An alias for `site.name`. If you don't have the site framework installed, this will be set to the value of [`request.META['SERVER_NAME']`](). For more on sites, see [The "sites" framework]().
+* `domain`: An alias for `site.domain`. If you don't have the site framework installed, this will be set to the value of `request.get_host()`.
+* `protocol`: http or https.
+* `uid`: The user's primary key encoded in base 64.
+* `token`: Token to check that the reset link is valid.
+
+Sample `registration/password_reset_email.html` (email body template):
+```
+Someone asked for password reset for email {{ email }}. Follow the link below:
+{{ protocol }}://{{ domain }}{% url 'password_reset_confirm' uidb64=uid token=token %}
+```
+The same template context is used for subject template. Subject must be single line plain text string.
+
+<hr>
+
+##### `class PasswordResetDoneView`
+
+**URL name: `password_reset_done`**
+
+The page shown after a user has been emailed a link to reset their password. This view is called by default if the [`PasswordResetView`]() <!-- above --> doesn't have an explicit `success_url` URL set.
+
+<hr>
+
+**Note**: If the email address provided does not exist in the system, the user is inactive, or has an unusable password, the user will still be redirected to this view but no email will be sent.
+
+<hr>
+
+**Attributes:**
+
+##### `template_name`
+
+The full name of a template to use. DEfaults to `registration/password_reset_done.html` if not supplied.
+
+##### `extra_content`
+
+A dictionary of context data that will be added to the default context data passed to the template.
+
+<hr>
+
+##### `class PasswordResetConfirmView`
+
+**URL name: `password_reset_confirm`**
+
+Presents a form for entering a new password.
+
+**Keyword arguments from the URL:**
+
+* `uidb64`: The user's id encoded in base 64.
+* `token`: Token to check that the password is valid.
+
+**Attributes:**
+
+##### `template_name`
+
+The full name of a template to display the confirm password view. Default value is `registration/password_reset_confirm.html`.
+
+##### `token_generator`
+
+Instance of the class to check the password. This will default to `default_token_generator`, it's an instance of `django.contrib.auth.tokens.PasswordResetTokenGenerator`.
+
+##### `post_reset_login`
+
+A Boolean indicating if the user should be automatically authenticated after a successful password reset. Defaults to `False`.
+
+##### `post_reset_login_backend`
+
+A dotted path to the authentication backend to use when authenticating a user if `post_reset_login` is `True`. Required only if you have multiple [`AUTHENTICATION_BACKENDS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTHENTICATION_BACKENDS) configured. Defaults to `None`.
+
+##### `form_class`
+
+Form that will be used to set the password. Defaults to [`SetPasswordForm`](). <!-- below -->
+
+##### `success_url`
+
+URL to redirect after the password reset done. Defaults to `'password_reset_complete'`.
+
+##### `extra_context`
+
+A dictionary of context data that will be added to the default context data passed to the template.
+
+##### `reset_url_token`
+
+Token parameter displayed as a component of password reset URLs. Defaults to `'set-password'`.
+
+**Template context:**
+
+* `form`: The form (see `form_class` above) for setting the new user's password.
+* `validlink`: Boolean, True if the link (combination of `uidb64` and `token`) is valid or unused yet.
