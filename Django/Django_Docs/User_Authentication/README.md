@@ -38,11 +38,11 @@ With these settings in place, running the command `manage.py migrate` creates th
 
 ## Usage
 
-[Using Django's default implementation]()
+[Using Django's default implementation](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#using-the-django-authentication-system)
 
-* [Working with User objects]()
-* [Permissions and authorization]()
-* [Authentication in web requests]()
+* [Working with User objects](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#user-objects)
+* [Permissions and authorization](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#permissions-and-authorization)
+* [Authentication in web requests](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#authentication-in-web-requests)
 * [Managing users in the admin]()
 
 [API reference for the default implementation]()
@@ -53,4 +53,4 @@ With these settings in place, running the command `manage.py migrate` creates th
 
 <hr>
 
-[[Previous module: Testing]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing#testing-in-django) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication#user-authentication-in-django) - [[First page: Using the Django authentication system]]() - [[Next module: Django's cache framework]]()
+[[Previous module: Testing]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing#testing-in-django) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication#user-authentication-in-django) - [[First page: Using the Django authentication system]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#using-the-django-authentication-system) - [[Next module: Django's cache framework]]()
