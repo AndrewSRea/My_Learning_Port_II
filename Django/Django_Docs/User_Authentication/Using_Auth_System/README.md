@@ -1129,3 +1129,96 @@ Uses the arguments to send an `EmailMultiAlternatives`. Can be overridden to cus
 * `html_email_template_name` - the template for the HTML body; defaults to `None`, in which case a plain text email is sent.
 
 By default, `save()` populates the `context` with the same variables that [`PasswordResetView`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-passwordresetview) passes to its email context.
+
+##### `class SetPasswordForm`
+
+A form that lets a user change their password without entering the old password.
+
+##### `class UserChangeForm`
+
+A form used in the admin interface to change a user's information and permissions.
+
+##### `class UserCreationForm`
+
+A [`ModelForm`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Creating_Forms_from_Models#class-modelform) for creating a new user.
+
+It has three fields: `username` (from the user model), `password1`, and `password2`. It verifies that `password1` and `password2` match, validates the password using [`validate_password()`](), <!-- future page, "Password mgmt. in Django / 'validate_password()`" --> and sets the user's password using [`set_password()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.set_password).
+
+### Authentication data in templates
+
+The currently logged-in user and their permissions are made available in the [template context](https://docs.djangoproject.com/en/4.0/ref/templates/api/) when you use [`RequestContext`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.RequestContext).
+
+<hr>
+
+**Technicality**
+
+Technically, these variables are only made available in the template context if you use `RequestContext` and the `'django.contrib.auth.context_processors.auth'` context processor is enabled. It is in the default generated settings file. For more, see the [`RequestContext` docs](https://docs.djangoproject.com/en/4.0/ref/templates/api/#subclassing-context-requestcontext).
+
+<hr>
+
+#### Users
+
+When rendering a template [`RequestContext`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.RequestContext), the currently logged-in user, either a [`User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User) instance or an [`AnonymousUser`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.AnonymousUser) instance, is stored in the template variable `{{ user }}`:
+```
+{% if user.is_authenticated %}
+    <p>Welcome, {{ user.username }}. Thanks for logging in.</p>
+{% else %}
+    <p>Welcome, new user. Please log in.</p>
+{% endif %}
+```
+This template context variable is not available if a `RequestContext` is not being used.
+
+#### Permissions
+
+The currently logged-in user's permissions are stored in the template variable `{{ perms }}`. This is an instance of `django.contrib.auth.context_processors.PermWrapper`, which is a template-friendly proxy of permissions.
+
+Evaluating a single-attribute lookup of `{{ perms }}` as a Boolean is a proxy to [`User.has_module_perms()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.has_module_perms). For example, to check if the logged-in user has any permissions in the `foo` app:
+```
+{% if perms.foo %}
+```
+Evaluating a two-level-attribute lookup as a Boolean is a proxy  to [`User.has_perms()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.has_module_perms). For example, to check if the logged-in user has the permission `foo.add_vote`:
+```
+{% if perms.foo.add_vote %}
+```
+Here's a more complex example of checking permissions in a template:
+```
+{% if perms.foo %}
+    <p>You have permission to do something in the foo app.</p>
+    {% if perms.foo.add_vote %}
+        <p>You can vote!</p>
+    {% endif %}
+    {% if perms.foo.add_driving %}
+        <p>You can drive!</p>
+    {% endif %}
+{% else %}
+    <p>You don't have permission to do anything in the foo app.</p>
+{% endif %}
+```
+It is possible to also look permissions up by `{% if in %}` statements. For example:
+```
+{% if 'foo' in perms %}
+    {% if 'foo.add_vote' in perms %}
+        <p>In lookup works, too.</p>
+    {% endif %}
+{% endif %}
+```
+
+## Managing users in the admin
+
+When you have both `django.contrib.admin` and `django.contrib.auth` installed, the admin provides a convenient way to view and manage users, groups, and permissions. Users can be created and deleted like any Django model. Groups can be created, and permissions can be assigned to users or groups. A log of user edits to models made within the admin is also stored and displayed.
+
+### Creating users
+
+You should see a link to "Users" in the "Auth" section of the main admin index page. The "Add user" admin page is different than standard admin pages in that it requires you to choose a username and password before allowing you to edit the rest of the user's fields.
+
+Also note: If you want a user account to be able to create users using the Django admin site, you'll need to give them permission to add users *and* change users (i.e., the "Add user" and "Change user" permissions). If an account has permission to add users but not to change them, that account won't be able to add users. Why? Because if you have permission to add users, you have the power to create superusers, which can then, in turn, change other users. So Django requires add *and* change permissions as a slight security measure.
+
+Be thoughtful about how you allow users to manage permissions. If you give a non-superuser the ability to edit users, this is ultimately the same as giving them superuser status because they will be able to elevate permissions of users including themselves!
+
+### Changing passwords
+
+User passwords are not displayed in the admin (nor stored in the database), but the [password storage details]() <!-- future page "Password mgmt. in Django" --> are displayed. Included in the display of this information is a link to a password change form that allows admins to change user passwords.
+
+<hr>
+
+[[Back to the User authentication in Django opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication#user-authentication-in-django) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#using-the-django-authentication-system) - [[Next page]]()
