@@ -1,6 +1,6 @@
 # Using the Django authentication system
 
-This document explains the usage of Django's authentication system in its default configuration. This configuration has evolved to serve the most common project needs, handling a reasonably wide range of tasks, and has a careful implementation of passwords and permissions. For projects where authentication needs differ from the default, Django supports extensive [extension and customization]() of authentication.
+This document explains the usage of Django's authentication system in its default configuration. This configuration has evolved to serve the most common project needs, handling a reasonably wide range of tasks, and has a careful implementation of passwords and permissions. For projects where authentication needs differ from the default, Django supports extensive [extension and customization]() of authentication. <!-- future page, "Customizing auth in Django" -->
 
 Django authentication provides both authentication and authorization together and is generally referred to as the authentication system, as these features are somewhat coupled.
 
@@ -31,7 +31,7 @@ The most direct way to create users is to use the included [`create_user()`](htt
 >>> user.last_name = 'Lennon'
 >>> user.save()
 ```
-If you have the Django admin installed, you can also [create users interactively](). <!-- below -->
+If you have the Django admin installed, you can also [create users interactively](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#managing-users-in-the-admin).
 
 ### Creating superusers
 
@@ -43,7 +43,7 @@ You will be prompted for a password. After you enter one, the user will be creat
 
 ### Changing passwords
 
-Django does not store raw (clear text) passwords on the user model, but only a hash (see [documentation of how passwords are managed]() <!-- next page --> for full details). Because of this, do not attempt to manipulate the password attribute of the user directly. This is why a helper function is used when creating a user.
+Django does not store raw (clear text) passwords on the user model, but only a hash (see [documentation of how passwords are managed](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Password_Management#password-management-in-django) for full details). Because of this, do not attempt to manipulate the password attribute of the user directly. This is why a helper function is used when creating a user.
 
 To change a user's password, you have several options:
 
@@ -56,11 +56,11 @@ You can also change a password programmatically, using [`set_password()`](https:
 >>> u.set_password('new password')
 >>> u.save()
 ```
-If you have the Django admin installed, you can also change user's passwords on the [authentication system's admin pages](). <!-- below -->
+If you have the Django admin installed, you can also change user's passwords on the [authentication system's admin pages](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#managing-users-in-the-admin).
 
-Django also provides [views]() and [forms]() that may be used to allow users to change their own passwords. <!-- both below -->
+Django also provides [views](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#authentication-views) and [forms](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#built-in-forms) that may be used to allow users to change their own passwords.
 
-Changing a user's password will log out all their sessions. See [Session invalidation on password change]() for details. <!-- below -->
+Changing a user's password will log out all their sessions. See [Session invalidation on password change](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#session-invalidation-on-password-change) for details.
 
 ### Authenticating users
 
@@ -154,7 +154,7 @@ The permission can then be assigned to a [`User`](https://docs.djangoproject.com
 
 **Proxy models need their own content type**
 
-If you want to create [permissions for a proxy model](), <!-- "Proxy models" below --> pass `for_concrete_model=False` to [`ContentTypeManager.get_for_model()`](https://docs.djangoproject.com/en/4.0/ref/contrib/contenttypes/#django.contrib.contenttypes.models.ContentTypeManager.get_for_model) to get the appropriate `ContentType`:
+If you want to create [permissions for a proxy model](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#proxy-models), pass `for_concrete_model=False` to [`ContentTypeManager.get_for_model()`](https://docs.djangoproject.com/en/4.0/ref/contrib/contenttypes/#django.contrib.contenttypes.models.ContentTypeManager.get_for_model) to get the appropriate `ContentType`:
 ```
 content_type = ContentType.objects.get_for_model(BlogPostProxy, for_concrete_model=False)
 ```
@@ -272,7 +272,7 @@ def my_view(request):
 When a user logs in, the user's ID and the backend that was used for authentication are saved in the user's session. This allows the same [authentication backend]() <!-- "Other authentication sources" section of the "Customizing authentication in Django" page --> to fetch the user's details on a future request. The authentication backend to save in the session is selected as follows:
 
 1. Use the value of the optional `backend` argument, if provided.
-2. Use the value of the `user.backend` attribute, if present. This allows pairing [`authenticate()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#authenticaterequestnone-credentials) and [`login()`](): `authenticate()` sets the `user.backend` attribute on the user object it returns. <!-- "login()" above -->
+2. Use the value of the `user.backend` attribute, if present. This allows pairing [`authenticate()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#authenticaterequestnone-credentials) and [`login()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#how-to-log-a-user-in): `authenticate()` sets the `user.backend` attribute on the user object it returns.
 3. Use the `backend` in [`AUTHENTICATION_BACKENDS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTHENTICATION_BACKENDS), if there is only one.
 4. Otherwise, raise an exception.
 
@@ -282,7 +282,7 @@ In cases 1 and 2, the value of the `backend` argument or the `user.backend` attr
 
 ##### `logout(request)`
 
-To log out a user who has been logged in via [`django.contrib.auth.login()`](), use [`django.contrib.auth.logout()`]() <!-- both above --> within your view. It takes an [`HttpRequest`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest) object and has no return value. Example:
+To log out a user who has been logged in via [`django.contrib.auth.login()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#loginrequest-user-backendnone), use [`django.contrib.auth.logout()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#logoutrequest) within your view. It takes an [`HttpRequest`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest) object and has no return value. Example:
 ```
 from django.contrib.auth import logout
 
@@ -292,13 +292,13 @@ def logout_view(request):
 ```
 Note that `logout()` doesn't throw any errors if the user wasn't logged in.
 
-When you call `logout()`, the session data for the current request is completely cleaned out. All existing data is removed. This is to prevent another person from using the same web browser to log in and have access to the previous user's session data. If you want to put anything into the session that will be available to the user immediately after logging out, do that *after* calling [`django.contrib.auth.logout()`](). <!-- above -->
+When you call `logout()`, the session data for the current request is completely cleaned out. All existing data is removed. This is to prevent another person from using the same web browser to log in and have access to the previous user's session data. If you want to put anything into the session that will be available to the user immediately after logging out, do that *after* calling [`django.contrib.auth.logout()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#logoutrequest).
 
 ### Limiting access to logged-in users
 
 #### The raw way
 
-The raw way to limit access to pages is to check [`request.user.is_authenticated`]() and either redirect to a login page:
+The raw way to limit access to pages is to check [`request.user.is_authenticated`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.is_authenticated) and either redirect to a login page:
 ```
 from django.conf import settings
 from django.shortcuts import redirect
@@ -335,7 +335,7 @@ def my_view(request):
 * If the user isn't logged in, redirect to [`settings.LOGIN_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_URL), passing the current absolute path in the query string. Example: `/accounts/login/?next=/polls/3/`.
 * If the user is logged in, execute the view normally. The view code is free to assume the user is logged in.
 
-By default, the path that the user should be redirected to upon successful authentication is stored in a query string parameter called `"next"`. If you would prefer to use a different name for this parameter, [`login_required()`]() <!-- directly above --> takes an optional `redirect_field_name` parameter:
+By default, the path that the user should be redirected to upon successful authentication is stored in a query string parameter called `"next"`. If you would prefer to use a different name for this parameter, [`login_required()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#login_requiredredirect_field_namenext-login_urlnone) takes an optional `redirect_field_name` parameter:
 ```
 from django.contrib.auth.decorators import login_required
 
@@ -345,7 +345,7 @@ def my_view(request):
 ```
 Note that if you provide a value to `redirect_field_name`, you will most likely need to customize your login template as well, since the template context variable which stores the redirect path will use the value of `redirect_field_name` as its key rather than `"next"` (the default).
 
-[`login_required()`]() <!-- directly above --> also takes an optional `login_url` parameter. Example:
+[`login_required()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#login_requiredredirect_field_namenext-login_urlnone) also takes an optional `login_url` parameter. Example:
 ```
 from django.contrib.auth.decorators import login_required
 
@@ -538,21 +538,21 @@ You may also override these methods:
 
 ### Redirecting unauthorized requests in class-based views
 
-To ease the handling of access restrictions in [class-based views](https://docs.djangoproject.com/en/4.0/ref/class-based-views/), the `AccessMixin` can be used to configure the behavior of a view when access is denied. Authenticated users are denied access with an HTTP 403 Forbidden response. Anonymous users are redirected to the login page or shown an HTTP 403 Forbidden response, depending on the [`raise_exception`]() attribute. <!-- below -->
+To ease the handling of access restrictions in [class-based views](https://docs.djangoproject.com/en/4.0/ref/class-based-views/), the `AccessMixin` can be used to configure the behavior of a view when access is denied. Authenticated users are denied access with an HTTP 403 Forbidden response. Anonymous users are redirected to the login page or shown an HTTP 403 Forbidden response, depending on the [`raise_exception`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#raise_exception) attribute.
 
 #### `class AccessMixin`
 
 ##### `login_url`
 
-Default return value for [`get_login_url()`](). Defaults to `None` in which case `get_login_url()` falls back to [`settings.LOGIN_URL`]().
+Default return value for [`get_login_url()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#get_login_url). Defaults to `None` in which case `get_login_url()` falls back to [`settings.LOGIN_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_URL).
 
 ##### `permission_denied_message`
 
-Default return value for [`get_permission_denied_message()`](). Defaults to an empty string.
+Default return value for [`get_permission_denied_message()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#get_permission_denied_message). Defaults to an empty string.
 
 ##### `redirect_field_name`
 
-Default return value for [`get_redirect_field_name()`](). Defaults to `"next"`.
+Default return value for [`get_redirect_field_name()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#get_redirect_field_name). Defaults to `"next"`.
 
 ##### `raise_exception`
 
@@ -560,15 +560,15 @@ If this attribute is set to `True`, a [`PermissionDenied`](https://docs.djangopr
 
 ##### `get_login_url()`
 
-Returns the URL that users who don't pass the test will be redirected to. Returns [`login_url`]() <!-- above --> if set, or [`settings.LOGIN_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_URL) otherwise.
+Returns the URL that users who don't pass the test will be redirected to. Returns [`login_url`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#login_url) if set, or [`settings.LOGIN_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_URL) otherwise.
 
 ##### `get_permission_denied_message()`
 
-When [`raise_exception`]() is `True`, this method can be used to control the error message passed to the error handler for display to the user. Returns the [`permission_denied_message`]() attribute by default.
+When [`raise_exception`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#raise_exception) is `True`, this method can be used to control the error message passed to the error handler for display to the user. Returns the [`permission_denied_message`]() attribute by default.
 
 ##### `get_redirect_field_name()`
 
-Returns the name of the query parameter that will contain the URL the user should be redirected to after a successful login. If you set this to `None`, a query parameter won't be added. Returns the [`redirect_field_name`]() <!-- above --> attribute by default.
+Returns the name of the query parameter that will contain the URL the user should be redirected to after a successful login. If you set this to `None`, a query parameter won't be added. Returns the [`redirect_field_name`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#permission_denied_message) <!-- above --> attribute by default.
 
 ##### `handle_no_permission()`
 
@@ -578,7 +578,7 @@ Depending on the value of `raise_exception`, the method either raises a [`Permis
 
 If your [`AUTH_USER_MODEL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTH_USER_MODEL) inherits from [`AbstractBaseUser`]() <!-- "Customizing auth in Django" / "Specifying a custom user model" / `class models.AbstractBaseUser` --> or implements its own [`get_session_auth_hash()`]() <!-- same as directly above, sub-subsection `get_session_auth_hash` --> method, authenticated sessions will include the hash returned by this function. In the `AbstractBaseUser` case, this is an HMAC of the password field. Django verifies that the hash in the session for each request matches the one that's computed during the request. This allows a user to log out all of their sessions by changing their password.
 
-The default password change views included with Django, [`PasswordChangeView`]() <!-- below --> and the `user_change_password` view in the [`django.contrib.auth`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/) admin, update the session with the new password hash so that a user changing their own password won't log themselves out. If you have a custom password change view and wish to have similar behavior, use the `update_session_auth_hash()` function.
+The default password change views included with Django, [`PasswordChangeView`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-passwordchangeview) and the `user_change_password` view in the [`django.contrib.auth`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/) admin, update the session with the new password hash so that a user changing their own password won't log themselves out. If you have a custom password change view and wish to have similar behavior, use the `update_session_auth_hash()` function.
 
 ##### `update_session_auth_hash(request, user)`
 
@@ -600,15 +600,15 @@ def password_change(request):
 
 <hr>
 
-**Note**: Since [`get_session_auth_hash()`]() <!-- above --> is based on [`SECRET_KEY`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SECRET_KEY), updating your site to use a new secret key will invalidate all existing sessions.
+**Note**: Since [`get_session_auth_hash()`]() <!-- "Customizing auth Django" --> is based on [`SECRET_KEY`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SECRET_KEY), updating your site to use a new secret key will invalidate all existing sessions.
 
 <hr>
 
 ### Authentication views
 
-Django provides several views that you can use for handling login, logout, and password management. These make use of the [stock auth forms]() <!-- "Built-in forms" below --> but you can pass in your own forms as well.
+Django provides several views that you can use for handling login, logout, and password management. These make use of the [stock auth forms](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#built-in-forms) but you can pass in your own forms as well.
 
-Django provides no default template for the authentication views. You should create your own templates for the views you want to use. The template context is documented in each view. See [All authentication views](). <!-- "All authentication views" below -->
+Django provides no default template for the authentication views. You should create your own templates for the views you want to use. The template context is documented in each view. See [All authentication views](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#all-authentication-views).
 
 #### Using the views
 
@@ -672,11 +672,11 @@ The URL to redirect to after login. Defaults to [`LOGIN_REDIRECT_URL`](https://d
 
 ##### `redirect_field_name`
 
-The name of a `GET` field containing the URL to redirect to after login. Defaults to `next`. Overrides the [`get_default_redirect_url()`]() <!-- below --> URL if the given `GET` parameter is passed.
+The name of a `GET` field containing the URL to redirect to after login. Defaults to `next`. Overrides the [`get_default_redirect_url()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#get_default_redirect_url) URL if the given `GET` parameter is passed.
 
 ##### `authentication_form`
 
-A callable (typically a form class) to use for authentication. Defaults to [`AuthenticationForm`](). <!-- "class AuthenticationForm" below -->
+A callable (typically a form class) to use for authentication. Defaults to [`AuthenticationForm`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-authenticationform).
 
 ##### `extra_context`
 
@@ -700,7 +700,7 @@ A [`set`](https://docs.python.org/3/library/stdtypes.html#set) of hosts, in addi
 
 ##### `get_default_redirect_url()`
 
-Returns the URL to redirect to after login. The default implementation resolves and returns [`next_page`]() <!-- above --> if set, or [`LOGIN_REDIRECT_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_REDIRECT_URL) otherwise.
+Returns the URL to redirect to after login. The default implementation resolves and returns [`next_page`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#next_page) if set, or [`LOGIN_REDIRECT_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_REDIRECT_URL) otherwise.
 
 <hr>
 
@@ -711,7 +711,7 @@ Here's what `LoginView` does:
 
 It's your responsibility to provide the HTML for the login template, called `registration/login.html` by default. This template gets passed four template context variables:
 
-* `form`: A [`Form`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form) object representing the [`AuthenticationForm`](). <!-- below -->
+* `form`: A [`Form`](https://docs.djangoproject.com/en/4.0/ref/forms/api/#django.forms.Form) object representing the [`AuthenticationForm`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-authenticationform).
 * `next`: The URL to redirect to after successful login. This may contain a query string, too.
 * `site`: The current [`Site`](https://docs.djangoproject.com/en/4.0/ref/contrib/sites/#django.contrib.sites.models.Site), according to the [`SITE_ID`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SITE_ID) setting. If you don't have the site framework installed, this will be set to an instance of [`RequestSite`](https://docs.djangoproject.com/en/4.0/ref/contrib/sites/#django.contrib.sites.requests.RequestSite), which derives the site name and domain from the current [`HttpRequest`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest).
 * `site_name`: An alias for `site.name`. If you dojn't have the site framework installed, this will be set to the value of [`request.META['SERVER_NAME']`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest.META). For more on sites, see [The "sites" framework](https://docs.djangoproject.com/en/4.0/ref/contrib/sites/).
@@ -785,7 +785,7 @@ The full name of a template to display after logging the user out. Defaults to `
 
 ##### `redirect_field_name`
 
-The name of a `GET` field containing the URL to redirect to after log out. Defaults to `'next'`. Overrides the [`next_page`]() <!-- directly above --> URL if the given `GET` parameter is passed.
+The name of a `GET` field containing the URL to redirect to after log out. Defaults to `'next'`. Overrides the [`next_page`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#next_page-1) URL if the given `GET` parameter is passed.
 
 ##### `extra_context`
 
@@ -833,7 +833,7 @@ The URL to redirect to after a successful password change. Defaults to `'passwor
 
 ##### `form_class`
 
-A custom "change password" form which must accept a `user` keyword argument. The form is responsible for actually changing the user's password. Defaults to [`PasswordChangeForm`](). <!-- below -->
+A custom "change password" form which must accept a `user` keyword argument. The form is responsible for actually changing the user's password. Defaults to [`PasswordChangeForm`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-passwordchangeform).
 
 ##### `extra_context`
 
@@ -875,7 +875,7 @@ This view will send an email if the following conditions are met:
 * The requested user is active (`User.is_active` is `True`).
 * The requested user has a usable password. Users flagged with an unusable password (see [`set_unusable_password()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.set_unusable_password)) aren't allowed to request a password reset to prevent misuse when using an external authentication source like LDAP.
 
-If any of these conditions are *not* met, no email will be sent, but the user won't receive any error message either. This prevents information leaking to potential attackers. If you want to provide an error message in this case, you can subclass [`PasswordResetForm`]() <!-- above --> and use the `form_class` attribute.
+If any of these conditions are *not* met, no email will be sent, but the user won't receive any error message either. This prevents information leaking to potential attackers. If you want to provide an error message in this case, you can subclass [`PasswordResetForm`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-passwordresetform) and use the `form_class` attribute.
 
 <hr>
 
@@ -891,7 +891,7 @@ The full name of a template to use for displaying the password reset form. Defau
 
 ##### `form_class`
 
-Form that will be used to get the email of the user to reset the password for. Defaults to [`PasswordResetForm`](). <!-- below -->
+Form that will be used to get the email of the user to reset the password for. Defaults to [`PasswordResetForm`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-passwordresetform).
 
 ##### `email_template_name`
 
@@ -929,11 +929,11 @@ A dictionary of context data that will be available in the email template. It ca
 
 * `form`: The form (see `form_class` above) for resetting the user's password.
 
-**Email template content:**
+**Email template context:**
 
 * `email`: An alias for `user.email`.
-* `user`: The current [`User`](), according to the `email` form field. Only active users are able to reset their passwords (`User.is_active is True`).
-* `site_name`: An alias for `site.name`. If you don't have the site framework installed, this will be set to the value of [`request.META['SERVER_NAME']`](). For more on sites, see [The "sites" framework]().
+* `user`: The current [`User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User), according to the `email` form field. Only active users are able to reset their passwords (`User.is_active is True`).
+* `site_name`: An alias for `site.name`. If you don't have the site framework installed, this will be set to the value of [`request.META['SERVER_NAME']`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest.META). For more on sites, see [The "sites" framework]().
 * `domain`: An alias for `site.domain`. If you don't have the site framework installed, this will be set to the value of `request.get_host()`.
 * `protocol`: http or https.
 * `uid`: The user's primary key encoded in base 64.
@@ -952,7 +952,7 @@ The same template context is used for subject template. Subject must be single l
 
 **URL name: `password_reset_done`**
 
-The page shown after a user has been emailed a link to reset their password. This view is called by default if the [`PasswordResetView`]() <!-- above --> doesn't have an explicit `success_url` URL set.
+The page shown after a user has been emailed a link to reset their password. This view is called by default if the [`PasswordResetView`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-passwordresetview) doesn't have an explicit `success_url` URL set.
 
 <hr>
 
@@ -1003,7 +1003,7 @@ A dotted path to the authentication backend to use when authenticating a user if
 
 ##### `form_class`
 
-Form that will be used to set the password. Defaults to [`SetPasswordForm`](). <!-- below -->
+Form that will be used to set the password. Defaults to [`SetPasswordForm`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-setpasswordform).
 
 ##### `success_url`
 
@@ -1221,4 +1221,4 @@ User passwords are not displayed in the admin (nor stored in the database), but 
 
 <hr>
 
-[[Back to the User authentication in Django opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication#user-authentication-in-django) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#using-the-django-authentication-system) - [[Next page]]()
+[[Back to the User authentication in Django opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication#user-authentication-in-django) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#using-the-django-authentication-system) - [[Next page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Password_Management#password-management-in-django)
