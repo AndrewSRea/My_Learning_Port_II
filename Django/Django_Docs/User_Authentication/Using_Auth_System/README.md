@@ -1021,3 +1021,111 @@ Token parameter displayed as a component of password reset URLs. Defaults to `'s
 
 * `form`: The form (see `form_class` above) for setting the new user's password.
 * `validlink`: Boolean, True if the link (combination of `uidb64` and `token`) is valid or unused yet.
+
+<hr>
+
+##### `class PasswordResetCompleteView`
+
+**URL name: `password_reset_complete`**
+
+Presents a view which informs the user that the password has been successfully changed.
+
+**Attributes:**
+
+##### `template_name`
+
+The full name of a template to display the view. Defaults to `registration/password_reset_complete.html`.
+
+##### `extra_context`
+
+A dictionary of context data that will be added to the default context data passed to the template.
+
+### Helper functions
+
+##### `redirect_to_login(next, login_url=None, redirect_field_name='next')`
+
+Redirects to the login page, and then back to another URL after a successful login.
+
+**Required arguments:**
+
+* `next`: The URL to redirect to after a successful login.
+
+**Optional arguments:**
+
+* `login_url`: The URL of the login page to redirect to. Defaults to [`settings.LOGIN_URL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOGIN_URL) if not supplied.
+* `redirect_field_name`: The name of a `GET` field containing the URL to redirect to after log out. Overrides `next` if the given `GET` parameter is passed.
+
+### Built-in forms
+
+If you don't want to use the built-in views, but want the convenience of not having to write forms for this functionality, the authentication system provides several built-in forms located in `django.contrib.auth.forms` (reference to this section, "Built-in forms"):
+
+<hr>
+
+**Note**: The built-in authentication forms make certain assumptions about the user model that they are working with. If you're using a [custom user model](), <!-- future page, "Customizing auth in Django / Substituting a custom `User` model" --> it may be necessary to define your own forms for the authentication system. For more information, refer to the documentation about [using the built-in authentication forms with custom user models](). <!-- future page, "Customizing auth in Django / Custom users and the built-in auth forms" -->
+
+<hr>
+
+##### `class AdminPasswordChangeForm`
+
+A form used in the admin interface to change a user's password.
+
+Takes the `user` as the first positional argument.
+
+##### `class AuthenticationForm`
+
+A form for logging a user in.
+
+Takes `request` as its first positional argument, which is stored on the form instance for use by sub-classes.
+
+##### * `confirm_login_allowed(user)`
+
+By default, `AuthenticationForm` rejects users whose `is_active` flag is set to `False`. You may override this behavior with a custom policy to determine which users can log in. Do this with a custom form that subclasses `AuthenticationForm` and overrides the `confirm_login_allowed()` method. This method should raise a [`ValidationError`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.ValidationError) if the given user may not log in.
+
+For example, to allow all users to log in regardless of "active" status:
+```
+from django.contrib.auth.forms import AuthenticationForm
+
+class AuthenticationFormWithInactiveUsersOkay(AuthenticationForm):
+    def confirm_login_allowed(self, user):
+        pass
+```
+(In this case, you'll also need to use an authentication backend that allows inactive users, such as [`AllowAllUsersModelBackend`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.backends.AllowAllUsersModelBackend).)
+
+Or to allow only some active users to log in:
+```
+class PickyAuthenticationForm(AuthenticationForm):
+    def confirm_login_allowed(self, user):
+        if not user.is_active:
+            raise ValidationError(
+                _("This account is inactive."),
+                code='inactive',
+            )
+        if user.username.startswith('b'):
+            raise ValidationError(
+                _("Sorry, accounts starting with 'b' aren't welcome here."),
+                code='no_b_users',
+            )
+```
+
+##### `class PasswordChangeForm`
+
+A form for allowing a user to change their password.
+
+##### `class PasswordResetForm`
+
+A form for generating and emailing a one-time use link to reset a user's password.
+
+##### * `send_mail(subject_template_name, email_template_name, context, form_email, to_email, html_email_template_name=None)`
+
+Uses the arguments to send an `EmailMultiAlternatives`. Can be overridden to customize how the email is sent to the user.
+
+**Parameters:**
+
+* `subject_template_name` - the template for the subject.
+* `email_template_name` - the template for the email body.
+* `context` - context passed to the `subject_template`, `email_template`, and `html_email_template` (if it is not `None`).
+* `from_email` - the sender's email.
+* `to_email` - the email of the requester.
+* `html_email_template_name` - the template for the HTML body; defaults to `None`, in which case a plain text email is sent.
+
+By default, `save()` populates the `context` with the same variables that [`PasswordResetView`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-passwordresetview) passes to its email context.
