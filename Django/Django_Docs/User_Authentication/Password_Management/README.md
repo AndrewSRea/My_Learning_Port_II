@@ -209,3 +209,128 @@ work_factor * 2 block_size * 64
 ...so you may need to tweak `maxmem` when changing the `work_factor` or `block_size` values.
 
 <hr>
+
+### Password upgrading
+
+When users log in, if their passwords are stored with anything other than the preferred algorithm, Django will automatically upgrade the algorithm to the preferred one. This means that old installs of Django will get automatically more secure as users log in, and it also means that you can switch to new (and better) storage algorithms as they get invented.
+
+However, Django can only upgrade passwords that use algorithms mentioned in [`PASSWORD_HASHERS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-PASSWORD_HASHERS), so as you upgrade to new systems, you should make sure never to *remove* entries from this list. If you do, users using unmentioned algorithms won't be able to upgrade. Hashed passwords will be updated when increasing (or decreasing) the number of PBKDF2 iterations, bcrypt rounds, or argon2 attributes.
+
+Be aware that if all the passwords in your database aren't encoded in the default hasher's algorithm, you may be vulnerable to a user enumeration timing attack due to a difference between the duration of a login request for a user with a password encoded in a non-default algorithm and the duration of a login request for a nonexistent user (which runs the default hasher). You may be able to mitigate this by [upgrading older password hashes](). <!-- title directly below -->
+
+### Password upgrading without requiring a login
+
+If you have an existing database with an older, weak hash such as MD5 or SHA1, you might want to upgrade those hashes yourself instead of waiting for the upgrade to happen when a user logs in (which may never happen if a user doesn't return to your site). In this case, you can use a "wrapped" password hasher.
+
+For this example, we'll mitigate a collection of SHA1 hashes to use PBKDF2(SHA1(password)) and add the corresponding password hasher for checking if a user entered the correct password on login. We assume we're using the built-in `User` model and that our project has an `accounts` app. You can modify the pattern to work with any algorithm or with a custom user model.
+
+First, we'll add the custom hasher:
+```
+# accounts/hashers.py
+
+from django.contrib.auth.hashers import (
+    PBKDF2PasswordHasher, SHA1PasswordHasher,
+)
+
+
+class PBKDF2WrappedSHA1PasswordHasher(PBKDF2PasswordHasher):
+    algorithm = 'pbkdf2_wrapped_sha1'
+
+    def encode_sha1_hash(self, sha1_hash, salt, iterations=None):
+        return super().encode(sha1_hash, salt, iterations)
+
+    def encode(self, password, salt, iterations=None):
+        _, _, sha1_hash = SHA1PasswordHasher().encode(password, salt).split('$', 2)
+        return self.encode_sha1_hash(sha1_hash, salt, iterations)
+```
+The data migration might look something like:
+```
+# accounts/migrations/0002_migrate_sha1_passwords.py
+
+from django.db import migrations
+
+from ..hashers import PBKDF2WrappedSHA1PasswordHasher
+
+
+def forwards_func(apps, schema_editor):
+    User = apps.get_model('auth', 'User')
+    users = User.objects.filter(password__startswith='sha1$')
+    hasher = PBKDF2WrappedSHA1PasswordHasher()
+    for user in users:
+        algorithm, salt, sha1_hash = user.password.split('$', 2)
+        user.password = hasher.encode_sha1_hash(sha1_hash, salt)
+        user.save(update_fields=['password'])
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('accounts', '0001_initial'),
+        # replace this with the latest migration in contrib.auth
+        ('auth', '####_migration_name'),
+    ]
+
+    operations = [
+        migrations.RunPython(forwards_func),
+    ]
+```
+Be aware that this migration will take on the order of several minutes for several thousand users, depending on the speed of your hardware.
+
+Finally, we'll add a [`PASSWORD_HASHERS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-PASSWORD_HASHERS) setting:
+```
+# mysite/settings.py
+
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'accounts.hashers.PBKDF2WrappedSHA1PasswordHasher',
+]
+```
+Include any other hashers that your site uses in this list.
+
+### Included hashers
+
+The full list of hashers included in Django is:
+```
+[
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256Passwordhasher',
+    'django.contrib.auth.hashers.BCryptPasswordHasher',
+    'django.contrib.auth.hashers.ScryptPasswordHasher',
+    'django.contrib.auth.hashers.SHA1PasswordHasher',
+    'django.contrib.auth.hashers.MD5Passwordhasher',
+    'django.contrib.auth.hashers.UnsaltedSHA1PasswordHasher',
+    'django.contrib.auth.hashers.UnsaltedMD5PasswordHasher',
+    'django.contrib.auth.hashers.CryptPasswordHasher',
+]
+```
+The corresponding algorithm names are:
+
+* `pbkdf2_sha256`
+* `pkdf2_sha1`
+* `argon2`
+* `bcrypt_sha256`
+* `bcrypt`
+* `scrypt`
+* `sha1`
+* `md5`
+* `unsalted_sha1`
+* `unsalted_md5`
+* `crypt`
+
+### Writing your own hasher
+
+If you write your own password hasher that contains a work factor such as a number of iterations, you should implement a `harden_runtime(self, password, encoded)` method to bridge the runtime gap between the work factor supplied in the `encoded` password and the default work factor of the hasher. This prevents a user enumeration timing attack due to difference between a login request for a user with a password encoded in an older number of iterations and a nonexistent user (which runs the default hasher's default number of iterations).
+
+Taking PBKDF2 as an example, if `encoded` contains 20,000 iterations and the hasher's default `iterations` is 30,000, the method should run `password` through another 10,000 iterations of PBKDF2.
+
+If your hasher doesn't have a work factor, implement the method as a no-op (`pass`).
+
+## Manually managing a user's password
+
+The `django.contrib.auth.hashers` module provides a set of functions to create and validate hashed passwords. You can use them independently from the `User` model.
+
+##### `check_password(password, encoded)`
+
+If you'd like to manually authenticate 
