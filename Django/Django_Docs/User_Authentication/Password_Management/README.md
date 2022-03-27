@@ -333,4 +333,155 @@ The `django.contrib.auth.hashers` module provides a set of functions to create a
 
 ##### `check_password(password, encoded)`
 
-If you'd like to manually authenticate 
+If you'd like to manually authenticate a user by comparing a plain-text password to the hashed password in the database, use the convenience function `check_password()`. It takes two arguments: the plain-text password to check, and the full value of a user's `password` field in the database to check against, and returns `True` if they match, `False` otherwise.
+
+##### `make_password(password, salt=None, hasher='default')`
+
+Creates a hashed password in the format used by this application. It takes one mandatory argument: the password in plain-text (string or bytes). Optionally, you can provide a salt and a hashing algorithm to use, if you don't want to use the defaults (first entry of `PASSWORD_HASHERS` setting). See [included hashers](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Password_Management#included-hashers) for the algorithm name of each hasher. If the password argument is `None`, an unusable password is returned (one that will never be accepted by [`check_password()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Password_Management#check_passwordpassword-encoded)).
+
+##### `is_password_usuable(encoded_password)`
+
+Returns `False` if the password is a result of [`User.set_unusable_password()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.set_unusable_password).
+
+## Password validation
+
+Users often choose poor passwords. To help mitigate this problem, Django offers pluggable password validation. You can configure multiple password validators at the same time. A few validators are included in Django, but you can write your own as well.
+
+Each password validator must provide a help text to explain the requirements to the user, validate a given password, and return an error message if it does not meet the requirements, and optionally receive passwords that have been set. Validators can also have optional settings to fine tune their behavior.
+
+Validation is controlled by the [`AUTH_PASSWORD_VALIDATORS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTH_PASSWORD_VALIDATORS) setting. The default for the setting is an empty list, which means no validators are applied. In new projects created with the default [`startproject`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-startproject) template, a set of validators is enabled by default.
+
+By default, validators are used in the forms to reset or change passwords and in the [`createsuperuser`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-createsuperuser) and [`changepassword`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-changepassword) management commands. Validators aren't applied at the model level, for example, in `User.objects.create_user()` and `create_superuser()`, because we assume that developers, not users, interact with Django at that level and also because model validation doesn't automatically run as part of creating models.
+
+<hr>
+
+**Note**: Password validation can prevent the use of many types of weak passwords. However, the fact that a password passes all the validators doesn't guarantee that it is a strong password. There are many factors that can weaken a password that are not detectable by even the most advanced password validators.
+
+<hr>
+
+### Enabling password validation
+
+Password validation is configured in the [`AUTH_PASSWORD_VALIDATORS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTH_PASSWORD_VALIDATORS) setting:
+```
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 9,
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+```
+This example enables all four included validators:
+
+* `UserAttributeSimilarityValidator`, which checks the similarity between the password and a set of attributes of the user.
+* `MinimumLengthValidator`, which checks whether the password meets a minimum length. This validator is configured with a custom option: it now requires the minimum length to be nine characters, instead of the default eight.
+* `CommonPasswordValidator`, which checks whether the password occurs in a list of common passwords. By default, it compares to an included list of 20,000 common passwords.
+* `NumericPasswordValidator`, which checks whether the password isn't entirely numeric.
+
+For `UserAttributeSimilarityValidator` and `CommonPasswordValidator`, we're using the default settings in this example. `NumericPasswordValidator` has no settings.
+
+The help texts and any errors from password validators are always returned in the order they are listed in [`AUTH_PASSWORD_VALIDATORS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTH_PASSWORD_VALIDATORS).
+
+### Included validators
+
+Django includes four validators:
+
+##### `class MinimumLengthValidator(min_length=8)`
+
+Validates whether the password meets a minimum length. The minimum length can be customized with the `min_length` parameter.
+
+##### `class UserAttributeSimilarityValidator(user_attributes=DEFAULT_USER_ATTRIBUTES, max_similarity=0.7)`
+
+Validates whether the password should be an iterable of names of user attributes to compare to. If this argument is not provided, the default is used: `'username'`, `'first_name'`, `'last_name'`, `'email'`. Attributes that don't exist are ignored.
+
+The maximum allowed similarity of passwords can be set on a scale of 0.1 to 1.0 with the `max_similarity` parameter. This is compared to the result of [`difflib.SequenceMatcher.quick_ratio()`](https://docs.python.org/3/library/difflib.html#difflib.SequenceMatcher.quick_ratio). A value of 0.1 rejects passwords unless they are substantially different from the `user_attributes`, whereas a value of 1.0 rejects only passwords that are identical to an attribute's value.
+
+##### `class CommonPasswordValidator(password_list_path=DEFAULT_PASSWORD_LIST_PATH)`
+
+Validates whether the password is not a common password. This converts the password to lowercase (to do a case-insensitive comparison) and checks it against a list of 20,000 common passwords created by [Royce Williams](https://gist.github.com/roycewilliams/281ce539915a947a23db17137d91aeb7).
+
+The `password_list_path` can be set to the path of a custom file of common passwords. This file should contain one lowercase password per line and may be plain text or gzipped.
+
+##### `class NumericPasswordValidator`
+
+Validates whether the password is not entirely numeric.
+
+### Integrating validation
+
+There are a few functions in `django.contrib.auth.password_validation` that you can call from your own forms or other code to integrate password validation. This can be useful if you use custom forms for password setting, or if you have API calls that allow passwords to be set, for example.
+
+##### `validate_password(password, user=None, password_validators=None)`
+
+Validates a password. If all validators find the password valid, returns `None`. If one or more validators reject the password, raises a [`ValidationError`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.ValidationError) with all the error messages from the validators.
+
+The `user` object is optional: if it's not provided, some validators may not be able to perform any validators and will accept any password.
+
+##### `password_changed(password, user=None, password_validators=None)`
+
+Informs all validators that the password has been changed. This can be used by validators such as one that prevents password reuse. This should be called once the password has been successfully changed.
+
+For subclasses of [`AbstractBaseUser`](), the password field will be marked as "dirty" when calling [`set_password()`]() which triggers a call to `password_changed()` after the user is saved. <!-- both terms in "Customizing auth in Django" -->
+
+##### `password_validators_help_text(password_validators=None)`
+
+Returns a list of the help texts of all validators. These explain the password requirements to the user.
+
+##### `password_validators_help_text_html(password_validators=None)`
+
+Returns an HTML string with all help texts in an `<ul>`. This is helpful when adding password validation to forms, as you can pass the output directly to the `help_text` parameter of a form field.
+
+##### `get_password_validators(validator_config)`
+
+Returns a set of validator objects based on the `validator_config` parameter. By default, all functions use the validators defined in [`AUTH_PASSWORD_VALIDATORS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTH_PASSWORD_VALIDATORS), but by calling this function with an alternate set of validators and then passing the result into the `password_validators` parameter of the other functions, your custom set of validators will be used instead. This is useful when you have a typical set of validators to use for most scenarios, but also have a special situation that requires a custom set. If you always use the same set of validators, there is no need to use this function, as the configuration from `AUTH_PASSWORD_VALIDATORS` is used by default.
+
+The structure of `validator_config` is identical to the structure of [`AUTH_PASSWORD_VALIDATORS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTH_PASSWORD_VALIDATORS). The return value of this function can be passed into the `password_validators` parameter of the functions listed above.
+
+Note that where the password is passed to one of these functions, this should always be the clear text password -- not a hashed password.
+
+### Writing your own validator
+
+If Django's built-in validators are not sufficient, you can write your own password validators. Validators have a fairly small interface. They must implement two methods:
+
+* `validate(self, password, user=None)`: Validate a password. Return `None` if the password is valid, or raise a [`ValidationError`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.ValidationError) with an error message if the password is not valid. You must be able to deal with `user` being `None` -- if that means your validator can't run, return `None` for no error.
+* `get_help_text()`: Provide a help text to explain the requirements to the user.
+
+Any items in the `OPTIONS` in [`AUTH_PASSWORD_VALIDATORS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTH_PASSWORD_VALIDATORS) for your validator will be passed to the constructor. All constructor arguments should have a default value.
+
+Here's a basic example of a validator, with one optional setting:
+```
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext as _
+
+class MinimumLengthValidator:
+    def __init__(self, min_length=8):
+        self.min_length = min_length
+
+    def validate(self, password, user=None):
+        if len(password) < self.min_length:
+            raise ValidationError(
+                _("This password must contain at least %(min_length)d characters."),
+                code='password_too_short',
+                params={'min_length': self.min_length},
+            )
+
+    def get_help_text(self):
+        return _(
+            "Your password must contain at least %(min_length)d characters."
+            % {'min_length': self.min_length}
+        )
+```
+You can also implement `password_change(password, user=None)`, which will be called after a successful password change. That can be used to prevent password reuse, for example. However, if you decide to store a user's previous passwords, you should never do so in clear text.
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#using-the-django-authentication-system) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Password_Management#password-management-in-django) - [[Next page]]()
