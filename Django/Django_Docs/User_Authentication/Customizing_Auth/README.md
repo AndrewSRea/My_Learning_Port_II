@@ -109,3 +109,45 @@ class SettingsBackend(BaseBackend):
         except User.DoesNotExist:
             return None
 ```
+
+### Handling authorization in custom backends
+
+Custom auth backends can provide their own permissions.
+
+The user model and its manager will delegate permission lookup functions ([`get_user_permissions()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.get_user_permissions), [`get_group_permissions()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.get_group_permissions), [`get_all_permissions()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.get_all_permissions), [`has_perm()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.has_perm), [`has_module_perms()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.has_module_perms), and [`with_perm()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.UserManager.with_perm)) to any authentication backend that implements these functions.
+
+The permissions given to the user will be the superset of all permissions returned by all backends. That is, Django grants a permission to a user that any one backend grants.
+
+If a backend raises a [`PermissionDenied`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.PermissionDenied) exception in `has_perm()` or `has_module_perms()`, the authorization will immediately fail and Django won't check the backends that follow.
+
+A backend could implement permissions for the magic admin like this:
+```
+from django.contrib.auth.backends import BaseBackend
+
+class MagicAdminBackend(BaseBackend):
+    def has_perm(self, user_obj, perm, obj=None):
+        return user_obj.username == settings.ADMIN_LOGIN
+```
+This gives full permissions to the user granted access in the above example. Notice that in addition to the same arguments given  to the associated [`django.contrib.auth.models.User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User) functions, the backend auth functions all take the user object, which may be an anonymous user, as an argument.
+
+A full authorization implementation can be found in the `ModelBackend` class in [django/contrib/auth/backends.py](https://github.com/django/django/blob/main/django/contrib/auth/backends.py), which is the default backend and queries the `auth_permission` table most of the time.
+
+#### Authorization for anonymous users
+
+An anonymous user is one that is not authenticated, i.e. they have provided no valid authentication details. However, that does not necessarily mean they are not authorized to do anything. At the most basic level, most websites authorize anonymous users to browse most of the site, and many allow anonymous posting of comments, etc.
+
+Django's permission framework does not have a place to store permissions for anonymous users. However, the user object passed to an authentication backend may be a [`django.contrib.auth.models.AnonymousUser`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.AnonymousUser) object, allowing the backend to specify custom authorization behavior for anonymous users. This is especially useful for the authors of reusable apps, who can delegate all questions of authorization to the auth backend, rather than needing settings, for example, to control anonymous access.
+
+#### Authorization for inactive users
+
+An inactive user is one that has its [`is_active`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.is_active) field set to `False`. The [`ModelBackend`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.backends.ModelBackend) and [`RemoteUserBackend`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.backends.RemoteUserBackend) authentication backends prohibits these users from authenticating. If a custom user model doesn't have an `is_active` field, all users will be allowed to authenticate.
+
+You can use [`AllowAllUsersModelBackend`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.backends.AllowAllUsersModelBackend) or [`AllowAllUsersRemoteUserBackend`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.backends.AllowAllUsersRemoteUserBackend) if you want to allow inactive users to authenticate.
+
+The support for anonymous users in the permission system allows for a scenario where anonymous users have permissions to do something while inactive authenticated users do not.
+
+Do not forget to test for the `is_active` attribute of the user in your own backend permission methods.
+
+#### Handling object permissions
+
+Django's permission framework has a foundation for object permissions, though there is no implementation for it in the core. That means that checking for object permissions will always return `False` or an empty list (depending on the check performed). An authentication backend will receive the keyword parameters `obj` and `user_obj` for each object related authorization method and can return the object level permission as appropriate.
