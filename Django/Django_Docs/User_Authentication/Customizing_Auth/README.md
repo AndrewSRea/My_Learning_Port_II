@@ -254,3 +254,103 @@ This change can't be done automatically and requires manually fixing your schema
 Due to limitations of Django's synamic dependency feature for swappable models, the model referenced by `AUTH_USER_MODEL` must be created in the first migration of its app (usually called `0001_initial`); otherwise, you'll have dependency issues.
 
 In addition, you may run into a `CircularDependencyError` when running your migrations as Django won't be able to automatically break the dependency loop due to the dynamic dependency. If you see this error, you should break the loop by moving the models depended on by your user model into a second migration. (You can try making two normal models that have a `ForeignKey` to each other and seeing how `makemigrations` resolves that circular dependency if you want to see how it's usually done.)
+
+### Reusable apps and `AUTH_USER_MODEL`
+
+Reusable apps shouldn't implement a custom user model. A project may use many apps, and two reusable apps that implemented a custom user model couldn't be used together. If you need to store per user information in your app, use a [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey) or [`OneToOneField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.OneToOneField) to `settings.AUTH_USER_MODEL` as described below.
+
+### Referencing the `User` model
+
+If you reference [`User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User) directly (for example, by referring to it in a foreign key), your code will not work in projects where the [`AUTH_USER_MODEL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTH_USER_MODEL) setting has been changed to a different user model.
+
+##### `get_user_model()`
+
+Instead of referring to `User` directly, you should reference the user model using `django.contrib.auth.get_user_model()`. This method will return the currently active user model -- the custom user model if one is specified, or `User` otherwise.
+
+When you define a foreign key or many-to-many relations to the user model, you should specify the custom model using the `AUTH_USER_MODEL` setting. For example:
+```
+from django.conf import settings
+from django.db import models
+
+class Article(models.Model):
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+```
+When connecting to signals sent by the user model, you should specify the custom model using the `AUTH_USER_MODEL` setting. For example:
+```
+from django.conf import settings
+from django.db.models.signals import post_save
+
+def post_save_receiver(sender, instance, created, **kwargs):
+    pass
+
+post_save.connect(post_save_receiver, sender=settings.AUTH_USER_MODEL)
+```
+Generally speaking, it's easiest to refer to the user model with the `AUTH_USER_MODEL` setting in code that's executed at import time, however, it's also possible to call `get_user_model()` while Django is importing models, so you could use `models.ForeignKey(get_user_model(), ...)`.
+
+If your app is tested with multiple user models, using `@override_settings(AUTH_USER_MODEL=...)` for example, and you cache the result of `get_user_model()` in a module-level variable, you may need to listen to the [`setting_changed`](https://docs.djangoproject.com/en/4.0/ref/signals/#django.test.signals.setting_changed) signal to clear the cache. For example:
+```
+from django.apps import apps
+from django.contrib.auth import get_user_model
+from django.core.signals import setting_changed
+from django.dispatch import receiver
+
+@receiver(setting_changed)
+def user_model_swapped(**kwargs):
+    if kwargs['setting'] == 'AUTH_USER_MODEL':
+        apps.clear_cache()
+        from myapp import some_module
+        some_module.UserModel = get_user_model()
+```
+
+### Specifying a custom user model
+
+When you start your project with a custom user model, stop to consider if this is the right choice for your project.
+
+Keeping all user related information in one model removes the need for additional or more complex database queries to retrieve related models. On the other hand, it may be more suitable to store app-specific user information in a model that has a relation with your custom user model. That allows each app to specify its own user data requirements without potentially conflicting or breaking assumptions by other apps. It also means that you would keep your user model as simple as possible, focused on authentication, and following the minimum requirements Django expects custom user models to meet.
+
+If you use the default authentication backend, then your model must have a single unique field that can be used for identification purposes. This can be a username, an email address, or any other unique attribute. A non-unique username field is allowed if you use a custom authentication backend that can support it.
+
+The easiest way to construct a compliant custom user model is to inherit from [`AbstractBaseUser`](). <!-- below --> `AbstractBaseUser` provides the core implementation of a user model, including hashed passwords and tokenized password resets. You must then provide some key implementation details:
+
+##### `class models.CustomUser`
+
+##### * `USERNAME_FIELD`
+
+A string describing the name of the field on the user model that is used as the unique identifier. This will usually be a username of some kind, but it can also be an email address, or any other unique identifier. The field *must* be unique (i.e., have `unique=True` set in its definition), unless you use a custom authentication backend that can support non-unique usernames.
+
+In the following example, the field `identifier` is used as the identifying field:
+
+```
+class MyUser(AbstractBaseUser):
+    identifier = models.CharField(max_length=40, unique=True)
+    ...
+    USERNAME_FIELD = 'identifier'
+```
+
+##### * `EMAIL_FIELD`
+
+A string describing the name of the email field on the `User` model. This value is returned by [`get_email_field_name()`](). <!-- below -->
+
+##### * `REQUIRED_FIELDS`
+
+A list of field names that will be prompted when creating a user via the [`createsuperuser`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-createsuperuser) management command. The user will be prompted to supply a value for each of these fields. It must include any field for which [`blank`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.blank) is `False` or undefined and may include additional fields you want prompted when a user is created interactively. `REQUIRED_FIELDS` has no effect in other parts of Django, like creating a user in the admin.
+
+For example, here is the partial definition for a user model that defines two required fields -- a date of birth and height:
+
+```
+class MyUser(AbstractBaseUser):
+    ...
+    date_of_birth = models.DateField()
+    height = models.FloatField()
+    ...
+    REQUIRED_FIELDS = ['date_of_birth', 'height']
+```
+
+<hr>
+
+**Note**: `REQUIRED_FIELDS` must contain all required fields on your user model, but should *not* contain the `USERNAME_FIELD` or `password` as these fields will always be prompted.
+
+<hr>
