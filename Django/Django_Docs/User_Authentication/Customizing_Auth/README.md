@@ -354,3 +354,112 @@ class MyUser(AbstractBaseUser):
 **Note**: `REQUIRED_FIELDS` must contain all required fields on your user model, but should *not* contain the `USERNAME_FIELD` or `password` as these fields will always be prompted.
 
 <hr>
+
+##### * `is_active`
+
+A Boolean attribute that indicates whether the user is considered "active". This attribute is provided as an attribute on `AbstractBaseUser` defaulting to `True`. How you choose to implement it will depend on the details of your chosen auth backends. See the documentation of the [`is_active` attribute on the built-in user model](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.is_active) for details.
+
+##### * `get_full_name()`
+
+Optional. A longer formal identifier for the user such as their full name. If implemented, this appears alongside the username in an object's history in [`django.contrib.admin`](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#module-django.contrib.admin).
+
+##### * `get_short_name()`
+
+Optional. A short, informal identifier for the user such as their first name. If implemented, this replaces the username in the greeting to the user in the header of [`django.contrib.admin`](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#module-django.contrib.admin).
+
+<hr>
+
+**Importing `AbstractBaseUser`**
+
+`AbstractBaseUser` and `BaseUserManager` are importable from `django.contrib.auth.base_user` so that they can be imported without including `django.contrib.auth` in [`INSTALLED_APPS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-INSTALLED_APPS).
+
+<hr>
+
+The following attributes and methods are available on any subclass of `AbstractBaseUser`:
+
+##### `class models.AbstractBaseUser`
+
+##### * `get_username()`
+
+Returns the value of the field nominated by `USERNAME_FIELD`.
+
+##### * `clean()`
+
+Normalizes the username by calling [`normalize_username()`](). If you override this method, be sure to call `super()` to retain the normalization.
+
+##### * `classmethod get_email_field_name()`
+
+Returns the name of the email field specified by the [`EMAIL_FIELD`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-email_field) attribute. Defaults to `'email'` if `EMAIL_FIELD` isn't specified.
+
+##### * `classmethod normalize_username(username)`
+
+Applies NFKC Unicode normalization to usernames so that visually identical characters with different Unicode code points are considered identical.
+
+##### * `is_authenticated`
+
+Read-only attribute which is always `True` (as opposed to `AnonymousUser.is_authenticated` which is always `False`). This is a way to tell if the user has been authenticated. This does not imply any permissions and doesn't check if the user is active or has a valid session. Even though normally you will check this attribute on `request.user` to find out whether it has been populated by the [`AuthenticationMiddleware`](https://docs.djangoproject.com/en/4.0/ref/middleware/#django.contrib.auth.middleware.AuthenticationMiddleware) (representing the currently logged-in user), you should know this attribute is `True` for any [`User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User) instance.
+
+##### * `is_anonymous`
+
+Read-only attribute which is always `False`. This is a way of differentiating [`User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User) and [`AnonymousUser`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.AnonymousUser) objects. Generally, you should prefer using [`is_authenticated`]() <!-- just above --> to this attribute.
+
+##### * `set_password(raw_password)`
+
+Set the user's password to the given raw string, taking care of the password hashing. Doesn't save the [`AbstractBaseUser`]() <!-- above --> object.
+
+When the `raw_password` is `None`, the password will be set to an unusable password, as if [`set_unusable_password()`]() <!-- below --> were used.
+
+##### * `check_password(raw_password)`
+
+Return `True` if the given raw string is the correct password for the user. (This takes care of the password hashing in making the comparison.)
+
+##### * `set_unusable_password()`
+
+Marks the user as having no password set. This isn't the same as having a blank string for a password. [`check_password()`]() for this user will never return `True`. Doesn't save the [`AbstractBaseUser`]() object.
+
+You may need this if authentication for your application takes place against an existing external source such as an LDAP directory.
+
+##### * `has_usuable_password()`
+
+Returns `False` if [`set_unusable_password()`]() <!-- directly above --> has been called for this user.
+
+##### * `get_session_auth_hash()`
+
+Returns an HMAC of the password field. Used for [Session invalidation on password change]().
+
+<hr>
+
+`AbstractUser` subclasses [`AbstractBaseUser`]():
+
+##### `class models.AbstractUser`
+
+##### * `clean()`
+
+Normalizes the email by calling [`BaseUserManager.normalize_email()`]().<!-- below --> If you override this method, be sure to call `super()` to retain the normalization.
+
+### Writing a manager for a custom user model
+
+You should also define a custom manager for your user model. If your user model defines `username`, `email`, `is_staff`, `is_active`, `is_superuser`, `last_login`, and `date_joined` fields the same as Django's default user, you can install Django's [`UserManager`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.UserManager); however, if your user model defines different fields, you'll need to define a custom manager that extends [`BaseUserManager`]() <!-- below --> providing two additional methods:
+
+##### `class models.CustomUserManager`
+
+##### * `create_user(username_field, password=None, **other_fields)`
+
+The prototype of `create_user()` should accept the username field, plus all required fields as arguments. For example, if your user model uses `email` as the username field, and has `date_of_birth` as a required field, then `create_user` should be defined as:
+```
+def create_user(self, email, date_of_birth, password=None):
+    # create user here
+    ...
+```
+
+##### * `create_superuser(username_field, password=None, **other_fields)`
+
+The prototype of `create_superuser()` should accept the username field, plus all required fields as arguments. For example, if your user model uses `email` as the username field, and has `date_of_birth` as a required field, then `create_superuser` should be defined as:
+```
+def create_superuser(self, email, date_of_birth, password=None):
+    # create superuser here
+    ...
+```
+For a [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey) in [`USERNAME_FIELD`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-username_field) or [`REQUIRED_FIELDS`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-required_fields), these methods receive the value of the [`to_field`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey.to_field) (the [`primary_key`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.primary_key) by default) of an existing instance.
+
+`BaseUserManager` provides the following utility methods:
