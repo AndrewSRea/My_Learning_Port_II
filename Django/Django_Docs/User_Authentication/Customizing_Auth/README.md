@@ -463,3 +463,56 @@ def create_superuser(self, email, date_of_birth, password=None):
 For a [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey) in [`USERNAME_FIELD`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-username_field) or [`REQUIRED_FIELDS`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-required_fields), these methods receive the value of the [`to_field`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey.to_field) (the [`primary_key`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.Field.primary_key) by default) of an existing instance.
 
 `BaseUserManager` provides the following utility methods:
+
+##### `class models.BaseUserManager`
+
+##### * `classmethod normalize_email(email)`
+
+Normalizes email addresses by lowercasing the domain portion of the email address.
+
+##### * `get_by_natural_key(username)`
+
+Retrieves a user instance using the contents of the field nominated by `USERNAME_FIELD`.
+
+##### * `make_random_password(length=10, allowed_chars='abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789')`
+
+Returns a random password with the given length and given string of allowed characters. Note that the default value of `allowed_chars` doesn't contain letters that can cause user confusion, including:
+
+* `i`, `l`, `I`, and `1` (lowercase letter i, lowercase letter l, uppercase letter I, and the number one).
+* `o`, `O`, and `0` (lowercase o, uppercase letter O, and zero).
+
+### Extending Django's default `User`
+
+If you're entirely happy with Django's [`User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User) model, but you want to add some additional profile information, you could subclass [`django.contrib.auth.models.AbstractUser`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#class-modelsabstractuser) and add your custom profile fields, although we'd recommend a separate model as described in the "Model design considerations" note of [Specifying a custom user model](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#specifying-a-custom-user-model). `AbstractUser` provides the full implementation of the default [`User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User) as an [abstract model](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Models_and_Databases/Models#abstract-base-classes).
+
+### Custom users and the built-in auth forms
+
+Django's buil-in [forms](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#built-in-forms) and [views](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#authentication-views) make certain assumptions about the user model that they are working with.
+
+The following forms are compatible with any subclass of [`AbstractBaseUser`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#class-modelsabstractbaseuser):
+
+* [`AuthenticationForm`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-authenticationform): Uses the username field specified by [`USERNAME_FIELD`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-username_field).
+* [`SetPasswordForm`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-setpasswordform)
+* [`PasswordChangeForm`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-passwordchangeform)
+* [`AdminPasswordChangeForm`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-adminpasswordchangeform)
+
+The following forms make assumptions about the user model and can be used as-is if those assumptions are met:
+
+* [`PasswordResetForm`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-passwordresetform): Assumes that the user model has a field that stores the user's email address with the name returned by [`get_email_field_name()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-classmethod-get_email_field_name) (`email` by default) that can be used to identify the user and a Boolean field named `is_active` to prevent password resets for inactive users.
+
+Finally, the following forms are tied to [`User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User) and need to be rewritten or extended to work with a custom user model:
+
+* [`UserCreationForm`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-usercreationform)
+* [`UserChangeForm`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-userchangeform)
+
+If your custom user model is a subclass of `AbstractUser`, then you can extend these forms in this manner:
+```
+from django.contrib.auth.forms import UserCreationForm
+from myapp.models import CustomUser
+
+class CustomUserCreationForm(UserCreationForm):
+
+    class Meta(UserCreationForm.Meta):
+        model = CustomUser
+        fields = UserCreationForm.Meta.fields + ('custom_field',)
+```
