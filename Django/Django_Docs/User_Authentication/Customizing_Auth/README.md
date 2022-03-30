@@ -516,3 +516,100 @@ class CustomUserCreationForm(UserCreationForm):
         model = CustomUser
         fields = UserCreationForm.Meta.fields + ('custom_field',)
 ```
+
+### Custom users and [`django.contrib.admin`](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#module-django.contrib.admin)
+
+If you want your custom user model to also work with the admin, your user model must define some additional attributes and methods. These methods allow the admin to control access of the user to admin content:
+
+##### `class models.CustomUser`
+
+##### * `is_staff`
+
+Returns `True` if the user account is currently active.
+
+##### * `is_active`
+
+Returns `True` if the user account is currently active.
+
+##### * `has_perm(perm, obj=None):`
+
+Returns `True` if the user has the named permission. If `obj` is provided, the permission needs to be checked against a specific object instance.
+
+##### * `has_module_perms(app_label):`
+
+Returns `True` if the user has permission to access models in the given app.
+
+You will also need to register your custom user model with the admin. If your custom user model extends `django.contrib.auth.models.AbstractUser`, you can use Django's existing `django.contrib.auth.admin.UserAdmin` class. However, if your user model extends [`AbstractBaseUser`](), <!-- above --> you'll need to define a custom `ModelAdmin` class. It may be possible to subclass the default `django.contrib.auth.admin.UserAdmin`; however, you'll need to override any of the definitions that refer to fields on `django.contrib.auth.models.AbstractUser` that aren't on your custom user class.
+
+<hr>
+
+**Note**: If you are using a custom `ModelAdmin` which is a subclass of `django.contrib.auth.admin.UserAdmin`, then you need to add your custom fields to `fieldsets` (for fields to be used in editing users) and to `add_fieldsets` (for fields to be used when creating a user). For example:
+```
+from django.contrib.auth.admin import UserAdmin
+
+class CustomUserAdmin(UserAdmin):
+    ...
+    fieldsets = UserAdmin.fieldsets + (
+        (None, {'fields': ('custom_field',)}),
+    )
+    add_fieldsets = UserAdmin.add_fieldsets + (
+        (None, {'fields': ('custom_field',)}),
+    )
+```
+See [a full example]() for more details. <!-- below -->
+
+<hr>
+
+### Custom users and permissions
+
+To make it easy to include Django's permission framework into your own user class, Django provides `PermissionMixin`. This is an abstract model you can include in the class hierarchy for your user model, giving you all the methods and database fields necessary to support Django's permission model.
+
+`PermissionMixin` provides the following methods and attributes:
+
+##### `class models.PermissionMixin`
+
+##### * `is_superuser`
+
+Boolean. Designates that this user has all permissions without explicitly assigning them.
+
+##### * `get_user_permissions(obj=None)`
+
+Returns a set of permission strings that the user has directly.
+
+If `obj` is passed in, only returns the user permissions for this specific object.
+
+##### * `get_group_permissions(obj=None)`
+
+Returns a set of permission strings that the user has, through their groups.
+
+If `obj` is passed in, only returns the group permissions for this specific object.
+
+##### * `get_all_permissions(obj=None)`
+
+Returns a set of permission strings that the user has, both through group and user permissions.
+
+If `obj` is passed in, only returns the permissions for this specific object.
+
+##### * `has_perm(perm, obj=None)`
+
+Returns `True` if the user has the specified permission, where `perm` is in the format `"<app label>.<permission codename>"` (see [permissions](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#permissions-and-authorization)). If [`User.is_active`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.is_active) and [`is_superuser`]() <!-- directly above --> are both `True`, this method always returns `True`.
+
+If `obj` is passed in, this method won't check for a permission for the model, but for this specific object.
+
+##### * `has_perms(perm_list, obj=None)`
+
+Returns `True` if the user has each of the specified permissions, where each perm is in the format `"<app label>.<permission codename>"`. If [`User.is_active`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.is_active) and [`is_superuser`]()<!-- directly above --> are both `True`, this method always returns `True`.
+
+If `obj` is passed in, this method won't check for permissions for the model, but for the specific object.
+
+##### * `has_module_perms(package_name)`
+
+Returns `True` if the user has any permissions in the given package (the Django app label). If [`User.is_active`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.is_active) and [`is_superuser`]() <!-- directly above --> are both `True`, this method always returns `True`.
+
+<hr>
+
+**`PermissionsMixin` and `ModelBackend`**
+
+If you don't include the [`PermissionMixin`](), <!-- just above --> you must ensure you don't invoke the permissions methods on `ModelBackend`. `ModelBackend` assumes that certain fields are available on your user model. If your user model deosn't provide those fields, you'll receive database errors when you check permissions.
+
+<hr>
