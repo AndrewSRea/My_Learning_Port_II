@@ -61,7 +61,7 @@ To use Argon2 as your default storage algorithm, do the following:
     ]
     ```
 
-    Keep and/or add any entries in this list if you need Django to [upgrade passwords](). <!-- "Password upgrading" below -->
+    Keep and/or add any entries in this list if you need Django to [upgrade passwords](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Password_Management#password-upgrading).
 
 ### Using `bcrypt` with Django
 
@@ -82,7 +82,7 @@ To use Bcrypt as your default storage algorithm, do the following:
     ]
     ```
 
-    Keep and/or add any entries in this list if you need Django to [upgrade passwords](). <!-- "Password upgrading" below -->
+    Keep and/or add any entries in this list if you need Django to [upgrade passwords](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Password_Management#password-upgrading).
 
 That's it -- now your Django install will use Bcrypt as the default storage algorithm.
 
@@ -105,7 +105,7 @@ To use scrypt as your default storage algorithm, do the following:
     ]
     ```
 
-    Keep and/or add any entries in this list if you need Django to [upgrade passwords](). <!-- "Password upgrading" below -->
+    Keep and/or add any entries in this list if you need Django to [upgrade passwords](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Password_Management#password-upgrading).
 
 <hr>
 
@@ -216,7 +216,7 @@ When users log in, if their passwords are stored with anything other than the pr
 
 However, Django can only upgrade passwords that use algorithms mentioned in [`PASSWORD_HASHERS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-PASSWORD_HASHERS), so as you upgrade to new systems, you should make sure never to *remove* entries from this list. If you do, users using unmentioned algorithms won't be able to upgrade. Hashed passwords will be updated when increasing (or decreasing) the number of PBKDF2 iterations, bcrypt rounds, or argon2 attributes.
 
-Be aware that if all the passwords in your database aren't encoded in the default hasher's algorithm, you may be vulnerable to a user enumeration timing attack due to a difference between the duration of a login request for a user with a password encoded in a non-default algorithm and the duration of a login request for a nonexistent user (which runs the default hasher). You may be able to mitigate this by [upgrading older password hashes](). <!-- title directly below -->
+Be aware that if all the passwords in your database aren't encoded in the default hasher's algorithm, you may be vulnerable to a user enumeration timing attack due to a difference between the duration of a login request for a user with a password encoded in a non-default algorithm and the duration of a login request for a nonexistent user (which runs the default hasher). You may be able to mitigate this by [upgrading older password hashes](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Password_Management#password-upgrading-without-requiring-a-login).
 
 ### Password upgrading without requiring a login
 
@@ -430,7 +430,7 @@ The `user` object is optional: if it's not provided, some validators may not be 
 
 Informs all validators that the password has been changed. This can be used by validators such as one that prevents password reuse. This should be called once the password has been successfully changed.
 
-For subclasses of [`AbstractBaseUser`](), the password field will be marked as "dirty" when calling [`set_password()`]() which triggers a call to `password_changed()` after the user is saved. <!-- both terms in "Customizing auth in Django" -->
+For subclasses of [`AbstractBaseUser`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#class-modelsabstractbaseuser), the password field will be marked as "dirty" when calling [`set_password()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-set_passwordraw_password) which triggers a call to `password_changed()` after the user is saved.
 
 ##### `password_validators_help_text(password_validators=None)`
 
