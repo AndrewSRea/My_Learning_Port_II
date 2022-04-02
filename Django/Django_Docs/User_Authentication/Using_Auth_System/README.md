@@ -1,6 +1,6 @@
 # Using the Django authentication system
 
-This document explains the usage of Django's authentication system in its default configuration. This configuration has evolved to serve the most common project needs, handling a reasonably wide range of tasks, and has a careful implementation of passwords and permissions. For projects where authentication needs differ from the default, Django supports extensive [extension and customization]() of authentication. <!-- future page, "Customizing auth in Django" -->
+This document explains the usage of Django's authentication system in its default configuration. This configuration has evolved to serve the most common project needs, handling a reasonably wide range of tasks, and has a careful implementation of passwords and permissions. For projects where authentication needs differ from the default, Django supports extensive [extension and customization](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#customizing-authentication-in-django) of authentication.
 
 Django authentication provides both authentication and authorization together and is generally referred to as the authentication system, as these features are somewhat coupled.
 
@@ -66,7 +66,7 @@ Changing a user's password will log out all their sessions. See [Session invalid
 
 ##### `authenticate(request=None, **credentials)`
 
-Use `authenticate()` to verify a set of credentials. It takes credentials as keyword arguments, `username` and `password` for the default case, checks them against each [authentication backend](), <!-- "Other authentication sources" section of the "Customizing authentication in Django" page --> and returns a [`User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User) object if the credentials are valid for a backend. If the credentials aren't valid for any backend or if a backend raises [`PermissionDenied`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.PermissionDenied), it returns `None`. For example:
+Use `authenticate()` to verify a set of credentials. It takes credentials as keyword arguments, `username` and `password` for the default case, checks them against each [authentication backend](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#other-authentication-sources), and returns a [`User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User) object if the credentials are valid for a backend. If the credentials aren't valid for any backend or if a backend raises [`PermissionDenied`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.PermissionDenied), it returns `None`. For example:
 ```
 from django.contrib.auth import authenticate
 user = authenticate(username='john', password='secret')
@@ -135,7 +135,7 @@ Beyond permissions, groups are a convenient way to categorize users to give them
 
 ### Programmatically creating permissions
 
-While [custom permissions]() <!-- "Custom permissions" section of the "Customizing authentication in Django" page --> can be defined within a model's `Meta` class, you can also create permissions directly. For example, you can create the `can_publish` permission for a `BlogPost` model in `myapp`:
+While [custom permissions](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#custom-permissions) can be defined within a model's `Meta` class, you can also create permissions directly. For example, you can create the `can_publish` permission for a `BlogPost` model in `myapp`:
 ```
 from myapp.models import BlogPost
 from django.contrib.auth.models import Permission
@@ -269,7 +269,7 @@ def my_view(request):
 
 #### Selecting the authentication backend
 
-When a user logs in, the user's ID and the backend that was used for authentication are saved in the user's session. This allows the same [authentication backend]() <!-- "Other authentication sources" section of the "Customizing authentication in Django" page --> to fetch the user's details on a future request. The authentication backend to save in the session is selected as follows:
+When a user logs in, the user's ID and the backend that was used for authentication are saved in the user's session. This allows the same [authentication backend](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#other-authentication-sources) to fetch the user's details on a future request. The authentication backend to save in the session is selected as follows:
 
 1. Use the value of the optional `backend` argument, if provided.
 2. Use the value of the `user.backend` attribute, if present. This allows pairing [`authenticate()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#authenticaterequestnone-credentials) and [`login()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#how-to-log-a-user-in): `authenticate()` sets the `user.backend` attribute on the user object it returns.
@@ -564,11 +564,11 @@ Returns the URL that users who don't pass the test will be redirected to. Return
 
 ##### `get_permission_denied_message()`
 
-When [`raise_exception`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#raise_exception) is `True`, this method can be used to control the error message passed to the error handler for display to the user. Returns the [`permission_denied_message`]() attribute by default.
+When [`raise_exception`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#raise_exception) is `True`, this method can be used to control the error message passed to the error handler for display to the user. Returns the [`permission_denied_message`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#permission_denied_message) attribute by default.
 
 ##### `get_redirect_field_name()`
 
-Returns the name of the query parameter that will contain the URL the user should be redirected to after a successful login. If you set this to `None`, a query parameter won't be added. Returns the [`redirect_field_name`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#permission_denied_message) <!-- above --> attribute by default.
+Returns the name of the query parameter that will contain the URL the user should be redirected to after a successful login. If you set this to `None`, a query parameter won't be added. Returns the [`redirect_field_name`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#permission_denied_message) attribute by default.
 
 ##### `handle_no_permission()`
 
@@ -576,7 +576,7 @@ Depending on the value of `raise_exception`, the method either raises a [`Permis
 
 #### Session invalidation on password change
 
-If your [`AUTH_USER_MODEL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTH_USER_MODEL) inherits from [`AbstractBaseUser`]() <!-- "Customizing auth in Django" / "Specifying a custom user model" / `class models.AbstractBaseUser` --> or implements its own [`get_session_auth_hash()`]() <!-- same as directly above, sub-subsection `get_session_auth_hash` --> method, authenticated sessions will include the hash returned by this function. In the `AbstractBaseUser` case, this is an HMAC of the password field. Django verifies that the hash in the session for each request matches the one that's computed during the request. This allows a user to log out all of their sessions by changing their password.
+If your [`AUTH_USER_MODEL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-AUTH_USER_MODEL) inherits from [`AbstractBaseUser`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#class-modelsabstractbaseuser) or implements its own [`get_session_auth_hash()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-get_session_auth_hash) method, authenticated sessions will include the hash returned by this function. In the `AbstractBaseUser` case, this is an HMAC of the password field. Django verifies that the hash in the session for each request matches the one that's computed during the request. This allows a user to log out all of their sessions by changing their password.
 
 The default password change views included with Django, [`PasswordChangeView`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#class-passwordchangeview) and the `user_change_password` view in the [`django.contrib.auth`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/) admin, update the session with the new password hash so that a user changing their own password won't log themselves out. If you have a custom password change view and wish to have similar behavior, use the `update_session_auth_hash()` function.
 
@@ -600,7 +600,7 @@ def password_change(request):
 
 <hr>
 
-**Note**: Since [`get_session_auth_hash()`]() <!-- "Customizing auth Django" --> is based on [`SECRET_KEY`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SECRET_KEY), updating your site to use a new secret key will invalidate all existing sessions.
+**Note**: Since [`get_session_auth_hash()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-get_session_auth_hash) is based on [`SECRET_KEY`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SECRET_KEY), updating your site to use a new secret key will invalidate all existing sessions.
 
 <hr>
 
@@ -763,7 +763,7 @@ Here's a sample `registration/login.html` template you can use as a starting poi
 
 {% endblock %}
 ```
-If you have customized authentication (see [Customizing Authentication]()), <!-- folder within the "User_Authentication" fodler --> you can use a custom authentication form by setting the `authentication_form` attribute. This form must accept a `request` keyword argument in its `__init__()` method and provide a `get_user()` method which returns the authenticated user object (this method is only ever called after successful form validation).
+If you have customized authentication (see [Customizing Authentication](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#customizing-authentication-in-django)), you can use a custom authentication form by setting the `authentication_form` attribute. This form must accept a `request` keyword argument in its `__init__()` method and provide a `get_user()` method which returns the authenticated user object (this method is only ever called after successful form validation).
 
 <hr>
 
@@ -1061,7 +1061,7 @@ If you don't want to use the built-in views, but want the convenience of not hav
 
 <hr>
 
-**Note**: The built-in authentication forms make certain assumptions about the user model that they are working with. If you're using a [custom user model](), <!-- future page, "Customizing auth in Django / Substituting a custom `User` model" --> it may be necessary to define your own forms for the authentication system. For more information, refer to the documentation about [using the built-in authentication forms with custom user models](). <!-- future page, "Customizing auth in Django / Custom users and the built-in auth forms" -->
+**Note**: The built-in authentication forms make certain assumptions about the user model that they are working with. If you're using a [custom user model](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#substituting-a-custom-user-model), it may be necessary to define your own forms for the authentication system. For more information, refer to the documentation about [using the built-in authentication forms with custom user models](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#custom-users-and-the-built-in-auth-forms).
 
 <hr>
 
@@ -1142,7 +1142,7 @@ A form used in the admin interface to change a user's information and permission
 
 A [`ModelForm`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Working_with_Forms/Creating_Forms_from_Models#class-modelform) for creating a new user.
 
-It has three fields: `username` (from the user model), `password1`, and `password2`. It verifies that `password1` and `password2` match, validates the password using [`validate_password()`](), <!-- future page, "Password mgmt. in Django / 'validate_password()`" --> and sets the user's password using [`set_password()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.set_password).
+It has three fields: `username` (from the user model), `password1`, and `password2`. It verifies that `password1` and `password2` match, validates the password using [`validate_password()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Password_Management#validate_passwordpassword-usernone-password_validatorsnone), and sets the user's password using [`set_password()`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.set_password).
 
 ### Authentication data in templates
 
@@ -1217,7 +1217,7 @@ Be thoughtful about how you allow users to manage permissions. If you give a non
 
 ### Changing passwords
 
-User passwords are not displayed in the admin (nor stored in the database), but the [password storage details]() <!-- future page "Password mgmt. in Django" --> are displayed. Included in the display of this information is a link to a password change form that allows admins to change user passwords.
+User passwords are not displayed in the admin (nor stored in the database), but the [password storage details](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Password_Management#password-management-in-django)  are displayed. Included in the display of this information is a link to a password change form that allows admins to change user passwords.
 
 <hr>
 
