@@ -2,11 +2,11 @@
 
 The authentication that comes with Django is good enough for most common cases, but you may have needs not met by the out-of-the-box defaults. Customizing authentication in your projects requires understanding what points of the provided system are extensible or replaceable. This document provides details about how the auth system can be customized.
 
-[Authentication backends]() <!-- "Other authentication sources" below --> provide an extensible system for when a username and password stored with the user model need to be authenticated against a different service than Django's default.
+[Authentication backends](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#other-authentication-sources) provide an extensible system for when a username and password stored with the user model need to be authenticated against a different service than Django's default.
 
-You can give your models [custom permissions]() <!-- same title below --> that can be checked through Django's authorization system.
+You can give your models [custom permissions](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#custom-permissions) that can be checked through Django's authorization system.
 
-You can [extend]() <!-- "Extending the existing..." below --> the default `User` model, or [substitute]() <!-- "Substituting a custom..." below --> a completely customized model.
+You can [extend](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#extending-the-existing-user-model) the default `User` model, or [substitute](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#substituting-a-custom-user-model) a completely customized model.
 
 ## Other authentication sources
 
@@ -42,7 +42,7 @@ If a backend raises a [`PermissionDenied`](https://docs.djangoproject.com/en/4.0
 
 ### Writing an authentication backend
 
-An authentication backend is a class that implements two required methods: `get_user(user_id)` and `authenticate(request, **credentials)`, as well as a set of optional permission related [authorization methods](). <!-- "Handling authorization..." below -->
+An authentication backend is a class that implements two required methods: `get_user(user_id)` and `authenticate(request, **credentials)`, as well as a set of optional permission related [authorization methods](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#handling-authorization-in-custom-backends).
 
 The `get_user` method takes a `user_id` -- which could be a username, database ID or whatever, but has to be the primary key of your user object -- and returns a user object or `None`.
 
@@ -313,7 +313,7 @@ Keeping all user related information in one model removes the need for additiona
 
 If you use the default authentication backend, then your model must have a single unique field that can be used for identification purposes. This can be a username, an email address, or any other unique attribute. A non-unique username field is allowed if you use a custom authentication backend that can support it.
 
-The easiest way to construct a compliant custom user model is to inherit from [`AbstractBaseUser`](). <!-- below --> `AbstractBaseUser` provides the core implementation of a user model, including hashed passwords and tokenized password resets. You must then provide some key implementation details:
+The easiest way to construct a compliant custom user model is to inherit from [`AbstractBaseUser`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#class-modelsabstractbaseuser). `AbstractBaseUser` provides the core implementation of a user model, including hashed passwords and tokenized password resets. You must then provide some key implementation details:
 
 ##### `class models.CustomUser`
 
@@ -332,7 +332,7 @@ class MyUser(AbstractBaseUser):
 
 ##### * `EMAIL_FIELD`
 
-A string describing the name of the email field on the `User` model. This value is returned by [`get_email_field_name()`](). <!-- below -->
+A string describing the name of the email field on the `User` model. This value is returned by [`get_email_field_name()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-classmethod-get_email_field_name).
 
 ##### * `REQUIRED_FIELDS`
 
@@ -385,7 +385,7 @@ Returns the value of the field nominated by `USERNAME_FIELD`.
 
 ##### * `clean()`
 
-Normalizes the username by calling [`normalize_username()`](). If you override this method, be sure to call `super()` to retain the normalization.
+Normalizes the username by calling [`normalize_username()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-classmethod-normalize_usernameusername). If you override this method, be sure to call `super()` to retain the normalization.
 
 ##### * `classmethod get_email_field_name()`
 
@@ -401,13 +401,13 @@ Read-only attribute which is always `True` (as opposed to `AnonymousUser.is_auth
 
 ##### * `is_anonymous`
 
-Read-only attribute which is always `False`. This is a way of differentiating [`User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User) and [`AnonymousUser`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.AnonymousUser) objects. Generally, you should prefer using [`is_authenticated`]() <!-- just above --> to this attribute.
+Read-only attribute which is always `False`. This is a way of differentiating [`User`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User) and [`AnonymousUser`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.AnonymousUser) objects. Generally, you should prefer using [`is_authenticated`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-is_authenticated) to this attribute.
 
 ##### * `set_password(raw_password)`
 
-Set the user's password to the given raw string, taking care of the password hashing. Doesn't save the [`AbstractBaseUser`]() <!-- above --> object.
+Set the user's password to the given raw string, taking care of the password hashing. Doesn't save the [`AbstractBaseUser`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#class-modelsabstractbaseuser) object.
 
-When the `raw_password` is `None`, the password will be set to an unusable password, as if [`set_unusable_password()`]() <!-- below --> were used.
+When the `raw_password` is `None`, the password will be set to an unusable password, as if [`set_unusable_password()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-set_unusable_password) were used.
 
 ##### * `check_password(raw_password)`
 
@@ -415,31 +415,31 @@ Return `True` if the given raw string is the correct password for the user. (Thi
 
 ##### * `set_unusable_password()`
 
-Marks the user as having no password set. This isn't the same as having a blank string for a password. [`check_password()`]() for this user will never return `True`. Doesn't save the [`AbstractBaseUser`]() object.
+Marks the user as having no password set. This isn't the same as having a blank string for a password. [`check_password()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-check_passwordraw_password) for this user will never return `True`. Doesn't save the [`AbstractBaseUser`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#class-modelsabstractbaseuser) object.
 
 You may need this if authentication for your application takes place against an existing external source such as an LDAP directory.
 
 ##### * `has_usuable_password()`
 
-Returns `False` if [`set_unusable_password()`]() <!-- directly above --> has been called for this user.
+Returns `False` if [`set_unusable_password()`]((https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-set_unusable_password) has been called for this user.
 
 ##### * `get_session_auth_hash()`
 
-Returns an HMAC of the password field. Used for [Session invalidation on password change]().
+Returns an HMAC of the password field. Used for [Session invalidation on password change](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#session-invalidation-on-password-change).
 
 <hr>
 
-`AbstractUser` subclasses [`AbstractBaseUser`]():
+`AbstractUser` subclasses [`AbstractBaseUser`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#class-modelsabstractbaseuser):
 
 ##### `class models.AbstractUser`
 
 ##### * `clean()`
 
-Normalizes the email by calling [`BaseUserManager.normalize_email()`]().<!-- below --> If you override this method, be sure to call `super()` to retain the normalization.
+Normalizes the email by calling [`BaseUserManager.normalize_email()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-classmethod-normalize_emailemail). If you override this method, be sure to call `super()` to retain the normalization.
 
 ### Writing a manager for a custom user model
 
-You should also define a custom manager for your user model. If your user model defines `username`, `email`, `is_staff`, `is_active`, `is_superuser`, `last_login`, and `date_joined` fields the same as Django's default user, you can install Django's [`UserManager`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.UserManager); however, if your user model defines different fields, you'll need to define a custom manager that extends [`BaseUserManager`]() <!-- below --> providing two additional methods:
+You should also define a custom manager for your user model. If your user model defines `username`, `email`, `is_staff`, `is_active`, `is_superuser`, `last_login`, and `date_joined` fields the same as Django's default user, you can install Django's [`UserManager`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.UserManager); however, if your user model defines different fields, you'll need to define a custom manager that extends [`BaseUserManager`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#class-modelsbaseusermanager) providing two additional methods:
 
 ##### `class models.CustomUserManager`
 
@@ -539,7 +539,7 @@ Returns `True` if the user has the named permission. If `obj` is provided, the p
 
 Returns `True` if the user has permission to access models in the given app.
 
-You will also need to register your custom user model with the admin. If your custom user model extends `django.contrib.auth.models.AbstractUser`, you can use Django's existing `django.contrib.auth.admin.UserAdmin` class. However, if your user model extends [`AbstractBaseUser`](), <!-- above --> you'll need to define a custom `ModelAdmin` class. It may be possible to subclass the default `django.contrib.auth.admin.UserAdmin`; however, you'll need to override any of the definitions that refer to fields on `django.contrib.auth.models.AbstractUser` that aren't on your custom user class.
+You will also need to register your custom user model with the admin. If your custom user model extends `django.contrib.auth.models.AbstractUser`, you can use Django's existing `django.contrib.auth.admin.UserAdmin` class. However, if your user model extends [`AbstractBaseUser`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#class-modelsabstractbaseuser), you'll need to define a custom `ModelAdmin` class. It may be possible to subclass the default `django.contrib.auth.admin.UserAdmin`; however, you'll need to override any of the definitions that refer to fields on `django.contrib.auth.models.AbstractUser` that aren't on your custom user class.
 
 <hr>
 
@@ -556,7 +556,7 @@ class CustomUserAdmin(UserAdmin):
         (None, {'fields': ('custom_field',)}),
     )
 ```
-See [a full example]() for more details. <!-- below -->
+See [a full example](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#a-full-example) for more details.
 
 <hr>
 
@@ -592,25 +592,25 @@ If `obj` is passed in, only returns the permissions for this specific object.
 
 ##### * `has_perm(perm, obj=None)`
 
-Returns `True` if the user has the specified permission, where `perm` is in the format `"<app label>.<permission codename>"` (see [permissions](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#permissions-and-authorization)). If [`User.is_active`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.is_active) and [`is_superuser`]() <!-- directly above --> are both `True`, this method always returns `True`.
+Returns `True` if the user has the specified permission, where `perm` is in the format `"<app label>.<permission codename>"` (see [permissions](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#permissions-and-authorization)). If [`User.is_active`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.is_active) and [`is_superuser`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-is_superuser) are both `True`, this method always returns `True`.
 
 If `obj` is passed in, this method won't check for a permission for the model, but for this specific object.
 
 ##### * `has_perms(perm_list, obj=None)`
 
-Returns `True` if the user has each of the specified permissions, where each perm is in the format `"<app label>.<permission codename>"`. If [`User.is_active`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.is_active) and [`is_superuser`]()<!-- directly above --> are both `True`, this method always returns `True`.
+Returns `True` if the user has each of the specified permissions, where each perm is in the format `"<app label>.<permission codename>"`. If [`User.is_active`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.is_active) and [`is_superuser`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-is_superuser) are both `True`, this method always returns `True`.
 
 If `obj` is passed in, this method won't check for permissions for the model, but for the specific object.
 
 ##### * `has_module_perms(package_name)`
 
-Returns `True` if the user has any permissions in the given package (the Django app label). If [`User.is_active`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.is_active) and [`is_superuser`]() <!-- directly above --> are both `True`, this method always returns `True`.
+Returns `True` if the user has any permissions in the given package (the Django app label). If [`User.is_active`](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/#django.contrib.auth.models.User.is_active) and [`is_superuser`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#-is_superuser) are both `True`, this method always returns `True`.
 
 <hr>
 
 **`PermissionsMixin` and `ModelBackend`**
 
-If you don't include the [`PermissionMixin`](), <!-- just above --> you must ensure you don't invoke the permissions methods on `ModelBackend`. `ModelBackend` assumes that certain fields are available on your user model. If your user model deosn't provide those fields, you'll receive database errors when you check permissions.
+If you don't include the [`PermissionMixin`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#class-modelspermissionmixin), you must ensure you don't invoke the permissions methods on `ModelBackend`. `ModelBackend` assumes that certain fields are available on your user model. If your user model deosn't provide those fields, you'll receive database errors when you check permissions.
 
 <hr>
 
