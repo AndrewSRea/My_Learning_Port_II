@@ -1,6 +1,6 @@
 # User authentication in Django
 
-Django comes with a user authentication system. It handles user accounts, groups, permissions, and cookie-based user sessions. This section of the documentation explains how the default implementation works out of the box, as well as how to [extend and customize]() it to suit your project's needs. <!-- next module -->
+Django comes with a user authentication system. It handles user accounts, groups, permissions, and cookie-based user sessions. This section of the documentation explains how the default implementation works out of the box, as well as how to [extend and customize](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#customizing-authentication-in-django) it to suit your project's needs.
 
 ## Overview
 
@@ -43,13 +43,13 @@ With these settings in place, running the command `manage.py migrate` creates th
 * [Working with User objects](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#user-objects)
 * [Permissions and authorization](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#permissions-and-authorization)
 * [Authentication in web requests](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#authentication-in-web-requests)
-* [Managing users in the admin]()
+* [Managing users in the admin](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Using_Auth_System#managing-users-in-the-admin)
 
-[API reference for the default implementation]()
+[API reference for the default implementation](https://docs.djangoproject.com/en/4.0/ref/contrib/auth/)
 
-[Customizing Users and authentication]()
+[Customizing Users and authentication](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Customizing_Auth#customizing-authentication-in-django)
 
-[Password management in Django]()
+[Password management in Django](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/User_Authentication/Password_Management#password-management-in-django)
 
 <hr>
 
