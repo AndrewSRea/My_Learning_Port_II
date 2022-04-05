@@ -101,3 +101,113 @@ A final point about Memcached is that memory-based caching has a disadvantage: b
 The `MemcachedCache` backend is deprecated as `python-memcached` has some problems and seems to be unmaintained. Use `PyMemcacheCache` or `PyLibMCCache` instead.
 
 <hr>
+
+### Redis
+
+[Redis](https://redis.io/) is an in-memory database that can be used for caching. To begin, you'll need a Redis server running either locally or on a remote machine.
+
+After setting up the Redis server, you'll need to install Python bindings for Redis. [redis.py](https://pypi.org/project/redis/) is the binding supported natively by Django. Installing the additional [hiredis-py](https://pypi.org/project/hiredis/) package is also recommended.
+
+To use Redis as your cache backend with Django:
+
+* Set [`BACKEND`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-BACKEND) to `django.core.cache.backends.redis.RedisCache`.
+* Set [`LOCATION`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-LOCATION) to the URL pointing to your Redis instance, using the appropriate scheme. See the `redis-py` docs for [details on the available schemes](https://redis-py.readthedocs.io/en/stable/connections.html#redis.connection.ConnectionPool.from_url).
+
+For example, if Redis is running on localhost (127.0.0.1) port 6379:
+```
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379',
+    }
+}
+```
+Often Redis servers are protected with authentication. In order to supply a username and password, add them in the `LOCATION` along with the URL:
+```
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://username:password@127.0.0.1:6379',
+    }
+}
+```
+If you have multiple Redis servers set up in the replication mode, you can specify the servers either as a semicolon or comma delimited string, or as a list. While using multiple servers, write operations are performed on the first server (leader). Read operations are performed on the other servers (replicas) chosen at random:
+```
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': [
+            'redis://127.0.0.1:6379',   # leader
+            'redis://127.0.0.1:6378',   # read-replica 1
+            'redis://127.0.0.1:6377',   # read-replica 2
+        ],
+    }
+}
+```
+
+### Database caching
+
+Django can store its cached data in your database. This works best if you've got a fast, well-indexed database server.
+
+To use a database table as your cache backend:
+
+* Set [`BACKEND`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-BACKEND) to `django.core.cache.backends.db.DatabaseCache`.
+* Set [`LOCATION`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-LOCATION) to `tablename`, the name of the database table. This name can be whatever you want, as long as it's a valid table name that's not already being used in your database.
+
+In this example, the cache table's name is `my_cache_table`:
+```
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'my_cache_table',
+    }
+}
+```
+Unlike other cache backends, the database cache does not support automatic culling of expired entries at the database level. Instead, expired cache entries are culled each time `add()`, `set()`, or `touch()` is called.
+
+#### Creating the cache table
+
+Before using the database cache, you must create the cache table with this command:
+```
+python manage.py createcachetable
+```
+This creates a table in your database that is in the proper format that Django's database-cache system expects. The name of the table is taken from [`LOCATION`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-LOCATION).
+
+If you are using multiple database caches, [`createcachetable`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-createcachetable) creates one table for each cache.
+
+If you are using multiple databases, `createcachetable` observes the `allow_migrate()` method of your database routers (see below).
+
+Like [`migrate`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-migrate), `createcachetable` won't touch an existing table. It will only create missing tables.
+
+To print the SQL that would be run, rather than run it, use the [`createcachetable --dry-run`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#cmdoption-createcachetable-dry-run) option.
+
+#### Multiple databases
+
+If you use database caching with multiple databases, you'll also need to set up routing instructions for your database cache table. For the purposes of routing, the database cache table appears as a model named `CacheEntry`, in an application named `django_cache`. This model won't appear in the models cache, but the model details can be used for routing purposes.
+
+For example, the following router would direct all cache read operations to `cache_replica`, and all write operations to `cache_primary`. The cache table will only be synchronized onto `cache_primary`:
+```
+class CacheRouter:
+    """A router to control all database cache operations"""
+
+    def db_for_read(self, model, **hints):
+        "All cache read operations go to the replica"
+        if model._meta.app_label == 'django_cache':
+            return 'cache_replica'
+        return None
+
+    def db_for_write(self, model, **hints):
+        "All cache write operations go to primary"
+        if model._meta.app_label == 'django_cache':
+            return 'cache_primary'
+        return None
+
+    def allow_migrate(self, db, app_label, model_name=None, **hints):
+        "Only install the cache model on primary"
+        if app_label == 'django_cache':
+            return db == 'cache_primary'
+        return None
+```
+If you don't specify routing directions for the database cache model, the cache backend will use the `default` database.
+
+And if you don't use the database cache backend, you don't need to worry about providing routing instructions for the database cache model.
