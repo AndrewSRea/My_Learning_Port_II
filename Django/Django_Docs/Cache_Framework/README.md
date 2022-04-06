@@ -211,3 +211,105 @@ class CacheRouter:
 If you don't specify routing directions for the database cache model, the cache backend will use the `default` database.
 
 And if you don't use the database cache backend, you don't need to worry about providing routing instructions for the database cache model.
+
+### Filesystem caching
+
+The file-based backend serializes and stores each cache value as a separate file. To use this backend, set [`BACKEND`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-BACKEND) to `"django.core.cache.backends.filebased.FileBasedCache"` and [`LOCATION`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-LOCATION) to a suitable directory. For example, to store cached data in `/var/tmp/django_cache`, use this setting:
+```
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': '/var/tmp/django_cache',
+    }
+}
+```
+If you're on Windows, put the drive letter at the beginning of the path, like this:
+```
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': 'c:/foo/bar',
+    }
+}
+```
+The directory path should be absolute -- that is, it should start at the root of your filesystem. It doesn't matter whether you put a slash at the end of the setting.
+
+Make sure the directory pointed-to by this setting either exists and is readable and writable, or that it can be created by the system user under which your web server runs. Continuing the above example, if your server runs as the user `apache`, make sure the directory `/var/tmp/django_cache` exists and is readable and writable by the user `apache`, or that it can be created by the user `apache`.
+
+<hr>
+
+**Warning**
+
+When the cache [`LOCATION`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-LOCATION) is contained within [`MEDIA_ROOT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-MEDIA_ROOT), [`STATIC_ROOT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-STATIC_ROOT), or [`STATICFILES_FINDERS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-STATICFILES_FINDERS), sensitive data may be exposed.
+
+An attacker who gains access to the cache file can not only falsify HTML content, which your site will trust, but also remotely execute arbitrary code, as the data is serialized using [`pickle`](https://docs.python.org/3/library/pickle.html#module-pickle).
+
+<hr>
+
+### Local-memory caching
+
+This is the default cache if another is not specified in your settings file. If you want the speed advantages of in-memory caching but don't have the capability of running Memcached, consider the local-memory cache backend. This cache is per-process (see below) and thread-safe. To use it, set [`BACKEND`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-BACKEND) to `"django.core.cache.backends.locmem.LocMemCache"`. For example:
+```
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+```
+The cache [`LOCATION`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-LOCATION) is used to identify individual memory stores. If you only have one `locmem` cache, you can omit the `LOCATION`; however, if you have more than one local memory cache, you will need to assign a name to, at least, one of them in order to keep them separate.
+
+The cache uses a least-recently-used (LRU) culling strategy.
+
+Note that each process will have its own private cache instance, which means no cross-process caching is possible. This also means the local memory cache isn't particularly memory-efficient, so it's probably not a good choice for production environments. It's nice for development.
+
+### Dummy caching (for development)
+
+Finally, Django comes with a "dummy" cache that doesn't actually cache -- it just implements the cache interface without doing anything.
+
+This is useful if you have a production site that uses heavy-duty caching in various places but a development/test environment where you don't want to cache and don't want to have to change your code to special-case the latter. To activate dummy caching, set [`BACKEND`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-BACKEND) like so:
+```
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    }
+}
+```
+
+### Using a custom cache backend
+
+While Django includes support for a number of cache backends out-of-the-box, sometimes you might want to use a customized cache backend. To use an external cache backend with Django, use the Python import path as the [`BACKEND`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-BACKEND) of the [`CACHES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES) setting, like so:
+```
+CACHES = {
+    'default': {
+        'BACKEND': 'path.to.backend',
+    }
+}
+```
+If you're building your own backend, you can use the standard cache backends as reference implementations. You'll find the code in the `django/core/cache/backends/` directory of the Django source.
+
+Note: Without a really compelling reason, such as a host that doesn't support them, you should stick to the cache backends included with Django. They've been well-tested and are well-documented.
+
+### Cache arguments
+
+Each cache backend can be given additional arguments to control caching behavior. These arguments are provided as additional keys in the [`CACHES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES) setting. Valid arguments are as follows:
+
+* [`TIMEOUT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-TIMEOUT): The default timeout, in seconds, to use for the cache. This argument defaults to `300` seconds (5 minutes). You can set `TIMEOUT` to `None` so that, by default, cache keys never expire. A value of `0` causes keys to immediately expire (effectively "don't cache").
+* [`OPTIONS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-OPTIONS): Any options that should be passed to the cache backend. The list of valid options will vary with each backend, and cache backends backed by a third-party library will pass their options directly to the underlying cache library.
+
+    Cache backends that implement their own culling strategy (i.e., the `locmem`, `filesystem`, and `database` backends) will honor the following options:
+
+    * `MAX_ENTRIES`: The maximum number of entries allowed in the cache before old values are deleted. This argument defaults to `300`.
+    * `CULL_FREQUENCY`: The fraction of entries that are culled when `MAX_ENTRIES` is reached. The actual ratio if `1 / CULL_FREQUENCY`, so set `CULL_FREQUENCY` to `2` to cull half the entries when `MAX_ENTRIES` is reached. This argument should be an integer and defaults to `3`.
+
+        A value of `0` for `CULL_FREQUENCY` means that the entire cache will be dumped when `MAX_ENTRIES` is reached. On some backends (`database` in particular), this makes culling *much* faster at the expense of more cache misses.
+
+    The Memcached and Redis backends pass the contents of [`OPTIONS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-OPTIONS) as keyword arguments to the client constructors, allowing for more advanced control of client behavior. For example usage, see below.
+
+* [`KEY_PREFIX`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-KEY_PREFIX): A string that will be automatically included (prepended by default) to all cache keys used by the Django server.
+
+    See the [cache documentation]() for more information. <!-- "Cache key prefixing" below -->
+
+* [`VERSION`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-VERSION): The default version number for cache keys generated by the Django server.
+
+    See the [cache documentation]() for more information. <!-- "Cache versioning" below -->
