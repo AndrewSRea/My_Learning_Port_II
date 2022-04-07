@@ -474,3 +474,89 @@ urlpatterns = [
     path('foo/<int:code>/', cache_page(60 * 15)(my_view)),
 ]
 ```
+
+## Template fragment caching
+
+If you're after even more control, you can also cache template fragments using the `cache` template tag. To give your template access to this tag, put `{% load cache %}` near the top of your template.
+
+The `{% cache %}` template tag caches the contents of the block for a given amount of time. It takes at least two arguments: the cache timeout, in seconds, and the name to give the cache fragment. The fragment is cached forever if timeout is `None`. The name will be taken as is, do not use a variable. For example:
+```
+{% load cache %}
+{% cache 500 sidebar %}
+    .. sidebar ..
+{% endcache %}
+```
+Sometimes you might want to cache multiple copies of a fragment depending on some dynamic data that appears inside the fragment. For example, you might want a separate cached copy of the sidebar used in the previous example for every user of your site. Do this by passing one or more additional arguments, which may be variables with or without filters, to the `{% cache %}` template tag to uniquely identify the cache fragment:
+```
+{% load cache %}
+{% cache 500 sidebar request.user.username %}
+    .. sidebar for logged in user ..
+{% endcache %}
+```
+If [`USE_I18N`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-USE_I18N) is set to `True`, the per-site middleware cache will [respect the active language](https://docs.djangoproject.com/en/4.0/topics/i18n/#term-language-code). For the `cache` template tag, you could use one of the [translation-specific variables](https://docs.djangoproject.com/en/4.0/topics/i18n/translation/#template-translation-vars) available in templates to achieve the same result:
+```
+{% load i18n %}
+{% load cache %}
+
+{% get_current_language as LANGUAGE_CODE %}
+
+{% cache 600 welcome LANGUAGE_CODE %}
+    {% translate "Welcome to example.com" %}
+{% endcache %}
+```
+The cache timeout can be a template variable, as long as the template variable resolves to an integer value. For example, if the template variable `my_timeout` is set to the value `600`, then the following two examples are equivalent:
+```
+{% cache 600 sidebar %} ... {% endcache %}
+{% cache my_timeout sidebar %} ... {% endcache %}
+```
+This feature is useful in avoiding repetition in templates. You can set the timeout in a variable, in one place, and reuse that value.
+
+By default, the cache tag will try to use the cache called "template_fragments". If no such cache exists, it will fall back to using the default cache. You may select an alternate cache backend to use with the `using` keyword argument, which must be the last argument to the tag.
+```
+{% cache 300 local-thing ... using="localcache" %}
+```
+It is considered an error to specify a cache name that is not configured.
+
+##### `django.core.cache.utils.make_template_fragment_key(fragment_name, vary_on=None)`
+
+If you want to obtain the cache key used for a cached fragment, you can use `make_template_fragment_key`. `fragment_name` is the same as second argument to the `cache` template tag; `vary_on` is a list of all additional arguments passed to the tag. This function can be useful for invalidating or overwriting a cached item, for example:
+```
+>>> from django.core.cache import cache
+>>> from django.core.cache.utils import make_template_fragment_key
+# cache key for {% cache 500 sidebar username %}
+>>> key = make_template_fragment_key('sidebar', [username])
+>>> cache.delete(key)   # invalidates cached template fragment
+True
+```
+
+## The low-level cache API
+
+Sometimes, caching an entire rendered page doesn't gain you very much and is, in fact, inconvenient overkill.
+
+Perhaps, for instance, your site includes a view whose results depend on several expensive queries, the results of which change at different intervals. In this case, it would not be ideal to use the full-page caching that the per-site or per-view cache strategies offer, because you wouldn't want to cache the entire result (since some of the data changes often), but you'd still want to cache the results that rarely change.
+
+For cases like this, Django exposes a low-level cache API. You can use this API to store objects in the cache with any level of granularity you like. You can cache any Python object that can be picked safely: strings, dictionaries, lists of model objects, and so forth. (Most common Python objects can be pickled; refer to the Python documentation for more information about pickling.)
+
+### Accessing the cache
+
+##### `django.core.cache.caches`
+
+You can access the caches configured in the [`CACHES`]() setting through a dict-like object: `django.core.cache.caches`. Repeated requests for the same alias in the same thread will return the same object.
+```
+>>> from django.core.cache import caches
+>>> cache1 = caches['myalias']
+>>> cache2 = caches['myalias']
+>>> cache1 is cache2
+True
+```
+If the named key does not exist, `InvalidCacheBackendError` will be raised.
+
+To provide thread-safety, a different instance of the cache backend will be returned for each thread.
+
+##### `django.core.cache.cache`
+
+As a shortcut, the default cache is available as `django.core.cache.cache`:
+```
+>>> from django.core.cache import cache
+```
+This object is equivalent to `caches['default']`.
