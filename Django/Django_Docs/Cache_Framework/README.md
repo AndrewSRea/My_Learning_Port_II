@@ -676,3 +676,105 @@ If you want to clear a bunch of keys at once, `delete_many()` can take a list of
 ```
 >>> cache.delete_many(['a', 'b', 'c'])
 ```
+
+##### `cache.clear()`
+
+Finally, if you want to delete all the keys in the cache, use `cache.clear()`. Be careful with this; `clear()` will remove *everything* from the cache, not just the keys set by your application.
+```
+>>> cache.clear()
+```
+
+##### `cache.touch(key, timeout=DEFAULT_TIMEOUT, version=None)`
+
+`cache.touch()` sets a new expiration for a key. For example, to update a key to expire 10 seconds from now:
+```
+>>> cache.touch('a', 10)
+True
+```
+Like other methods, the `timeout` argument is optional and defaults to the `TIMEOUT` option of the appropriate backend in the [`CACHES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES) setting.
+
+`touch()` returns `True` if the key was successfully touched, `False` otherwise.
+
+##### `cache.incr(key, delta=1, version=None)`
+
+##### `cache.decr(key, delta=1, version=None)`
+
+You can also increment or decrement a key that already exists using the `incr()` or `decr()` methods, respectively. By default, the existing cache value will be incremented or decremented by 1. Other increment/decrement values can be specified by providing an argument to the increment/decrement call. A `ValueError` will be raised if you attempt to increment or decrement a nonexistent cache key:
+```
+>>> cache.set('num', 1)
+>>> cache.incr('num')
+2
+>>> cache.incr('num', 10)
+12
+>>> cache.decr('num')
+11
+>>> cache.decr('num', 5)
+6
+```
+
+<hr>
+
+**Note**: `incr()`/`decr()` methods are not guaranteed to be atomic. On those backends that support atomic increment/decrement (most notably, the memcached backend), increment and decrement operations will be atomic. However, if the backend doesn't natively provide an increment/decrement operation, it will be implemented using a two-step retrieve/update.
+
+<hr>
+
+##### `cache.close()`
+
+You can close the connection to your cache with `close()` if implemented by the cache backend.
+```
+>>> cache.close()
+```
+
+<hr>
+
+**Note**: For caches that don't implement `close` methods, it is a no-op.
+
+<hr>
+
+**Note**: The async variants of base methods are prefixed with `a`, e.g. `cache.aadd()` or `cache.adelete_many()`. See [Asynchronous support]() for more details. <!-- "Asynchronous support" below -->
+
+<hr>
+
+**Changed in Django 4.0**: The async variants of methods were added to the `BaseCache`.
+
+<hr>
+
+### Cache key prefixing
+
+If you are sharing a cache instance between servers, or between your production and development environments, it's possible for data cached by one server to be used by another server. If the format of cached data is different between servers, this can lead to some very hard to diagnose problems.
+
+To prevent this, Django provides the ability to prefix all cache keys used by a server. When a particular cache key is saved or retrieved, Django will automatically prefix the cache key with the value of the [`KEY_PREFIX`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-KEY_PREFIX) cache setting.
+
+By ensuring each Django instance has a different `KEY_PREFIX`, you can ensure that there will be no collisions in cache values.
+
+### Cache versioning
+
+When you change running code that uses cached values, you may need to purge any existing cached values. The easiest way to do this is to flush the entire cache, but this can lead to the loss of cache values that are still valid and useful.
+
+Django provides a better way to target individual cache values. Django's cache framework has a system-wide version identifier, specified using the [`VERSION`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-VERSION) cache setting. The value of this setting is automatically combined with the cache prefix and the user-provided cache key to obtain the final cache key.
+
+By default, any key request will automatically include the site default cache key version. However, the primitive cache functions all include a `version` argument, so you can specify a particular cache key version to set or get. For example:
+```
+>>> # Set version 2 of a cache key
+>>> cache.set('my_key', 'hello world!', version=2)
+>>> # Get the default version (assuming version=1)
+>>> cache.get('my_key')
+None
+>>> # Get version 2 of the same key
+>>> cache.get('my_key', version=2)
+'hello world!'
+```
+The version of a specific key can be incremented and decremented using the `incr_version()` and `decr_version()` methods. This enables specific keys to be bumped to a new version, leaving other keys unaffected. Continuing our previous example:
+```
+>>> # Increment the version of 'my_key'
+>>> cache.incr_version('my_key')
+>>> # The default version still isn't available
+>>> cache.get('my_key')
+None
+# Version 2 isn't available, either
+>>> cache.get('my_key', version=2)
+None
+>>> # But version 3 *is* available
+>>> cache.get('my_key', version=3)
+'hello world!'
+```
