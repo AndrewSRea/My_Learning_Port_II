@@ -541,7 +541,7 @@ For cases like this, Django exposes a low-level cache API. You can use this API 
 
 ##### `django.core.cache.caches`
 
-You can access the caches configured in the [`CACHES`]() setting through a dict-like object: `django.core.cache.caches`. Repeated requests for the same alias in the same thread will return the same object.
+You can access the caches configured in the [`CACHES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES) setting through a dict-like object: `django.core.cache.caches`. Repeated requests for the same alias in the same thread will return the same object.
 ```
 >>> from django.core.cache import caches
 >>> cache1 = caches['myalias']
@@ -560,3 +560,119 @@ As a shortcut, the default cache is available as `django.core.cache.cache`:
 >>> from django.core.cache import cache
 ```
 This object is equivalent to `caches['default']`.
+
+### Basic usage
+
+The basic interface is:
+
+##### `cache.set(key, value, timeout=DEFAULT_TIMEOUT, version=None)`
+
+```
+>>> cache.set('my_key', 'hello, world!', 30)
+```
+
+##### `cache.get(key, default=None, version=None)`
+
+```
+>>> cache.get('my_key')
+'hello, world!'
+```
+
+`key` should be a `str`, and `value` can be any picklable Python object.
+
+The `timeout` argument is optional and defaults to the `timeout` argument of the appropriate backend in the [`CACHES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES) setting (explained above). It's the number of seconds the value should be stored in the cache. Passing in `None` for `timeout` will cache the value forever. A `timeout` of `0` won't cache the value.
+
+If the object doesn't exist in the cache, `cache.get()` returns `None`:
+```
+>>> # Wait 30 seconds for 'my_key' to expire...
+>>> cache.get('my_key')
+None
+```
+If you need to determine whether the object exists in the cache and you have stored a literal value `None`, use a sentinel object as the default:
+```
+>>> sentinel = object()
+>>> cache.get('my_key', sentinel) is sentinel
+False
+>>> # Wait 30 seconds for 'my_key' to expire...
+>>> cache.get('my_key', sentinel) is sentinel
+True
+```
+
+<hr>
+
+**MemcachedCache**
+
+Due to a `python-memcached` limitation, it's not possible to distinguish between stored `None` value and a cache miss signified by a return value of `None` on the deprecated `MemcachedCache` backend.
+
+<hr>
+
+`cache.get()` can take a `default` argument. This specifies which value to return if the object doesn't exist in the cache:
+```
+>>> cache.get('my_key', 'has expired')
+'has expired'
+```
+
+##### `cache.add(key, value, timeout=DEFAULT_TIMEOUT, version=None)`
+
+To add a key only if it doesn't already exist, use the `add()` method. It takes the same parameters as `set()`, but it will not attempt to update the cache if the key specified is already present:
+```
+>>> cache.set('add_key', 'Initial value')
+>>> cache.add('add_key', 'New value')
+>>> cache.get('add_key')
+'Initial value'
+```
+If you need to know whether `add()` stored a value in the cache, you can check the return value. It will return `True` if the value was stored, `False` otherwise.
+
+##### `cache.get_or_set(key, default, timeout=DEFAULT_TIMEOUT, version=None)`
+
+If you want to get a key's value or set a value if the key isn't in the cache, there is the `get_or_set()` method. It takes the same parameters as `get()` but the default is set as the new cache value for that key, rather than returned:
+```
+>>> cache.get('my_new_key')   # returns None
+>>> cache.get_or_set('my_new_key', 'my new value', 100)
+'my new value'
+```
+You can also pass any callable as a *default* value:
+```
+>>> import datetime
+>>> cache.get_or_set('some-timestamp-key', datetime.datetime.now)
+datetime.datetime(2014, 12, 11, 0, 15, 49, 457920)
+```
+
+##### `cache.get_many(keys, version=None)`
+
+There's also a `get_many()` interface that only hits the cache once. `get_many()` returns a dictionary with all the keys you asked for that actually exist in the cache (and haven't expired):
+```
+>>> cache.set('a', 1)
+>>> cache.set('b', 2)
+>>> cache.set('c', 3)
+>>> cache.get_many(['a', 'b', 'c'])
+{'a': 1, 'b': 2, 'c': 3}
+```
+
+##### `cache.set_many(dict, timeout)`
+
+To set multiple values more efficiently, use `set_many()` to pass a dictionary of key-value pairs:
+```
+>>> cache.set_many({'a': 1, 'b': 2, 'c': 3})
+>>> cache.get_many(['a', 'b', 'c'])
+{'a': 1, 'b': 2, 'c': 3}
+```
+Like `cache.set()`, `set_many()` takes an optional `timeout` parameter.
+
+On supported backends (memcached), `set_many()` returns a list of keys that failed to be inserted.
+
+##### `cache.delete(key, version=None)`
+
+You can delete keys explicitly with `delete()` to clear the cache for a particular object:
+```
+>>> cache.delete('a')
+True
+```
+`delete()` returns `True` if the key was successfully deleted, `False` otherwise.
+
+##### `cache.delete_many(keys, version=None)`
+
+If you want to clear a bunch of keys at once, `delete_many()` can take a list of keys to be cleared:
+```
+>>> cache.delete_many(['a', 'b', 'c'])
+```
