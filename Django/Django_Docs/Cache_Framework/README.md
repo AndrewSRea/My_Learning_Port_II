@@ -778,3 +778,117 @@ None
 >>> cache.get('my_key', version=3)
 'hello world!'
 ```
+
+### Cache key transformation
+
+As described in the previous two sections, the cache key provided by a user is not used verbatim -- it is combined with the cache prefix and key version to provide a final cache key. By default, the three parts are joined using colons to produce a final string:
+```
+def make_key(key, key_prefix, version):
+    return '%s:%s:%s' % (key_prefix, version, key)
+```
+If you want to combine the parts in different ways, or apply other processing to the final key (e.g., taking a hash digest of the key parts), you can provide a custom key function.
+
+The [`KEY_FUNCTION`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-KEY_FUNCTION) cache setting specifies a dotted-path to a function matching the prototype of `make_key()` above. If provided, this custom key function will be used instead of the default key combining function.
+
+### Cache key warnings
+
+Memcached, the most commonly-used production cache backend, does not allow cache keys longer than 250 characters or containing whitespace or control characters, and using such keys will cause an exception. To encourage cache-portable code and minimize unpleasant surprises, the other built-in cache backends issue a warning (`django.core.cache.backends.base.CacheKeyWarning`) if a key is used that would cause an error on memcached.
+
+If you are using a production backend that can accept a wider range of keys (a custom backend, or one of the non-memcached built-in backends), and want to use this wider range without warnings, you can silence `CacheKeyWarning` with this code in the `management` module of one of your [`INSTALLED_APPS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-INSTALLED_APPS):
+```
+import warnings
+
+from django.core.cache import CacheKeyWarning
+
+warnings.simplefilter("ignore", CacheKeyWarning)
+```
+If you want to instead provide custom key validation logic for one of the built-in backends, you can subclass it, override just the `validate_key` method, and follow the instructions for [using a custom cache backend](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Cache_Framework#using-a-custom-cache-backend). For instance, to do this for the `locmem` backend, out this code in a module:
+```
+from django.core.cache.backends.locmem import LocMemCache
+
+class CustomLocMemCache(LocMemCache):
+    def validate_key(self, key):
+        """Custom validation, raising exceptions or warnings as needed."""
+        ...
+```
+...and use the dotted Python path to this class in the [`BACKEND`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES-BACKEND) portion of your [`CACHES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CACHES) setting.
+
+## Asynchronous support
+
+Django has developing support for asynchronous cache backends, but does not yet support asynchronous caching. It will be coming in a future release.
+
+`django.core.cache.backends.base.BaseCache` has async variants of [all base methods](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Cache_Framework#basic-usage). By convention, the asynchronous versions of all methods are prefixed with `a`. By default, the arguments for both variants are the same:
+```
+>>> await cache.aset('num', 1)
+>>> await cache.ahas_key('num')
+True
+```
+
+## Downstream caches
+
+So far, this document has focused on caching your *own* data. But another type of caching is relevant to web development, too: caching performed by "downstream" caches. These are systems that cache pages for users even before the request reaches your website.
+
+Here are a few examples of downstream caches:
+
+* When using HTTP, your ISP may cache certain pages, so if you requested a page from `http://example.com/`, your ISP would send you the page without having to access `example.com` directly. The maintainers of `example.com` have no knowledge of this caching: the ISP sits between `example.com` and your web browser, handling all of the caching transparently. Such caching is not possible under HTTPS as it would constitute a man-in-the-middle attack.
+* Your Django website may sit behind a *proxy cache*, such as Squid Web Proxy Cache ([http://www.squid-cache.org/](http://www.squid-cache.org/)), that caches pages for performance. In this case, each request first would be handled by the proxy, and it would be passed to your application only if needed.
+* Your web browser caches pages, too. If a web page sends out the appropriate headers, your browser will use the local cached copy for subsequent requests to that page, without even contacting the web page again to see whether it has changed.
+
+Downstream caching is a nice efficiency boost, but there's a danger to it: Many web pages' contents differ based on authentication and a host of other variables, and cache systems that blindly save pages based purely on URLs could expose incorrect or sensitive data to subsequent visitors to those pages.
+
+For example, if you operate a web email system, then the contents of the "inbox" page depend on which user is logged in. If an ISP blindly cached your site, then the first user who logged in through that ISP would have their user-specific inbox page cached for subsequent visitors to the site. That's not cool.
+
+Fortunately, HTTP provides a solution to this problem. A number of HTTP headers exist to instruct downstream caches to differ their cache contents depending on designated variables, and to tell caching mechanisms not to cache particular pages. We'll look at some of these headers in the sections that follow.
+
+## Using `Vary` headers
+
+The `Vary` header defines which request headers a cache mechanism should take into account when building its cache key. For example, if the contents of a web page depend on a user's language preference, the page is said to "vary on language."
+
+By default, Django's cache system creates its cache keys using the requested fully-qualified URL -- e.g., `"https://www.example.com/stories/2005/?order_by=author"`. This means every request to that URL will use the same cached version, regardless of user-agent differences such as cookies or language preferences. However, if this page produces different content based on some difference in request headers -- such as a cookie, or a language, or a user-agent -- you'll need to use the `Vary` header to tell caching mechanisms that the page output depends on those things.
+
+To do this in Django, use the convenient [`django.views.decorators.vary.vary_on_headers()`](https://docs.djangoproject.com/en/4.0/topics/http/decorators/#django.views.decorators.vary.vary_on_headers) view decorator, like so:
+```
+from django.views.decorators.vary import vary_on_headers
+
+@vary_on_headers('User-Agent')
+def my_view(request):
+    ...
+```
+In this case, a caching mechanism (such as Django's own cache middleware) will cache a separate version of the page for each unique user-agent.
+
+The advantage to using the `vary_on_headers` decorator rather than manually setting the `Vary` header (using something like `response.headers['Vary'] = 'user-agent'`) is that the decorator *adds* to the `Vary` header (which may already exist), rather than setting it from scratch and potentially overriding anything that was already in there.
+
+You can pass multiple headers to `vary_on_headers()`:
+```
+@vary_on_headers('User-Agent', 'Cookie')
+def my_view(request):
+    ...
+```
+This tells downstream caches to vary on *both*, which means each combination of user-agent and cookie will get its own cache value. For example, a request with the user-agent `Mozilla` and the cookie value `foo=bar` will be considered different from a request with the user-agent `Mozilla` and the cookie value `foo=ham`.
+
+Because varying on cookie is so common, there's a [`django.views.decorators.vary.vary_on_cookie()`](https://docs.djangoproject.com/en/4.0/topics/http/decorators/#django.views.decorators.vary.vary_on_cookie) decorator. These two views are equivalent:
+```
+@vary_on_cookie
+def my_view(request):
+    ...
+
+@vary_on_headers('Cookie')
+def my_view(request):
+    ...
+```
+The headers you pass to `vary_on_headers` are not case sensitive; `"User-Agent"` is the same thing as `"user-agent"`.
+
+You can also use a helper function, [`django.utils.cache.patch_vary_headers()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.cache.patch_vary_headers), directly. This function sets, or adds to, the `Vary header`. For example:
+```
+from django.shortcuts import render
+from django.utils.cache import patch_vary_headers
+
+def my_view(request):
+    ...
+    response = render(request, 'template_name', context)
+    patch_vary_headers(response, ['Cookie'])
+    return response
+```
+`patch_vary_headers` takes an [`HttpResponse`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpResponse) instance as its first argument and a list/tuple of case-insensitive header names as its second argument.
+
+For more on `Vary` headers, see the [official `Vary` spec](https://datatracker.ietf.org/doc/html/rfc7231.html#section-7.1.4).
