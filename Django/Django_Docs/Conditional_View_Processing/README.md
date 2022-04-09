@@ -92,3 +92,39 @@ def my_view(request):
 # End of bad code.
 ```
 The first decorator doesn't know anything about the second and might answer that the response is not modified even if the second decorators would determine otherwise. The `condition` decorator uses both callback functions simultaneously to work out the right action to take.
+
+## Using decorators with other HTTP methods
+
+The `condition` decorator is useful for more than only `GET` and `HEAD` requests (`HEAD` requests are the same as `GET` in this situation). It can also be used to provide checking for `POST`, `PUT`, and `DELETE` requests. In these situations, the idea isn't to return a "not modified" response, but to tell the client that the resource they are trying to change has been altered in the meantime.
+
+For example, consider the following exchange between the client and server:
+
+1. Client requests `/foo/`.
+2. Server responds with some content with an ETag of `"abcd1234"`.
+3. Client sends an HTTP `PUT` request to `/foo/` to update the resource. It also sends an `If-Match: "abcd1234"` header to specify the version it is trying to update.
+4. Server checks to see if the resource has changed, by computing the ETag the same way it does for a `GET` request (using the same function). If the resource *has* changed, it will return a 412 status code, meaning "precondition failed".
+5. Client sends a `GET` request to `/foo/`, after receiving a 412 response, to retrieve an updated version of the content before updating it.
+
+The important thing this example shows is that the same functions can be used to compute the ETag and last modification values in all situations. In fact, you **should** use the same functions, so that the same values are returned every time.
+
+<hr>
+
+**Validator headers with non-safe request methods**
+
+The `condition` decorator only sets validator headers (`ETag` and `Last-Modified`) for safe HTTP methods, i.e. `GET` and `HEAD`. If you wish to return them in other cases, set them in your view. See [`RFC 7231#section-4.3.4`](https://datatracker.ietf.org/doc/html/rfc7231.html#section-4.3.4) to learn about the distinction between setting a validator header in response to requests made with `PUT` versus `POST`.
+
+<hr>
+
+## Comparison with middleware conditional processing
+
+Django provides conditional `GET` handling via [`django.middleware.http.ConditionalGetMiddleware`](https://docs.djangoproject.com/en/4.0/ref/middleware/#django.middleware.http.ConditionalGetMiddleware). While being suitable for many situations, the middleware has limitations for advanced usage:
+
+* It's applied globally to all views in your project.
+* It doesn't save you from generating the response, which may be expensive.
+* It's only appropriate for HTTO `GET` requests.
+
+You should choose the most appropriate tool for your particular problem here. If you have a way to compute ETags and modification times quickly and if some view takes a while to generate the content, you should consider using the `condition` decorator described in this document. If everything already runs fairly quickly, stick to using the middleware and the amount of network traffic sent back to the clients will still be reduced if the view hasn't changed.
+
+<hr>
+
+[[Previous module: Django's cache framework]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Cache_Framework#djangos-cache-framework) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Conditional_View_Processing#conditional-view-processing) - [[Next module: Crytographic signing]]()
