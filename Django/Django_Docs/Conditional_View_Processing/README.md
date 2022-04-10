@@ -18,7 +18,7 @@ The `condition` decorator's signature looks like this:
 ```
 condition(etag_func=None, last_modified_fun=None)
 ```
-The two functions, to compute the `ETag` and the last modified time, will be passed the incoming `request` object and the same parameters, in the same order, as the view function they are helping to wrap. The function passed `last_modified_func` should return a standard datetime value  specifying the last time the resource was modified, or `None` if the resource doesn't exist. The function passed to the `etag` decorator should return a string representing the [`ETag`]() for the resource, or `None` if it doesn't exist.
+The two functions, to compute the `ETag` and the last modified time, will be passed the incoming `request` object and the same parameters, in the same order, as the view function they are helping to wrap. The function passed `last_modified_func` should return a standard datetime value  specifying the last time the resource was modified, or `None` if the resource doesn't exist. The function passed to the `etag` decorator should return a string representing the [`ETag`](https://datatracker.ietf.org/doc/html/rfc7232.html#section-2.3) for the resource, or `None` if it doesn't exist.
 
 The decorator sets the `ETag` and `Last-Modified` headers on the response if they are not already set by the view and if the request's method is safe (`GET` or `HEAD`).
 
