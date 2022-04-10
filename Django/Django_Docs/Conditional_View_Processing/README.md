@@ -127,4 +127,4 @@ You should choose the most appropriate tool for your particular problem here. If
 
 <hr>
 
-[[Previous module: Django's cache framework]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Cache_Framework#djangos-cache-framework) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Conditional_View_Processing#conditional-view-processing) - [[Next module: Crytographic signing]]()
+[[Previous module: Django's cache framework]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Cache_Framework#djangos-cache-framework) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Conditional_View_Processing#conditional-view-processing) - [[Next module: Crytographic signing]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Crypto_Signing#cryptographic-signing)
