@@ -91,3 +91,79 @@ If you do not wish for every occurrence of a particular string to have the same 
 Using salt in this way puts the different signatures into different namespaces. A signature that comes from one namespace (a particular salt value) cannot be used to validate the same plaintext string in a different namespace that is using a different salt setting. The result is to prevent an attacker from using a signal string generated in one place in the code as input to another piece of code that is generating (and verifying) signatures using a different salt.
 
 Unlike your [`SECRET_KEY`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SECRET_KEY), your salt argument does not need to stay secret.
+
+### Verifying timestamped values
+
+`TimestampSigner` is a subclass of [`Signer`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Crypto_Signing#class-signerkeynone-sep-saltnone-algorithmnone) that appends a signed timestamp to the value. This allows you to confirm that a signed value was created within a specified period of time:
+```
+>>> from datetime import timedelta
+>>> from django.core.signing import TimestampSigner
+>>> signer = TimestampSigner()
+>>> value = signer.sign('hello')
+>>> value
+'hello:1NMg5H:oPVuCqlJWmChm1rA2lyTUtelC-c'
+>>> signer.unsign(value)
+'hello'
+>>> signer.unsign(value, max_age=10)
+...
+SignatureExpired: Signature age 15.5289158821 > 10 seconds
+>>> signer.unsign(value, max_age=20)
+'hello'
+>>> signer.unsign(value, max_age=timedelta(seconds=20))
+'hello'
+```
+
+##### [`class TimestampSigner(key=None, sep=':', salt=None, algorithm='sha256')`](https://docs.djangoproject.com/en/4.0/_modules/django/core/signing/#TimestampSigner)
+
+* [`sign(value)`](https://docs.djangoproject.com/en/4.0/_modules/django/core/signing/#TimestampSigner.sign)
+
+    Sign `value` and append current timestamp to it.
+
+* [`unsign(value, max_age=None)`](https://docs.djangoproject.com/en/4.0/_modules/django/core/signing/#TimestampSigner.unsign)
+
+    Checks if `value` was signed less than `max_age` seconds ago, otherwise raises `SignatureExpired`. The `max_age` parameter can accept an integer or a [`datetime.timedelta`](https://docs.python.org/3/library/datetime.html#datetime.timedelta) object.
+
+* `sign_object(obj, serializer=JSONSerializer, compress=False)`
+
+    Encode, optionally compress, append current timestamp, and sign complex data structure (e.g. list, tuple, or dictionary).
+
+* `unsign_object(signed_obj, serializer=JSONSerializer, max_age=None)`
+
+    Checks if `signed_obj` was signed less than `max_age` seconds ago, otherwise raises `SignatureExpired`. The `max_age` parameter can accept an integer or a [`datetime.timedelta`](https://docs.python.org/3/library/datetime.html#datetime.timedelta) object.
+
+### Protecting complex data structures
+
+If you wish to protect a list, tuple, or dictionary, you can do so using the `Signer.sign_object()` and `unsign_object()` methods, or signing module's `dumps()` or `loads()` functions (which are shortcuts for `TimestampSigner(salt='django.core.signing').sign_object()/unsign_object()`). These use JSON serialization under the hood. JSON ensures that even if your [`SECRET_KEY`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SECRET_KEY) is tolen, an attacker will not be able to execute arbitrary commands by exploiting the pickle format:
+```
+>>> from django.core import signing
+>>> signer = signing.TimestampSigner()
+>>> value = signer.sign_object({'foo': 'bar'})
+>>> value
+'eyJmb28iOiJiYXIifQ:1kx6R3:D4qGKiptAqo5QW9iv4eNLc6xl4RwiFfes6oOcYhkYnc'
+>>> signer.unsign_object(value)
+{'foo': 'bar'}
+>>> value = signing.dumps({'foo': 'bar'})
+>>> value
+'eyJmb28iOiJiYXIifQ:1kx6Rf:LBB39RQmME-SRvilheUe5EmPYRbuDBgQp2tCAi7KGLk'
+>>> signing.loads(value)
+{'foo': 'bar'}
+```
+Because of the nature of JSON (there is no native distinction between lists and tuples) if you pass in a tuple, you will get a list from `signing.loads(object)`:
+```
+>>> from django.core import signing
+>>> value = signing.dumps(('a','b','c'))
+>>> signing.loads(value)
+['a', 'b', 'c']
+```
+
+##### [`dumps(obj, key=None, salt='django.core.signing', serializer=JSONSerializer, compress=False)`](https://docs.djangoproject.com/en/4.0/_modules/django/core/signing/#dumps)
+
+Returns URL-safe, signed base64 compressed JSON string. Serialized object is signed using [`TimestampSigner`](https://docs.djangoproject.com/en/4.0/topics/signing/#django.core.signing.TimestampSigner).
+
+##### [`loads(string, key=None, salt='django.core.signing', serializer=JSONSerializer, max_age=None)`](https://docs.djangoproject.com/en/4.0/_modules/django/core/signing/#loads)
+
+Reverse of `dumps()`, raises `BadSignature` if signature fails. Checks `max_age` (in seconds) if given.
+
+<hr>
+
+[[Previous module: Conditional view processing]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Conditional_View_Processing#conditional-view-processing) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Crypto_Signing#cryptographic-signing) - [[Next module: Sending email]]()
