@@ -143,7 +143,7 @@ def send_email(request):
 
 ## The `EmailMessage` class
 
-Django's [`send_mail()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#send_mailsubject-message-from_email-recipient_list-fail_silentlyfalse-auth_usernone-auth_passwordnone-connectionnone-html_messagenone) and [`send_mass_mail()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#send_mass_maildatatuple-fail_silentlyfalse-auth_usernone-auth_passwordnone-connectionnone) functions are actually thin wrappers that make use of the [`EmailMessage`]() class. <!-- below -->
+Django's [`send_mail()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#send_mailsubject-message-from_email-recipient_list-fail_silentlyfalse-auth_usernone-auth_passwordnone-connectionnone-html_messagenone) and [`send_mass_mail()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#send_mass_maildatatuple-fail_silentlyfalse-auth_usernone-auth_passwordnone-connectionnone) functions are actually thin wrappers that make use of the [`EmailMessage`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#class-emailmessage) class.
 
 Not all features of the `EmailMessage` class are available through the `send_mail()` and related wrapper functions. If you wish to use advanced features, such as BCC'ed recipients, file attachments, or multi-part email, you'll need to create `EmailMessage` instances directly.
 
@@ -153,7 +153,7 @@ Not all features of the `EmailMessage` class are available through the `send_mai
 
 <hr>
 
-[`EmailMessage`]() <!-- below --> is responsible for creating the email message itself. The [email backend]() <!-- below --> is then responsible for sending the email.
+[`EmailMessage`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#class-emailmessage) <!-- below --> is responsible for creating the email message itself. The [email backend]() <!-- below --> is then responsible for sending the email.
 
 For convenience, `EmailMessage` provides a `send()` method for sending a single email. If you need to send multiple messages, the email backend API [provides an alternative](). <!-- "Sending multiple emails" below -->
 
@@ -165,11 +165,11 @@ The `EmailMessage` class is initialized with the following parameters (in the gi
 
 * `subject`: The subject line of the email.
 * `body`: The body text. This should be a plain text message.
-* `from_email`: The sender's address. Both `fred@example.com` and `"Fred" <fred@example.com>` forms are legal. If omitted, the [`DEFAULT_FROM_EMAIL`]() setting. is used.
+* `from_email`: The sender's address. Both `fred@example.com` and `"Fred" <fred@example.com>` forms are legal. If omitted, the [`DEFAULT_FROM_EMAIL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DEFAULT_FROM_EMAIL) setting. is used.
 * `to`: A list or tuple of recipient addresses.
 * `bcc`: A list or tuple of addresses used in the "Bcc" header when sending the email.
 * `connection`: An email backend instance. Use this parameter if you want to use the same connection for multiple messages. If omitted, a new connection is created when `send()` is called.
-* `attachments`: A list of attachments to put on the message. These can be either [`MIMEBase`]() instances, or `(filename, content, mimetype)` triples.
+* `attachments`: A list of attachments to put on the message. These can be either [`MIMEBase`](https://docs.python.org/3/library/email.mime.html#email.mime.base.MIMEBase) instances, or `(filename, content, mimetype)` triples.
 * `headers`: A dictionary of extra headers to put on the message. The keys are the header name, values are the header values. It's up to the caller to ensure header names and values are in the correct format for an email message. The corresponding attribute is `extra_headers`.
 * `cc`: A list or tuple of recipient addresses used in the "Cc" header when sending the email.
 * `reply_to`: A list or tuple of recipient addresses used in the "Reply-To" header when sending the email.
@@ -188,3 +188,116 @@ email = EmailMessage(
     headers={'Message-ID: 'foo'},
 )
 ```
+The class has the following methods:
+
+* `send(fail_silently=False)` sends the message. If a connection was specified when the email was constructed, that connection will be used. Otherwise, an instance of the default backend will be instantiated and used. If the keyword argument `fail_silently` is `True`, exceptions raised while sending the message will be quashed. An empty list of recipients will not raise an exception. It will return `1` if the message was sent successfully, otherwise `0`.
+* `message()` constructs a `django.core.mail.SafeMIMEText` object (a subclass of Python's [`MIMEText`](https://docs.python.org/3/library/email.mime.html#email.mime.text.MIMEText) class) or a `django.core.mail.SafeMIMEMultipart` object holding the message to be sent. If you ever need to extend the [`EmailMessage`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#class-emailmessage) class, you'll probably want to override this method to put the content you want into the MIME object.
+* `recipients()` returns a list of all the recipients of the message, whether they're recorded in the `to`, `cc`, or `bcc` attributes. This is another method you might need to override when subclassing, because the SMTP server needs to be told the full list of recipients when the message is sent. If you add another way to specify recipients in your class, they need to be returned from this method as well.
+* `attach()` creates a new file attachment and adds it to the message. There are two ways to call `attach()`:
+    - You can pass it a single argument that is a [`MIMEBase`](https://docs.python.org/3/library/email.mime.html#email.mime.base.MIMEBase) instance. This will be inserted directly into the resulting message.
+    - Alternatively, you can pass `attach()` three arguments: `filename`, `content`, and `mimetype`. `filename` is the name of the file attachment as it will appear in the email, `content` is the data that will be contained inside the attachment, and `mimetype` is the optional MIME type for the attachment. If you omit `mimetype`, the MIME content type will be guessed from the filename of the attachment.
+
+    For example:
+
+    ```
+    message.attach('design.png', img_data, 'image/png')
+    ```
+
+    If you specify a `mimetype` of *message/rfc822*, it will also accept [`django.core.mail.EmailMessage`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#class-emailmessage) and [`email.message.Message`](https://docs.python.org/3/library/email.compat32-message.html#email.message.Message).
+
+    For a `mimetype` starting with *text/*, content is expected to be a string. Binary data will be decoded using UTF-8, and if that fails, the MIME type will be changed to *application/octet-stream* and the data will be attached unchanged.
+
+    In addition, *message/rfc822* attachments will no longer be base64-encoded in violation of [RFC 2046#section-5.2.1](), which can cause issues with displaying the attachments in [Evolution]() and [Thunderbird]().
+
+* `attach_file()` creates a new attachment using a file from your filesystem. Call it with the path of the file to attach and, optionally, the MIME type to use for the attachment. If the MIME type is omitted, it will be guessed from the filename. You can use it like this:
+
+    ```
+    message.attach_file('/images/weather_map.png')
+    ```
+
+    For MIME types starting with *text/*, binary data is handled as in `attach()`.
+
+#### Sending alternative content types
+
+It can be useful to include multiple versions of the content in an email; the classic example is to send both text and HTML versions of a message. With Django's email library, you can do this using the `EmailMultiAlternatives` class. This subclass of [`EmailMessage`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#class-emailmessage) has an `attach_alternative()` method for including extra versions of the message body in the email. All the other methods (including class initialization) are inherited directly from `EmailMessage`.
+
+To send a text and HTML combination, you could write:
+```
+from django.core.mail import EmailMultiAlternatives
+
+subject, from_email, to = 'hello', 'from@example.com', 'to@example.com'
+text_content = 'This is an important message.'
+html_content = '<p>This is an <strong>important</strong> message.</p>'
+msg = EmailMultiAlternatives(subject, text_content, from_email, [to])
+msg.attach_alternative(html_content, "text/html")
+msg.send()
+```
+By default, the MIME type of the `body` parameter in an [`EmailMessage`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#class-emailmessage) is `"text/plain"`. It is good practice to leave this alone, because it guarantees that any recipient will be able to read the email, regardless of their mail client. However, if you are confident that your recipients can handle an alternative content type, you can use the `content_subtype` attribute on the `EmailMessage` class to change the main content type. The major type will always be `"text"`, but you can change the subtype. For example:
+```
+msg = EmailMessage(subject, html_content, from_email, [to])
+msg.content_subtype = "html"   # Main content is now text/html
+msg.send()
+```
+
+## Email backends
+
+The actual sending of an email is handled by the email backend.
+
+The email backend class has the following methods:
+
+* `open()` instantiates a long-lived email-sending connection.
+* `close()` closes the current email-sending connection.
+* `send_messages(email_messages)` sends a list of [`EmailMessage`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#class-emailmessage) objects. If the connection is not open, this call will implicitly open the connection, and close the connection afterward. If the connection is already open, it will be left open after mail has been sent.
+
+It can also be used as a context manager, which will automatically call `open()` and `close()` as needed:
+```
+from django.core import mail
+
+with mail.get_connection() as connection:
+    mail.EmailMessage(
+        subject1, body1, from1, [to1],
+        connection=connection,
+    ).send()
+    mail.EmailMessage(
+        subject2, body2, from2, [to2],
+        connection=connection,
+    ).send()
+```
+
+### Obtaining an instance of an email backend
+
+The `get_connection()` function in `django.core.mail` returns an instance of the email backend that you can use.
+
+##### [`get_connection(backend=None, fail_silently=False, *args, **kwargs)`](https://docs.djangoproject.com/en/4.0/_modules/django/core/mail/#get_connection)
+
+By default, a call to `get_connection()` will return an instance of the email backend specified in [`EMAIL_BACKEND`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_BACKEND). If you specify the `backend` argument, an instance of that backend will be instantiated.
+
+The `fail_silently` argument controls how the backend should handle errors. If `fail_silently` is `True`, exceptions during the email sending process will be silently ignored.
+
+All other arguments are pased directly to the constructor of the email backend.
+
+Django ships with several email sending backends. With the exception of the SMTP backend (which is the default), these backends are only useful during testing and development. If you have special email sending requirements, you can [write your own email backend](). <!-- "Defining a custom email..." below -->
+
+#### SMTP backend
+
+##### `class backends.smtp.EmailBackend(host=None, port=None, username=None, password=None, use_tls=None, fail_silently=False, use_ssl=None, timeout=None, ssl_keyfile=None, ssl_certfile=None, **kwargs)`
+
+This is the default backend. Email will be sent through an SMTP server.
+
+The value for each argument is retrieved from the matching setting if the argument is `None`:
+
+* `host`: [`EMAIL_HOST`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_HOST)
+* `port`: [`EMAIL_PORT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_PORT)
+* `username`: [`EMAIL_HOST_USER`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_HOST_USER)
+* `password`: [`EMAIL_HOST_PASSWORD`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_HOST_PASSWORD)
+* `use_tls`: [`EMAIL_USE_TLS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_USE_TLS)
+* `use_ssl`: [`EMAIL_USE_SSL`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_USE_SSL)
+* `timeout`: [`EMAIL_TIMEOUT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_TIMEOUT)
+* `ssl_keyfile`: [`EMAIL_SSL_KEYFILE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_SSL_KEYFILE)
+* `ssl_certfile`: [`EMAIL_SSL_CERTFILE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_SSL_CERTFILE)
+
+The SMTP backend is the default configuration inherited by Django. If you want to specify it explicitly, put the following in your settings:
+```
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+```
+If unspecified, the default `timeout` will be the one provided by [`socket.getdefaulttimeout()`](https://docs.python.org/3/library/socket.html#socket.getdefaulttimeout), which defaults to `None` (no timeout).
