@@ -56,7 +56,7 @@ The return value will be the number of successfully delivered messages (which ca
 ```
 (subject, message, from_email, recipient_list)
 ```
-`fail_silently`, `auth_user`, and `auth_password` have the swame functions as in [`send_mail()`](). <!-- just above -->
+`fail_silently`, `auth_user`, and `auth_password` have the swame functions as in [`send_mail()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#send_mailsubject-message-from_email-recipient_list-fail_silentlyfalse-auth_usernone-auth_passwordnone-connectionnone-html_messagenone).
 
 Each separate element of `datatuple` results in a separate email message. As in `send_mail()`, recipients in the same `recipient_list` will all see the other addresses in the email messages' "To:" field.
 
@@ -70,7 +70,7 @@ The return value will be the number of successfully delivered messages.
 
 ### `send_mass_mail()` vs. `send_mail()`
 
-The main difference between [`send_mass_mail()`]() and [`send_mail()`]() <!-- both above --> is that `send_mail()` opens a connection to the mail server each time it's executed, while `send_mass_mail()` uses a single connection for all of its messages. This makes `send_mass_mail()` slightly more efficient.
+The main difference between [`send_mass_mail()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#send_mass_maildatatuple-fail_silentlyfalse-auth_usernone-auth_passwordnone-connectionnone) and [`send_mail()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#send_mailsubject-message-from_email-recipient_list-fail_silentlyfalse-auth_usernone-auth_passwordnone-connectionnone-html_messagenone) is that `send_mail()` opens a connection to the mail server each time it's executed, while `send_mass_mail()` uses a single connection for all of its messages. This makes `send_mass_mail()` slightly more efficient.
 
 ## `mail_admins()`
 
@@ -101,5 +101,90 @@ send_email(
     'Message.',
     'from@example.com',
     ['john@example.com', 'jane@example.com'],
+)
+```
+This sends a message to john@example.com and jane@example.com, with them both receiving a separate email:
+```
+datatuple = (
+    ('Subject', 'Message', 'from@example.com', ['john@example.com']),
+    ('Subject', 'Message', 'from@example.com', ['john@example.com']),
+)
+send_mass_mail(datatuple)
+```
+
+## Preventing header injection
+
+[Header injection](http://www.nyphp.org/phundamentals/8_Preventing-Email-Header-Injection.html) is a security exploit in which an attacker inserts extra email headers to control the "To:" and "From:" in email messages that your scripts generate.
+
+The Django email functions outlined above all protect against header injection by forbidding newlines in header values. If any `subject`, `from_email`, or `recipient_list` contains a newline (in either Unix, Windows, or Mac style), the email function (e.g. [`send_email()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#send_mailsubject-message-from_email-recipient_list-fail_silentlyfalse-auth_usernone-auth_passwordnone-connectionnone-html_messagenone)) will raise `django.core.mail.BadHeaderError` (a subclass of `ValueError`) and, hence, will not send the email. It's your responsibility to validate all data before passing it to the email functions.
+
+If a `message` contains headers at the start of the string, the headers will be printed as the first bit of the email message.
+
+Here's an example view that takes a `subject`, `message`, and `from_email` from the request's `POST` data, sends that to admin@example.com and redirects to "/contact/thanks/" when it's done:
+```
+from django.core.mail import BadHeaderError, send_mail
+from django.http import HttpResponse, HttpResponseRedirect
+
+def send_email(request):
+    subject = request.POST.get('subject', '')
+    message = request.POST.get('message', '')
+    from_email = request.POST.get('from_email', '')
+    if subject and message and from_email:
+        try:
+            send_mail(subject, message, from_email, ['admin@example.com'])
+        except BadHeaderError:
+            return HttpResponse('Invalid header found.')
+        return HttpResponseRedirect('/contact/thanks/')
+    else:
+        # In reality we'd use a form class
+        # to get proper validation errors.
+        return HttpResponse('Make sure all fields are entered and valid.')
+```
+
+## The `EmailMessage` class
+
+Django's [`send_mail()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#send_mailsubject-message-from_email-recipient_list-fail_silentlyfalse-auth_usernone-auth_passwordnone-connectionnone-html_messagenone) and [`send_mass_mail()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#send_mass_maildatatuple-fail_silentlyfalse-auth_usernone-auth_passwordnone-connectionnone) functions are actually thin wrappers that make use of the [`EmailMessage`]() class. <!-- below -->
+
+Not all features of the `EmailMessage` class are available through the `send_mail()` and related wrapper functions. If you wish to use advanced features, such as BCC'ed recipients, file attachments, or multi-part email, you'll need to create `EmailMessage` instances directly.
+
+<hr>
+
+**Note**: This is a design feature. [`send_mail()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#send_mailsubject-message-from_email-recipient_list-fail_silentlyfalse-auth_usernone-auth_passwordnone-connectionnone-html_messagenone) and related functions were originally the only interface Django provided. However, the list of parameters they accepted was slowly growing over time. It made sense to move to a more object-oriented design for email messages and retain the original functions only for backwards compatibility.
+
+<hr>
+
+[`EmailMessage`]() <!-- below --> is responsible for creating the email message itself. The [email backend]() <!-- below --> is then responsible for sending the email.
+
+For convenience, `EmailMessage` provides a `send()` method for sending a single email. If you need to send multiple messages, the email backend API [provides an alternative](). <!-- "Sending multiple emails" below -->
+
+### `EmailMessage` objects
+
+##### [`class EmailMessage`](https://docs.djangoproject.com/en/4.0/_modules/django/core/mail/message/#EmailMessage)
+
+The `EmailMessage` class is initialized with the following parameters (in the given order, if positional arguments are used). All parameters are optional and can be set at any time prior to calling the `send()` method.
+
+* `subject`: The subject line of the email.
+* `body`: The body text. This should be a plain text message.
+* `from_email`: The sender's address. Both `fred@example.com` and `"Fred" <fred@example.com>` forms are legal. If omitted, the [`DEFAULT_FROM_EMAIL`]() setting. is used.
+* `to`: A list or tuple of recipient addresses.
+* `bcc`: A list or tuple of addresses used in the "Bcc" header when sending the email.
+* `connection`: An email backend instance. Use this parameter if you want to use the same connection for multiple messages. If omitted, a new connection is created when `send()` is called.
+* `attachments`: A list of attachments to put on the message. These can be either [`MIMEBase`]() instances, or `(filename, content, mimetype)` triples.
+* `headers`: A dictionary of extra headers to put on the message. The keys are the header name, values are the header values. It's up to the caller to ensure header names and values are in the correct format for an email message. The corresponding attribute is `extra_headers`.
+* `cc`: A list or tuple of recipient addresses used in the "Cc" header when sending the email.
+* `reply_to`: A list or tuple of recipient addresses used in the "Reply-To" header when sending the email.
+
+For example:
+```
+from django.core.mail import EmailMessage
+
+email = EmailMessage(
+    'Hello',
+    'Body goes here',
+    'from@example.com',
+    ['to1@example.com', 'to2@example.com'],
+    ['bcc@example.com'],
+    reply_to=['another@example.com'],
+    headers={'Message-ID: 'foo'},
 )
 ```
