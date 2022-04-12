@@ -197,17 +197,17 @@ The class has the following methods:
     - You can pass it a single argument that is a [`MIMEBase`](https://docs.python.org/3/library/email.mime.html#email.mime.base.MIMEBase) instance. This will be inserted directly into the resulting message.
     - Alternatively, you can pass `attach()` three arguments: `filename`, `content`, and `mimetype`. `filename` is the name of the file attachment as it will appear in the email, `content` is the data that will be contained inside the attachment, and `mimetype` is the optional MIME type for the attachment. If you omit `mimetype`, the MIME content type will be guessed from the filename of the attachment.
 
-    For example:
+        For example:
 
-    ```
-    message.attach('design.png', img_data, 'image/png')
-    ```
+        ```
+        message.attach('design.png', img_data, 'image/png')
+        ```
 
-    If you specify a `mimetype` of *message/rfc822*, it will also accept [`django.core.mail.EmailMessage`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#class-emailmessage) and [`email.message.Message`](https://docs.python.org/3/library/email.compat32-message.html#email.message.Message).
+        If you specify a `mimetype` of *message/rfc822*, it will also accept [`django.core.mail.EmailMessage`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#class-emailmessage) and [`email.message.Message`](https://docs.python.org/3/library/email.compat32-message.html#email.message.Message).
 
-    For a `mimetype` starting with *text/*, content is expected to be a string. Binary data will be decoded using UTF-8, and if that fails, the MIME type will be changed to *application/octet-stream* and the data will be attached unchanged.
+        For a `mimetype` starting with *text/*, content is expected to be a string. Binary data will be decoded using UTF-8, and if that fails, the MIME type will be changed to *application/octet-stream* and the data will be attached unchanged.
 
-    In addition, *message/rfc822* attachments will no longer be base64-encoded in violation of [RFC 2046#section-5.2.1](https://datatracker.ietf.org/doc/html/rfc2046.html#section-5.2.1), which can cause issues with displaying the attachments in [Evolution](https://bugzilla.gnome.org/show_bug.cgi?id=651197) and [Thunderbird](https://bugzilla.mozilla.org/show_bug.cgi?id=333880).
+        In addition, *message/rfc822* attachments will no longer be base64-encoded in violation of [RFC 2046#section-5.2.1](https://datatracker.ietf.org/doc/html/rfc2046.html#section-5.2.1), which can cause issues with displaying the attachments in [Evolution](https://bugzilla.gnome.org/show_bug.cgi?id=651197) and [Thunderbird](https://bugzilla.mozilla.org/show_bug.cgi?id=333880).
 
 * `attach_file()` creates a new attachment using a file from your filesystem. Call it with the path of the file to attach and, optionally, the MIME type to use for the attachment. If the MIME type is omitted, it will be guessed from the filename. You can use it like this:
 
