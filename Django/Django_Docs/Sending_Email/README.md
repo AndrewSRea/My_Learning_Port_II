@@ -301,3 +301,130 @@ The SMTP backend is the default configuration inherited by Django. If you want t
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 ```
 If unspecified, the default `timeout` will be the one provided by [`socket.getdefaulttimeout()`](https://docs.python.org/3/library/socket.html#socket.getdefaulttimeout), which defaults to `None` (no timeout).
+
+#### Console backend
+
+Instead of sending out real emails, the console backend just writes the emails that would be sent to the standard output. By default, the console backend writes to `stdout`. You can use a different stream-like object by providing the `stream` keyword argument when constructing the connection.
+
+To specify this backend, put the following in your settings:
+```
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+```
+This backend is not intended for use in production -- it is provided as a convenience that can be used during development.
+
+#### File backend
+
+The file backend writes emails to a file. A new file is created for each new session that is opened on this backend. The directory to which the files are written is either taken from the [`EMAIL_FILE_PATH`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_FILE_PATH) setting or from the `file_path` keyword when creating a connection with [`get_connection`]().
+
+To specify this backend, put the following in your settings:
+```
+EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+EMAIL_FILE_PATH = '/tmp/app-messages'   # change this to a proper location
+```
+This backend is not intended for use in production -- it is provided as a convenience that can be used during development.
+
+#### In-memory backend
+
+The `'locmem'` backend stores messages in a special attribute of the `django.core.mail` module. The `outbox` attribute is created when the first message is sent. It's a list with an [`EmailMessage`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#class-emailmessage) instance for each message that would be sent.
+
+To specify this backend, put the following in your settings:
+```
+EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+```
+This backend is not intended for use in production -- it is provided as a convenience that can be used during development and testing.
+
+Django's test runner [automatically uses this backend for testing](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#email-services).
+
+#### Dummy backend
+
+As the name suggests, the dummy backend does nothing with your messages. To specify this backend, put the following in your settings:
+```
+EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'
+```
+This backend is not intended for use in production -- it is provided as a convenience that can be used during development.
+
+### Defining a custom email backend
+
+If you need to change how emails are sent, you can write your own email backend. The [`EMAIL_BACKEND`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_BACKEND) setting in your settings file is then the Python import path for your backend class.
+
+Custom email backends should subclass `BaseEmailBackend` that is located in the `django.core.mail.backends.base` module. A custom email backend must implement the `send_messages(email_messages)` method. This method receives a list of [`EmailMessage`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#class-emailmessage) instances and returns the number of successfully delivered messages. If your backend has any concept of a persistent session or connection, you should also implement the `open()` and `close()` methods. Refer to `smtp.EmailBackend` for a reference implementation.
+
+### Sending multiple emails
+
+Establishing and closing an SMTP connection (or any other network connection, for that matter) is an expensive process. If you have a lot of emails to send, it makes sense to reuse an SMTP connection, rather than creating and destroying a connection every time you want to send an email.
+
+There are two ways you tell an email backend to reuse a connection.
+
+Firstly, you can use the `send _messages()` method. `send_messages()` takes a list of [`EmailMessage`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#class-emailmessage) instances (or subclasses), and sends them all using a single connection.
+
+For example, if you have a function called `get_notification_email()` that returns a list of `EmailMessage` objects representing some periodic email you wish to send out, you could send these emails using a single call to `send_messages`:
+```
+from django.core import mail
+
+connection = mail.get_connection()   # Use default email connection
+messages = get_notification_email()
+connection.send_messages(messages)
+```
+In this example, the call to `send_messages()` opens a connection on the backend, sends the list of messages, and then closes the connection again.
+
+The second approach is to use the `open()` and `close()` methods on the email backend to manually control the connection. `send_messages()` will not manually open or close the connection if it is already open, so if you manually open the connection, you can control when it is closed. For example:
+```
+from django.core import mail
+
+connection = mail.get_connection()
+
+# Manually open the connection
+connection.open()
+
+# Contruct an email message that uses the connection
+email1 = mail.EmailMessage(
+    'Hello',
+    'Body goes here',
+    'from@example.com',
+    ['to1@example.com'],
+    connection=connection,
+)
+email1.send()   # Send the email
+
+# Construct two more messages
+email2 = mail.EmailMessage(
+    'Hello',
+    'Body goes here',
+    'from@example.com',
+    ['to2@example.com'],
+)
+email3 = mail.EmailMessage(
+    'Hello',
+    'Body goes here',
+    'from@example.com',
+    ['to3@example.com'],
+)
+
+# Send the two emails in a single call -
+connection.send_messages([email2, email3])
+# The connection was already open so send_messages() doesn't close it.
+# We need to manually close the connection.
+connection.close()
+```
+
+## Configuring email for development
+
+There are times when you do not want Django to send emails at all. For example, while developing a website, you probably don't want to send out thousands of emails -- but you may want to validate that emails will be sent to the right people uhnder the right conditions, and that those emails will contain the correct content.
+
+The easiest way to configure email for local development is to use the [console]() email backend. This backend redirects all email to `stdout`, allowing you to inspect the content of mail.
+
+The [file]() email backend can also be useful during development -- this backend dumps the contents of every SMTP connection to a file that can be inspected at your leisure.
+
+Another approach is to use a "sumb" SMTP server that receives the emails locally and displays them to the terminal, but does not actually send anything. The [aiosmtpd](https://aiosmtpd.readthedocs.io/en/latest/) package provides a way to accomplish this:
+```
+python -m pip install aiosmtpd
+
+python -m aiosmtpd -n -l localhost:8025
+```
+This command will start a minimal SMTP server listening on port 8025 of localhost. This server prints to standard output all email headers and the email body. You then only need to set the [`EMAIL_HOST`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_HOST) and [`EMAIL_PORT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_PORT) accordingly. For a more detailed discussion of SMTP server options, see the documentation of the [aiosmtpd](https://aiosmtpd.readthedocs.io/en/latest/) module.
+
+For information about unit-testing the sending of emails in your application, see the [Email services](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Testing/Testing_Tools#email-services) section of the testing documentation.
+
+<hr>
+
+[[Previous module: Cryptographic signing]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Crypto_Signing#cryptographic-signing) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#sending-email) - [[Next module: Internationalization and localization]]()
