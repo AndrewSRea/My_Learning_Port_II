@@ -166,4 +166,4 @@ Reverse of `dumps()`, raises `BadSignature` if signature fails. Checks `max_age`
 
 <hr>
 
-[[Previous module: Conditional view processing]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Conditional_View_Processing#conditional-view-processing) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Crypto_Signing#cryptographic-signing) - [[Next module: Sending email]]()
+[[Previous module: Conditional view processing]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Conditional_View_Processing#conditional-view-processing) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Crypto_Signing#cryptographic-signing) - [[Next module: Sending email]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#sending-email)
