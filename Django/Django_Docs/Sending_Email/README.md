@@ -41,7 +41,7 @@ The `subject`, `message`, `from_email`, and `recipient_list` parameters are requ
 * `fail_silently`: A Boolean. When it's `False`, `send_email()` will raise an [`smtplib.SMTPException`](https://docs.python.org/3/library/smtplib.html#smtplib.SMTPException) if an error occurs. See the [`smtplib`](https://docs.python.org/3/library/smtplib.html#module-smtplib) docs for a list of possible exceptions, all of which are subclasses of [`SMTPException`](https://docs.python.org/3/library/smtplib.html#smtplib.SMTPException).
 * `auth_user`: The optional username to use to authenticate to the SMTP server. If this isn't provided, Django will use the value of the [`EMAIL_HOST_USER`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_HOST_USER) setting.
 * `auth_password`: The optional password to use to authenticate to the SMTP server. If this isn't provided, Django will use the value of the [`EMAIL_HOST_PASSWORD`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_HOST_PASSWORD) setting.
-* `connection`: The optional email backend to use to send the mail. If unspecified, an instance of the default backend will be used. See the documentation on [Email backends]() for more details. <!-- "Email backends" below -->
+* `connection`: The optional email backend to use to send the mail. If unspecified, an instance of the default backend will be used. See the documentation on [Email backends](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#email-backends) for more details.
 * `html_message`: If `html_message` is provided, the resulting email will be a *multipart/alternative* email with `message` as the *text/plain* content type and `html_message` as the *text/html* content type.
 
 The return value will be the number of successfully delivered messages (which can be `0` or `1` since it can only send one message).
@@ -153,9 +153,9 @@ Not all features of the `EmailMessage` class are available through the `send_mai
 
 <hr>
 
-[`EmailMessage`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#class-emailmessage) <!-- below --> is responsible for creating the email message itself. The [email backend]() <!-- below --> is then responsible for sending the email.
+[`EmailMessage`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#class-emailmessage) <!-- below --> is responsible for creating the email message itself. The [email backend](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#email-backends) is then responsible for sending the email.
 
-For convenience, `EmailMessage` provides a `send()` method for sending a single email. If you need to send multiple messages, the email backend API [provides an alternative](). <!-- "Sending multiple emails" below -->
+For convenience, `EmailMessage` provides a `send()` method for sending a single email. If you need to send multiple messages, the email backend API [provides an alternative](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#sending-multiple-emails).
 
 ### `EmailMessage` objects
 
@@ -207,7 +207,7 @@ The class has the following methods:
 
     For a `mimetype` starting with *text/*, content is expected to be a string. Binary data will be decoded using UTF-8, and if that fails, the MIME type will be changed to *application/octet-stream* and the data will be attached unchanged.
 
-    In addition, *message/rfc822* attachments will no longer be base64-encoded in violation of [RFC 2046#section-5.2.1](), which can cause issues with displaying the attachments in [Evolution]() and [Thunderbird]().
+    In addition, *message/rfc822* attachments will no longer be base64-encoded in violation of [RFC 2046#section-5.2.1](https://datatracker.ietf.org/doc/html/rfc2046.html#section-5.2.1), which can cause issues with displaying the attachments in [Evolution](https://bugzilla.gnome.org/show_bug.cgi?id=651197) and [Thunderbird](https://bugzilla.mozilla.org/show_bug.cgi?id=333880).
 
 * `attach_file()` creates a new attachment using a file from your filesystem. Call it with the path of the file to attach and, optionally, the MIME type to use for the attachment. If the MIME type is omitted, it will be guessed from the filename. You can use it like this:
 
@@ -276,7 +276,7 @@ The `fail_silently` argument controls how the backend should handle errors. If `
 
 All other arguments are pased directly to the constructor of the email backend.
 
-Django ships with several email sending backends. With the exception of the SMTP backend (which is the default), these backends are only useful during testing and development. If you have special email sending requirements, you can [write your own email backend](). <!-- "Defining a custom email..." below -->
+Django ships with several email sending backends. With the exception of the SMTP backend (which is the default), these backends are only useful during testing and development. If you have special email sending requirements, you can [write your own email backend](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#defining-a-custom-email-backend).
 
 #### SMTP backend
 
@@ -314,7 +314,7 @@ This backend is not intended for use in production -- it is provided as a conven
 
 #### File backend
 
-The file backend writes emails to a file. A new file is created for each new session that is opened on this backend. The directory to which the files are written is either taken from the [`EMAIL_FILE_PATH`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_FILE_PATH) setting or from the `file_path` keyword when creating a connection with [`get_connection`]().
+The file backend writes emails to a file. A new file is created for each new session that is opened on this backend. The directory to which the files are written is either taken from the [`EMAIL_FILE_PATH`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-EMAIL_FILE_PATH) setting or from the `file_path` keyword when creating a connection with [`get_connection`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#get_connectionbackendnone-fail_silentlyfalse-args-kwargs).
 
 To specify this backend, put the following in your settings:
 ```
@@ -411,9 +411,9 @@ connection.close()
 
 There are times when you do not want Django to send emails at all. For example, while developing a website, you probably don't want to send out thousands of emails -- but you may want to validate that emails will be sent to the right people uhnder the right conditions, and that those emails will contain the correct content.
 
-The easiest way to configure email for local development is to use the [console]() email backend. This backend redirects all email to `stdout`, allowing you to inspect the content of mail.
+The easiest way to configure email for local development is to use the [console](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#console-backend) email backend. This backend redirects all email to `stdout`, allowing you to inspect the content of mail.
 
-The [file]() email backend can also be useful during development -- this backend dumps the contents of every SMTP connection to a file that can be inspected at your leisure.
+The [file](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#file-backend) email backend can also be useful during development -- this backend dumps the contents of every SMTP connection to a file that can be inspected at your leisure.
 
 Another approach is to use a "sumb" SMTP server that receives the emails locally and displays them to the terminal, but does not actually send anything. The [aiosmtpd](https://aiosmtpd.readthedocs.io/en/latest/) package provides a way to accomplish this:
 ```
