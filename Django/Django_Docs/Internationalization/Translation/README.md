@@ -110,3 +110,85 @@ msgstr ""
 <hr>
 
 This also works in templates. See [Comments for translators in templates]() for more details. <!-- same title below -->
+
+### Marking strings as no-op
+
+Use the function [`django.utils.translation.gettext_noop()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.gettext_noop) to mark a string as a translation string without translating it. The string is later translated from a variable.
+
+Use this if you have constant strings that should be stored in the source language because they are exchanged over systems or users -- such as strings in a database -- but should be translated at the last possible point in time, such as when the string is presented to the user.
+
+### Pluralization
+
+Use the function [`django.utils.translation.ngettext()`]() to specify pluralized messages.
+
+`ngettext()` takes three arguments: the singular translation string, the plural translation string, and the number of objects.
+
+This function is useful when you need your Django application to be localizable to languages where the number and complexity of [plural forms]() is greater than the two forms used in English ('object' for the singular and 'objects' for all the cases where `count` is different from one, irrespective of its value).
+
+For example:
+```
+from django.http import HttpResponse
+from django.utils.translation import ngettext
+
+def hello_world(request, count):
+    page = ngettext(
+        'there is %(count)d object',
+        'there are %(count)d objects',
+        count,
+    ) % {
+        'count': count,
+    }
+    return HttpResponse(page)
+```
+In this example, the number of object is passed to the translation languages as the `count` variable.
+
+Note that pluralization is complicated and works differently in each language. Comparing `count` to 1 isn't always the correct rule. This code looks sophisticated, but will produce incorrect results for some languages:
+```
+from django.utils.translation import ngettext 
+from my app.models import Report
+
+count = Report.objects.count()
+if count == 1:
+    name = Report._meta.verbose_name
+else:
+    name = Report._meta.verbose_name_plural
+
+text = ngettext(
+    'There is %(count)d %(name)s available.',
+    'There are %(count)d %(name)s available.',
+    count,
+) % {
+    'count': count,
+    'name': name
+}
+```
+Don't try to implement your own singular-or-plural logic; it won't be correct. In a case like this, consider something like the following:
+```
+text = ngettext(
+    'There is %(count)d %(name)s object available.',
+    'There are %(count)d %(name)s objects available.',
+    count,
+) % {
+    'count': count,
+    'name': Report._meta.verbose_name,
+}
+```
+
+<hr>
+
+**Note**: When using `ngettext()`, make sure you use a single name for every extrapolated variable included in the literal. In the examples above, note how we used the `name` Python variable in both translation strings. This example, besides being incorrect in some languages as noted above, would fail:
+```
+text = ngettext(
+    'There is %(count)d %(name)s available.',
+    'There are %(count)d %(plural_name)s available.',
+    count,
+) % {
+    'count': Report.objects.count(),
+    'name': Report._meta.verbose_name,
+    'plural_name': Report._meta.verbose_name_plural,
+}
+```
+You would get an error when running [`django-admin compilemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-compilemessages):
+```
+a format specification for argument 'name', as in 'msgstr[0]`, doesn't exist in 'msgid'
+```
