@@ -43,7 +43,7 @@ A locale name, either a language specification of the form `ll` or a combined la
 
 Represents the name of a language. Browsers send the names of the languages they accept in the `Accept-Language` HTTP header using the format. Examples: `it`, `de-at`, `es`, `pt-br`. Language codes are generally represented in lowercase, but the HTTP `Accept-Language` header is case-insensitive. The separator is a dash.
 
-**message file**
+#### **message file**
 
 A message file is a plain-text file, representing a single language, that contains all available [translation strings](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization#translation-string) and how they should be represented in the given language. Message files have a `.po` file extension.
 
