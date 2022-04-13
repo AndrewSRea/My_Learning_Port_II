@@ -427,4 +427,4 @@ For information about unit-testing the sending of emails in your application, se
 
 <hr>
 
-[[Previous module: Cryptographic signing]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Crypto_Signing#cryptographic-signing) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#sending-email) - [[Next module: Internationalization and localization]]()
+[[Previous module: Cryptographic signing]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Crypto_Signing#cryptographic-signing) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#sending-email) - [[Next module: Internationalization and localization]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization#internationalization-and-localization)
