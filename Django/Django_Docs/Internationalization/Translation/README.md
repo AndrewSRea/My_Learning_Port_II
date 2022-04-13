@@ -192,3 +192,102 @@ You would get an error when running [`django-admin compilemessages`](https://doc
 ```
 a format specification for argument 'name', as in 'msgstr[0]`, doesn't exist in 'msgid'
 ```
+
+<hr>
+
+### Contextual markers
+
+Sometimes words have several meanings, such as `"May"` in English, which refers to a month name and to a verb. To enable translators to translate these words correctly in different contexts, you can use the [`django.utils.translation.pgettext()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.pgettext) function, or the [`django.utils.translation.npgettext()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.npgettext) function if the string needs pluralization. Both take a context string as the first variable.
+
+In the resulting `.po` file, the string will then appear as often as there are different contextual markers for the same string (the context will appear on the `msgctxt` line), allowing the translator to give a different translation for each of them.
+
+For example:
+```
+from django.utils.translation import pgettext
+
+month = pgettext("month name", "May")
+```
+or:
+```
+from django.db import models
+from django.utils.translation import pgettext_lazy
+
+class MyThing(models.Model):
+    name = models.CharField(help_text=pgettext_lazy(
+        'help text for MyThing model', 'This is the help text'))
+```
+...will appear in the `.po` file as:
+```
+msgctxt "month name"
+msgid "May"
+msgstr ""
+```
+Contextual markers are also supported by the [`translate`]() <!-- "`translate` template tag" below --> and [`blocktranslate`]() <!-- "`blocktranslate` template tag" below --> template tags.
+
+### Lazy translation
+
+Use the lazy versions of translation functions in [`django.utils.translation`](https://docs.djangoproject.com/en/4.0/ref/utils/#module-django.utils.translation) (easily recognizable by the `lazy` suffix in their names) to translate string lazily -- when the value is accessed rather than when they're called.
+
+These functions store a lazy reference to the string -- not the actual translation. The translation itself will be done when the string is used in a string context, such as in template rendering.
+
+This is essential when calls to these functions are located in code paths that are executed at module load time.
+
+This is something that can easily happen when defining models, forms, and model forms, because Django implements these such that their fields are actually class-level attributes. For that reason, make sure to use lazy translations in the following cases:
+
+#### Model fields and relationships `verbose_name` and `help_text` option values
+
+For example, to translate the help text of the *name* field in the following model, do the following:
+```
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+class MyThing(models.Model):
+    name = models.CharField(help_text=_('This is the help text'))
+```
+You can mark names of [`ForeignKey`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ForeignKey), [`ManyToManyField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.ManyToManyField) or [`OneToOneField`](https://docs.djangoproject.com/en/4.0/ref/models/fields/#django.db.models.OneToOneField) relationship as translatable by using their [`verbose_name`](https://docs.djangoproject.com/en/4.0/ref/models/options/#django.db.models.Options.verbose_name) options:
+```
+class MyThing(models.Model):
+    kind = models.ForeignKey(
+        ThingKind,
+        on_delete=models.CASCADE,
+        related_name='kinds',
+        verbose_name=_('kind'),
+    )
+```
+Just like you would do in `verbose_name`, you should provide a lowercase verbose name text for the relation as Django will automatically titlecase it when required.
+
+#### Model verbose names values
+
+It is recommended to always provide explicit [`verbose_name`](https://docs.djangoproject.com/en/4.0/ref/models/options/#django.db.models.Options.verbose_name) and [`verbose_name_plural`](https://docs.djangoproject.com/en/4.0/ref/models/options/#django.db.models.Options.verbose_name_plural) options rather than relying on the fallback English-centric and somewhat naive determination of verbose names Django performs by looking at the model's class name:
+```
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+class MyThing(models.Model):
+    name = models.CharField(_('name'), help_text=('This is the help text'))
+
+    class Meta:
+        verbose_name = _('my thing')
+        verbose_name_plural = _('my things')
+```
+
+#### Model methods `description` argument to the `@display` decorator
+
+For model methods, you can provide translations to Django and the admin site with the `description` argument to the [`display()`](https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#django.contrib.admin.display) decorator:
+```
+from django.contrib import admin
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+class MyThing(models.Model):
+    kind = models.ForeignKey(
+        ThingKind,
+        on_delete=models.CASCADE,
+        related_name='kinds',
+        verbose_name=_('kind'),
+    )
+
+    @admin.display(description=_('Is it a mouse?'))
+    def is_mouse(self):
+        return self.kind.type == MOUSE_TYPE
+```
