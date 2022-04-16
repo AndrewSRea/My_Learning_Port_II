@@ -291,3 +291,98 @@ class MyThing(models.Model):
     def is_mouse(self):
         return self.kind.type == MOUSE_TYPE
 ```
+
+### Working with lazy translation objects
+
+The result of a `gettext_lazy()` call can be used wherever you would use a string (a [`str`](https://docs.python.org/3/library/stdtypes.html#str) object) in other Django code, but it may not work with arbitrary Python code. For example, the following won't work because the [requests](https://pypi.org/project/requests/) library doesn't handle `gettext_lazy` objects:
+```
+body = gettext_lazy("I \u2764 Django")   # (Unicode :heart:)
+requests.post('https://example.com/send', data={'body': body})
+```
+You can avoid such problems by casting `gettext_lazy()` objects to text strings before passing them to non-Django code:
+```
+requests.post('https://example.com/send', data={'body': str(body)})
+```
+If you don't like the long `gettext_lazy` name, you can alias it as `_` (underscore), like so:
+```
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+class MyThing(models.Model):
+    name = models.CharField(help_text=_('This is the help text'))
+```
+Using `gettext_lazy()` and `ngettext_lazy()` to mark strings in models and utility functions is a common operation. When you're working with these objects elsewhere in your code, you should ensure that you don't accidentally convert them to strings, because they should be converted as late as possible (so that the correct locale is in effect). This necessitates the use of the helper function described next.
+
+#### Lazy translations and plural
+
+When using lazy translation for a plural string (`n[p]gettext_lazy`), you generally don't know the `number` argument at the time of the string definition. Therefore, you are authorized to pass a key name instead of an integer as the `number` argument. Then `number` will be looked up in the dictionary under that key during string interpolation. Here's an example:
+```
+from django import forms
+from django.core.exceptions import ValidationError
+from django.utils.translation import ngettext_lazy
+
+class MyForm(forms.Form):
+    error_message = ngettext_lazy("You only provided %(num)d argument", "You only provided %(num)d arguments", 'num')
+
+    def clean(self):
+        # ...
+        if error:
+            raise ValidationError(self.error_message % {'num': number})
+```
+If the string contains exactly one unnamed placeholder, you can interpolate directly with the `number` argument:
+```
+class MyForm(forms.Form):
+    error_message = ngettext_lazy(
+        "You provided %d argument",
+        "You provided %d arguments",
+    )
+
+    def clean(self):
+        # ...
+        if error:
+            raise ValidationError(self.error_message % number)
+```
+
+#### Formatting strings: `format_lazy()`
+
+Python's [`str.format()`](https://docs.python.org/3/library/stdtypes.html#str.format) method will not work when wither the `format_string` or any of the arguments to `str.format()` contains lazy translation objects. Instead, you can use [`django.utils.text.format_lazy()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.text.format_lazy), which creates a lazy object that runs the `str.format()` method only when the result is included in a string. For example:
+```
+from django.utils.text import format_lazy
+from django.utils.translation import gettext_lazy
+...
+name = gettext_lazy('John Lennon')
+instrument = gettext_lazy('guitar')
+result = format_lazy('{name}: {instrument}', name=name, instrument=instrument)
+```
+In this case, the lazy translations in `result` will only be converted to strings when `result` itself is used in a string (usually at template rendering time).
+
+#### Other uses of lazy in delayed translations
+
+For any other case where you would like to delay the translation, but have to pass the translatable string as an argument to another function, you can wrap this function inside a lazy call yourself. For example:
+```
+from django.utils.functional import lazy
+from django.utils.safestring import mark_safe
+from django.utils.translation import gettext_lazy as _
+
+mark_safe_lazy = lazy(mark_safe, str)
+```
+And the later:
+```
+lazy_string = mark_safe_lazy(_("<p>My <strong>string!</strong></p>"))
+```
+
+### Localized names of languages
+
+##### [`get_language_info(lang_code)`](https://docs.djangoproject.com/en/4.0/_modules/django/utils/translation/#get_language_info)
+
+The `get_language_info()` function provides detailed information about languages:
+```
+>>> from django.utils.translation import activate, get_language_info
+>>> activate('fr')
+>>> li = get_language_info('de')
+>>> print(li['name'], li['name_local'], li['name_translated'], li['bidi'])
+German Deutsch Allemande False
+```
+The `name`, `name_local`, and `name_translated` attributes of the dictionary contain the name of the language in English, in the language itself, and in your current active language respectively. The `bidi` attribute is `True` only for bi-directional languages.
+
+The source of the language information is the `django.conf.locale` module. Similar access to this information is available for template code. See below.
