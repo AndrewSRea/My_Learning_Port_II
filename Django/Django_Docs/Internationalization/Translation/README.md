@@ -176,7 +176,9 @@ text = ngettext(
 
 <hr>
 
-**Note**: When using `ngettext()`, make sure you use a single name for every extrapolated variable included in the literal. In the examples above, note how we used the `name` Python variable in both translation strings. This example, besides being incorrect in some languages as noted above, would fail:
+#### Note: 
+
+When using `ngettext()`, make sure you use a single name for every extrapolated variable included in the literal. In the examples above, note how we used the `name` Python variable in both translation strings. This example, besides being incorrect in some languages as noted above, would fail:
 ```
 text = ngettext(
     'There is %(count)d %(name)s available.',
@@ -386,3 +388,113 @@ German Deutsch Allemande False
 The `name`, `name_local`, and `name_translated` attributes of the dictionary contain the name of the language in English, in the language itself, and in your current active language respectively. The `bidi` attribute is `True` only for bi-directional languages.
 
 The source of the language information is the `django.conf.locale` module. Similar access to this information is available for template code. See below.
+
+## Internationalization: in template code
+
+Translation in [Django templates](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Templates#the-django-template-language) uses two template tags and a slightly different syntax than in Python code. To give your template access to these tags, put `{% load i18n %}` toward the top of your template. As with all template tags, this tag needs to be loaded in all templates which use translations, even those templates that extend from other templates which have already loaded the `i18n` tag.
+
+<hr>
+
+:warning: **Warning**: Translated strings will not be escaped when rendered in a template. This allows you to include HTML in translations, for example, for emphasis, but potentially dangerous characters (e.g. `"`) will also be rendered unchanged.
+
+<hr>
+
+### `translate` template tag
+
+The `{% translate %}` template tag translates either a constant string (enclosed in single or double quotes) or variable content:
+```
+<title>{% translate "This is the title." %}</title>
+<title>{% translate myvar %}</title>
+```
+If the `noop` option is present, variable lookup still takes place but the translation is skipped. This is useful when "stubbing out" content that will require translation in the future:
+```
+<title>{% translate "myvar" noop %}</title>
+```
+Internally, inline translations use a [`gettext()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.gettext) call.
+
+In case a template var (`myvar` above) is passed to the tag, the tag will first resolve such a variable to a string at run-time and then look up that string in the message catalogs.
+
+It's not possible to mix a template variable inside a string within `{% translate %}`. If your translations require strings with variables (placeholders), use [`{% blocktranslate %}`]() instead. <!-- below -->
+
+If you'd like to retrieve a translated string without displaying it, you can use the following syntax:
+```
+{% translate "This is the title" as the_title %}
+
+<title>{{ the_title }}</title>
+<meta name="description" content="{{ the_title }}">
+```
+In practice, you'll use this to get a string you can use in multiple places in a template or so you can use the output as an argument for other template tags or filters:
+```
+{% translate "starting point" as start %}
+{% translate "end point" as end %}
+{% translate "La Grande Boucle" as race %}
+
+<h1>
+    <a href="/" title="{% blocktranslate %}Back to '{{ race }}' homepage{% endblocktranslate %}">{{ race }}</a>
+</h1>
+<p>
+{% for stage in tour_stages %}
+    {% cycle start end %}: {{ stage }}{% if forloop.counter|divisibleby:2 %}<br>{% else %}, {% endif %}
+{% endfor %}
+</p>
+```
+`{% translate %}` also supports [contextual markers](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#contextual-markers) using the `context` keyword:
+```
+{% translate "May" context "month name" %}
+```
+
+### `blocktranslate` template tag
+
+Contrarily to the [`translate`]() <!-- above --> tag, the `blocktranslate` tag allows you to mark complex sentences consisting of literals and variable content for translation by making use of placeholders:
+```
+{% blocktranslate %}This string will have {{ value }} inside.{L% endblocktranslate %}
+```
+To translate a template expression -- say, accessing object attributes or using template filters -- you need to bind the expression to a local variable for use within the translation block. Examples:
+```
+{% blocktranslate with amount=article.price %}
+That will cost $ {{ amount }}.
+{% endblocktranslate %}
+
+{% blocktranslate with myvar=value|filter %}
+This will have {{ myvar }} inside.
+{% endblocktranslate %}
+```
+You can use multiple expressions inside a single `blocktranslate` tag:
+```
+{% blocktranslate with book_t=book|title author_t=author|title %}
+This is {{ book_t }} by {{ author_t }}
+{% endblocktranslate %}
+```
+
+<hr>
+
+**Note**: The previous more verbose format is still supported: `{% blocktranslate with book|title as book_t and author|title as author_t %}`.
+
+<hr>
+
+Other block tags (for example, `{% for %}` or `{% if %}`) are not allowed inside a `blocktranslate` tag.
+
+If resolving one of the block arguments fails, `blocktranslate` will fall back to the default language by deactivating the currently active language temporarily with the [`deactivate_all()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.deactivate_all) function.
+
+This tag also provides for pluralization. To use it:
+
+* Designate and bind a counter value with the name `count`. This value will be the one used to select the right plural form.
+* Specify both the singular and plural forms separating them with the `{% plural %}` tag within the `{% blocktranslate %}` and `{% endblocktranslate %}` tags.
+
+An example:
+```
+{% blocktranslate count counter=list|length %}
+There is only one {{ name }} object.
+{% plural %}
+There are {{ counter }} {{ name }} objects.
+{% endblocktranslate %}
+```
+A more complex example:
+```
+{% blocktranslate with amount=article.price count years=i.length %}
+That will cost $ {{ amount }} per year.
+{% plural %}
+That will cost $ {{ amount }} per {{ years}} years.
+{% endblocktranslate %}
+```
+When you use both the pluralization feature and bind values to local variables in addition to the counter value, keep in mind that the `blocktranslate` construct is internally converted to an `ngettext` call. This means the same [notes regarding `ngettext` variables]() apply.
