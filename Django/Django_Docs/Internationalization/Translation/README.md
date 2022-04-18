@@ -119,11 +119,11 @@ Use this if you have constant strings that should be stored in the source langua
 
 ### Pluralization
 
-Use the function [`django.utils.translation.ngettext()`]() to specify pluralized messages.
+Use the function [`django.utils.translation.ngettext()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.ngettext) to specify pluralized messages.
 
 `ngettext()` takes three arguments: the singular translation string, the plural translation string, and the number of objects.
 
-This function is useful when you need your Django application to be localizable to languages where the number and complexity of [plural forms]() is greater than the two forms used in English ('object' for the singular and 'objects' for all the cases where `count` is different from one, irrespective of its value).
+This function is useful when you need your Django application to be localizable to languages where the number and complexity of [plural forms](https://www.gnu.org/software/gettext/manual/gettext.html#Plural-forms) is greater than the two forms used in English ('object' for the singular and 'objects' for all the cases where `count` is different from one, irrespective of its value).
 
 For example:
 ```
@@ -497,4 +497,99 @@ That will cost $ {{ amount }} per year.
 That will cost $ {{ amount }} per {{ years}} years.
 {% endblocktranslate %}
 ```
-When you use both the pluralization feature and bind values to local variables in addition to the counter value, keep in mind that the `blocktranslate` construct is internally converted to an `ngettext` call. This means the same [notes regarding `ngettext` variables]() apply.
+When you use both the pluralization feature and bind values to local variables in addition to the counter value, keep in mind that the `blocktranslate` construct is internally converted to an `ngettext` call. This means the same [notes regarding `ngettext` variables](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#note) apply.
+
+Reverse URL lookups cannot be carried out within the `blocktranslate` and should be retrieved (and stored) beforehand:
+```
+{% url 'path.to.view' arg arg2 as the_url %}
+{% blocktranslate %}
+This is a URL: {{ the_url }}
+{% endblocktranslate %}
+```
+If you'd like to retrieve a translated string without displaying it, you can use the following syntax:
+```
+{% blocktranslate asvar the_title %}The title is {{ title }}.{% endblocktranslate %}
+<title>{{ the_title }}</title>
+<meta name="description" content="{{ the_title }}">
+```
+In practice, you'll use this to get a string you can use in multiple places in a template or so you can use the output as an argument for other template tags or filters.
+
+`{% blocktranslate %}` also supports [contextual markers](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#contextual-markers) using the `context` keyword:
+```
+{% blocktranslate with name=user.username context "greeting" %}Hi {{ name }}{% endblocktranslate %}
+```
+Another feature `{% blocktranslate %}` supports is the `trimmed` option. This option will remove newline characters from the beginning and the end of the content of the `{% blocktranslate %}` tag, replace any whitespace at the beginning and end of a line, and merge all lines into one using a space character to separate them. This is quite useful for indenting the content of a `{% blocktranslate %}` tag without having the indentation characters end up in the corresponding entry in the PO file, which makes the translation process easier.
+
+For instance, the following `{% blocktranslate %}` tag:
+```
+{% blocktranslate trimmed %}
+    First sentence.
+    Second paragraph.
+{% endblocktranslate %}
+```
+...will result in the entry `"First sentence. Second paragraph."` in the PO file, compared to `"\n  First sentence.\n  Second paragraph.\n"`, if the `trimmed` option had not been specified.
+
+### String literals passed to tags and filters
+
+You can translate string literals passed as arguments to tags and filters by using the familiar `_()` syntax:
+```
+{% some_tag _("Page not found") value|yesno:_("yes,no") %}
+```
+In this case, both the tag and the filter will see the translated string, so they don't need to be aware of translations.
+
+<hr>
+
+**Note**: In this example, the translation infrastructure will be passed the string `"yes,no"`, not the individual strings `"yes"` and `"no"`. The translated string will need to contain the comma so that the filter parsing code knows how to split up the arguments. For example, a German translator might translate the string `"yes,no"` as `"ja,nein"` (keeping the comma intact).
+
+<hr>
+
+### Comments for translators in templates
+
+Just like with [Python code](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#comments-for-translators), these notes for translators can be specified using comments, either with the [`comment`](https://docs.djangoproject.com/en/4.0/ref/templates/builtins/#std:templatetag-comment) tag:
+```
+{% comment %}Translators: View verb{% endcomment %}
+{% translate "View" %}
+
+{% comment %}Translators: Short intro blurb{% endcomment %}
+<p>{% blocktranslate %}A multiline translatable literal.{% endblocktranslate %}</p>
+```
+...or with the `{# ... #}` [one-line comment constructs](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Templates#comments):
+```
+{# Translators: Label of a button that triggers search #}
+<button type="submit">{% translate "Go" %}</button>
+
+{# Translators: This is a text of the base template #}
+{% blocktranslate %}Ambiguous translatable block of text{% endblocktranslate %}
+```
+
+<hr>
+
+**Note**: Just for completeness, these are the corresponding fragments of the resulting `.po` file:
+
+```
+#. Translators: View verb
+# path/to/template/file.html:10
+msgid "View"
+msgstr ""
+
+#. Translators: Short intro blurb
+# path/to/template/file.html:13
+msgid ""
+"A multiline translatable"
+"literal."
+msgstr ""
+
+# ...
+
+#. Translators: Label of a button that triggers search
+# path/to/template/file.html:100
+msgid "Go"
+msgstr ""
+
+#. Translators: This is a text of the base template
+# path/to/template/file.html:103
+msgid "Ambiguous translatable block of text"
+msgstr ""
+```
+
+<hr>
