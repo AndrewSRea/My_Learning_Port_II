@@ -890,3 +890,102 @@ The response format is as follows:
     "plural": "..."   # Expression for plural forms, or null.
 }
 ```
+
+### Note on performance
+
+The various JavaScript/JSON i18n views generate the catalog from `.mo` files on every request. Since its output is constant, at least for a given version of a site, it's a good candidate for caching.
+
+Server-side caching will reduce CPU load. It's easily implemented with the [`cache_page()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Cache_Framework#djangoviewsdecoratorscachecache_pagetimeout--cachenone-key_prefixnone) decorator. To trigger cache invalidation when your translations change, provide a version-dependent key prefix, as shown in the example below, or map the view at a version-dependent URL:
+```
+from django.views.decorators.cache import cache_page
+from django.views.i18n import JavaScriptCatalog
+
+# The value returned by get_version() must change when translations change.
+urlpatterns = [
+    path('jsi18n/', cache_page(86400, key_prefix='jsi18n-%s' % get_version())(JavaScriptCatalog.as_view()), name='javascript-catalog'),
+]
+```
+Client-side caching will save bandwidth and make your site load faster. If you're using ETags ([`ConditionalGetMiddleware`](https://docs.djangoproject.com/en/4.0/ref/middleware/#django.middleware.http.ConditionalGetMiddleware)), you're already covered. Otherwise, you can apply [conditional decorators](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Conditional_View_Processing#the-condition-decorator). In the following example, the cache is invalidated whenever you restart your application server:
+```
+from django.utils import timezone
+from django.views.decorators.http import last_modified
+from django.views.i18n import JavaScriptCatalog
+
+last_modified_date = timezone.now()
+
+urlpatterns = [
+    path('jsi18n/', last_modified(lambda req, **kw: last_modified_date)(JavaScriptCatalog.as_view()), name='javascript-catalog'),
+]
+```
+You can even pre-generate the JavaScript catalog as part of your development procedure and serve it as a static file. This radical technique is implemented in [django-statici18n](https://django-statici18n.readthedocs.io/en/v2.2.0/).
+
+## Internationalization: in URL patterns
+
+Django provides two mechanisms to internationalize URL patterns:
+
+* Adding the language prefix to the root of the URL patterns to make it possible for [`LocaleMiddleware`](https://docs.djangoproject.com/en/4.0/ref/middleware/#django.middleware.locale.LocaleMiddleware) to detect the language to activate from the requested URL.
+* Making URL patterns themselves translatable via the [`django.utils.translation.gettext_lazy()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.gettext_lazy) function.
+
+<hr>
+
+:warning: **Warning**: Using either one of these features requires that an active language be set for each request; in other words, you need to have [`django.middleware.locale.LocaleMiddleware`](https://docs.djangoproject.com/en/4.0/ref/middleware/#django.middleware.locale.LocaleMiddleware) in your [`MIDDLEWARE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-MIDDLEWARE) setting.
+
+<hr>
+
+### Language prefix in URL patterns
+
+##### `i18n_patterns(*urls, prefix_default_language=True)`
+
+This function can be used in a root URLconf and Django will automatically prepend the current active language code to all URL patterns defined within `i18n_patterns()`.
+
+Setting `prefix_default_language` to `False` removes the prefix from the default language ([`LANGUAGE_CODE`]()). This can be useful when adding translations to an existing site so that the current URLs won't change.
+
+Example URL patterns:
+```
+from django.conf.urls.i18n import i18n_patterns
+from django.urls import include, path
+
+from about import views as about_views
+from news import views as news_views
+from sitemap.views import sitemap
+
+urlpatterns = [
+    path('sitemap.xml', sitemap, name='sitemap-xml'),
+]
+
+news_patterns = ([
+    path('', news_views.index, name='index'),
+    path('category/<slug:slug>/', news_views.category, name='category'),
+    path('<slug:slug>/', news_views.details, name='detail'),
+], 'news')
+
+urlpatterns += i18n_patterns(
+    path('about/', about_views.main, name='about'),
+    path('news/', include(news_patterns, namespace='news')),
+)
+```
+After defining these URL patterns, Django will automatically add the language prefix to the URL patterns that were added by the `i18n_patterns` function. Example:
+```
+>>> from django.urls import reverse
+>>> from django.utils.translation import activate
+
+>>> activate('en')
+>>> reverse('sitemap-xml')
+'/sitemap.xml'
+>>> reverse('news:index')
+'/en/news/'
+
+>>> activate('nl')
+>>> reverse('news:detail', kwargs={'slug': 'news-slug'})
+'/nl/news/news-slug/'
+```
+With `prefix_default_language=False` and `LANGUAGE_CODE='en'`, the URLs will be:
+```
+>>> activate('en')
+>>> reverse('news:index')
+'/news/'
+
+>>> activate('nl')
+>>> reverse('news:index')
+'/nl/news/'
+```
