@@ -39,7 +39,7 @@ Here are some other terms that will help us to handle a common language:
 
 A locale name, either a language specification of the form `ll` or a combined language and country specification of the form `ll_CC`. Examples: `it`, `de_AT`, `es`, `pt_BR`, `sr_Latn`. The language part is always in lowercase. The country part is in titlecase if it has more than 2 characters, otherwise it's in uppercase. The separator is an underscore.
 
-**language code**
+#### **language code**
 
 Represents the name of a language. Browsers send the names of the languages they accept in the `Accept-Language` HTTP header using the format. Examples: `it`, `de-at`, `es`, `pt-br`. Language codes are generally represented in lowercase, but the HTTP `Accept-Language` header is case-insensitive. The separator is a dash.
 
