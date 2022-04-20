@@ -35,7 +35,7 @@ More details can be found in the [W3C Web Internationalization FAQ](https://www.
 
 Here are some other terms that will help us to handle a common language:
 
-**locale name**
+#### **locale name**
 
 A locale name, either a language specification of the form `ll` or a combined language and country specification of the form `ll_CC`. Examples: `it`, `de_AT`, `es`, `pt_BR`, `sr_Latn`. The language part is always in lowercase. The country part is in titlecase if it has more than 2 characters, otherwise it's in uppercase. The separator is an underscore.
 
