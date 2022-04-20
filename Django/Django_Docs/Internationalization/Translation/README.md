@@ -689,3 +689,115 @@ The main solution to these problems is the following `JavaScriptCatalog` view, w
 #### `class JavaScriptCatalog`
 
 A view that produces a JavaScript code library with functions that mimic the `gettext` interface, plus an array of translation strings.
+
+##### Attributes
+
+##### `domain`
+
+Translation domain containing strings to add in the view output. Defaults to `'djangojs`.
+
+##### `packages`
+
+A list of [`application names`](https://docs.djangoproject.com/en/4.0/ref/applications/#django.apps.AppConfig.name) among installed applications. Those apps should contain a `locale` directory. All those catalogs plus all catalogs found in [`LOCALE_PATHS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOCALE_PATHS) (which are always included) are merged into one catalog. Defaults to `None`, which means that all available translations from all [`INSTALLED_APPS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-INSTALLED_APPS) are provided in the JavaScript output.
+
+**Example with default values**:
+
+```
+from django.views.i18n import JavaScriptCatalog
+
+urlpatterns = [
+    path('jsi18n/', JavaScriptCatalog.as_view(), name='javascript-catalog'),
+]
+```
+
+**Example with custom packages**:
+
+```
+urlpatterns = [
+    path('jsi18n/myapp/',
+         JavaScriptCatalog.as_view(packages=['your.app.label']),
+         name='javascript-catalog'),
+]
+```
+
+If your URLconf uses [`i18n_patterns()`](), `JavaScriptCatalog` must also be wrapped by `i18n_patterns()` for the catalog to be correctly generated.
+
+**Example with `i18n_patterns()`**:
+
+```
+from django.conf.urls.i18n import i18n_patterns
+
+urlpatterns = i18n_patterns(
+    path('jsi18n/', JavaScriptCatalog.as_view(), name='javascript-catalog'),
+)
+```
+
+The precedence of translations is such that the packages appearing later in the `packages` argument have higher precedence than the ones appearing at the beginning. This is important in the case of clashing translations for the same literal.
+
+If you use more than one `JavaScriptCatalog` view on a site and some of them define the same strings, the strings in the catalog that was loaded last take precendence.
+
+### Using the JavaScript translation catalog
+
+To use the catalog, pull in the dynamically generated script like this:
+```
+<script src="{% url 'javascript-catalog' %}"></script>
+```
+This uses reverse URL lookup to find the URL of the JavaScript catalog view. When the catalog is loaded, your JavaScript code can use the following methods:
+
+* `gettext`
+* `ngettext`
+* `interpolate`
+* `get_format`
+* `gettext_noop`
+* `pgettext`
+* `npgettext`
+* `pluralidx`
+
+#### `gettext`
+
+The `gettext` function behaves similarly to the standard `gettext` interface within your Python code:
+```
+document.write(gettext('this is to be translated'));
+```
+
+#### `ngettext`
+
+The `ngettext` function provides an interface to pluralize words and phrases:
+```
+const objectCount = 1   // or 0, or 2, or 3, ...
+const string = ngettext(
+    'literal for the singular case',
+    'literal for the plural case',
+    objectCount
+);
+```
+
+#### `interpolate`
+
+The `interpolate` function supports dynamically populating a format string. The interpolation syntax is borrowed from Python, so the `interpolate` function supports both positional and named interpolation:
+
+* Positional interpolation: `obj` contains a JavaScript `Array` object whose elements values are then sequentially interpolated in their corresponding `fmt` placeholders in the same order they appear. For example:
+```
+const formats = ngettext(
+    'There is %s object. Remaining: %s',
+    'There are %s objects. Remaining: %s',
+    11
+);
+const string = interpolation(formats, [11, 20]);
+// string is 'There are 11 objects. Remaining: 20'
+```
+* Named interpolation: This mode is selected by passing the optional Boolean `named` parameter as `true`. `obj` contains a JavaScript object or associative array. For example:
+```
+const data = {
+    count: 10,
+    total: 50
+};
+
+const formats = ngettext(
+    'Total: %(total)s, there is %(count)s object',
+    'there are %(count)s of a total of %(total)s objects',
+    data.count
+);
+const string = interpolate(formats, data, true);
+```
+You shouldn't go over the top with string interpolation, though; this is still JavaScript, so the code has to make repeated regular-expression substitutions. This isn't as fast as string interpolation in Python, so keep it to those cases where you really need it (for example, in conjunction with `ngettext` to produce proper pluralizations).
