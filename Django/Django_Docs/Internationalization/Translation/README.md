@@ -593,3 +593,99 @@ msgstr ""
 ```
 
 <hr>
+
+### Switching language in templates
+
+If you want to select a language within a template, you can use the `language` template tag:
+```
+{% load i18n %}
+
+{% get_current_language as LANGUAGE_CODE %}
+<!-- Current language: {{ LANGUAGE_CODE }} -->
+<p>{% translate "Welcome to our page" %}</p>
+
+{% language 'en' %}
+    {% get_current_language as LANGUAGE_CODE %}
+    <!-- Current language: {{ LANGUAGE_CODE }} -->
+    <p>{% translate "Welcome to our page" %}</p>
+{% endlanguage %}
+```
+While the first occurrence of "Welcome to our page" uses the current language, the second will always be in English.
+
+### Other tags
+
+These tags also require a `{% load i18n %}`.
+
+#### `get_available_languages`
+
+`{% get_available_languages as LANGUAGES %}` returns a list of tuples in which the first element is the [language code](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization#language-code) and the second is the language name (translated into the currently active locale).
+
+#### `get_current_language`
+
+`{% get_current_language as LANGUAGE_CODE %}` returns the current user's preferred language as a string. Example: `en-us`. See [How Django discovers language preference](). <!-- same title below -->
+
+#### `get_current_language_bidi`
+
+`{% get_current_language_bidi as LANGUAGE_BIDI %}` returns the current locale's direction. If `True`, it's a right-to-left language, e.g. Hebrew, Arabic. If `False`, it's a left-to-right language, e.g. English, French, German, etc.
+
+#### `i18n` context processor
+
+If you enable the [`django.template.context_processors.i18n`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.context_processors.i18n) context processor, then each `RequestContext` will have access to `LANGUAGES`, `LANGUAGE_CODE`, and `LANGUAGE_BIDI` as defined above.
+
+#### `get_language_info`
+
+You can also retrieve information about any of the available languages using provided template tags and filters. To get information about a single language, use the `{% get_language_info %}` tag:
+```
+{% get_language_info for LANGUAGE_CODE as lang %}
+{% get_language_info for "pl" as lang %}
+```
+You can then access the information:
+```
+Language code: {{ lang.code }}<br>
+Name of language: {{ lang.name_local }}<br>
+Name in English: {{ lang.name }}<br>
+Bi-directional: {{ lang.bidi }}
+Name in the active language: {{ lang.name_translated }}
+```
+
+#### `get_language_info_list`
+
+You can also use the `{% get_language_info_list %}` template tag to retrieve information for a list of languages (e.g. active languages as specified in [`LANGUAGES`]()). See [the section about the `set_language` redirect view]() for an example of how to display a language selector using `{% get_language_info_list %}`.
+
+In addition to `LANGUAGES` style list of tuples, `{% get_language_info_list %}` supports lists of language codes. If you do this in your view:
+```
+context = {'available_languages': ['en', 'es', 'fr']}
+return render(request, 'mytemplate.html', context)
+```
+...you can iterate over those languages in the template:
+```
+{% get_language_info_list for available_languages as langs %}
+{% for lang in langs %} ... {% endfor %}
+```
+
+#### Template filters
+
+There are also some filters available for convenience:
+
+* `{{ LANGUAGE_CODE|language_name }}` ("German")
+* `{{ LANGUAGE_CODE|language_name_local }}` ("Deutsch")
+* `{{ LANGUAGE_CODE|language_name_bidi }}` (False)
+* `{{ LANGUAGE_CODE|language_name_translated }}` ("německy", when active language is Czech)
+
+## Internationalization: in JavaScript code
+
+Adding translations to JavaScript poses some problems:
+
+* JavaScript code doesn't have access to a `gettext` implementation.
+* JavaScript code doesn't have access to `.po` or `.mo` files; they need to be delivered by the server.
+* The translation catalogs for JavaScript should be kept as small as possible.
+
+Django provides an integrated solution for these problems: It passes the translations into JavaScript, so you can call `gettext`, etc., from within JavaScript.
+
+The main solution to these problems is the following `JavaScriptCatalog` view, which generates a JavaScript code library with functions that mimic the `gettext` interface, plus an array of translation strings.
+
+### The `JavaScriptCatalog` view
+
+#### `class JavaScriptCatalog`
+
+A view that produces a JavaScript code library with functions that mimic the `gettext` interface, plus an array of translation strings.
