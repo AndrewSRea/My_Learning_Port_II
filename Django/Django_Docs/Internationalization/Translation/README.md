@@ -989,3 +989,108 @@ With `prefix_default_language=False` and `LANGUAGE_CODE='en'`, the URLs will be:
 >>> reverse('news:index')
 '/nl/news/'
 ```
+
+<hr>
+
+:warning: **Warning**: [`i18n_patterns()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#i18n_patternsurls-prefix_default_languagetrue) is only allowed in a root URLconf. Using it within an included URLconf will throw an [`ImproperlyConfigured`](https://docs.djangoproject.com/en/4.0/ref/exceptions/#django.core.exceptions.ImproperlyConfigured) exception.
+
+<hr>
+
+:warning: **Warning**: Ensure that you don't have non-prefixed URL patterns that might collide with an automatically-added language prefix.
+
+<hr>
+
+### Translated URL patterns
+
+URL patterns can also be marked translatable using the [`gettext_lazy()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.gettext_lazy) function. Example:
+```
+from django.conf.urls.i18n import i18n_patterns
+from django.urls import include, path
+from django.utils.translation import gettext_lazy as _
+
+from about import views as about_views
+from news import views as news_views
+from sitemap.views import sitemap
+
+urlpatterns = [
+    path('sitemap.xml', sitemap, name='sitemap-xml'),
+]
+
+news_patterns = ([
+    path('', news_views.index, name='index'),
+    path(_('category/<slug:slug>/'), news-views.category, name='category'),
+    path('<slug:slug>/', news_views.details, name='detail'),
+], 'news')
+
+urlpatterns += i18n_patterns(
+    path(_('about/'), about_views.main, name='about'),
+    path(_('news/'), include(news_patterns, namespace='news')),
+)
+```
+After you've created the translations, the [`reverse()`](https://docs.djangoproject.com/en/4.0/ref/urlresolvers/#django.urls.reverse) function will return the URL in the active language. Example:
+```
+>>> from django.urls import reverse
+>>> from django.utils.translation import activate
+
+>>> activate('en')
+>>> reverse('news:category', kwargs={'slug': 'recent'})
+'/en/news/category/recent/'
+
+>>> activate('nl')
+>>> reverse('news:category', kwargs={'slug': 'recent'})
+'/nl/nieuws/categorie/recent/'
+```
+
+<hr>
+
+:warning: **Warning**: In most cases, it's best to use translated URLs only within a language code prefixed block of patterns (using [`i18n_patterns()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#i18n_patternsurls-prefix_default_languagetrue)), to avoid the possibility that a carelessly translated URL causes a collision with a non-translated URL pattern.
+
+<hr>
+
+### Reversing in templates
+
+If localized URLs get reverse in templates, they always use the current language. To link to a URL in another language, use the [`language`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#switching-language-in-templates) template tag. It enables the given language in the enclosed template section:
+```
+{% load i18n %}
+
+{% get_available_languages as languages %}
+
+{% translate "View this category in:" %}
+{% for lang_code, lang_name in languages %}
+    {% language lang_code %}
+    <a href="{% url 'category' slug=category.slug %}">{{ lang_name }}</a>
+    {% endlanguage %}
+{% endfor %}
+```
+The `language` tag expects the language code as the only argument.
+
+## Localization: how to create language files
+
+Once the string literals of an application have been tagged for later translation, the translation themselves need to be written (or obtained). Here's how that works.
+
+### Message files
+
+The first step is to create a [message file](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization#message-file) for a new language. A message file is a plain-text file, representing a single language, that contains all available translation strings and how they should be represented in the given language. Message files have a `.po` file extension.
+
+Django comes with a tool, [`django-admin makemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemessages), that automates the creation and upkeep of these files.
+
+<hr>
+
+**Gettext utilities**
+
+The `makemessages` command (and `compilemessages` discussed later) use commands from the GNU gettext toolset: `xgettext`, `msgfmt`, `msgmerge`, and `msguniq`.
+
+The minimum version of the `gettext` utilities supported is 0.15.
+
+<hr>
+
+To create or update a message file, run this command:
+```
+django-admin makemessages -l de
+```
+...where `de` is the [locale name](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization#locale-name) for the message file you want to create. For example, `pt_BR` for Brazilian Portuguese, `de_AT` for Autrian German, or `id` for Indonesian.
+
+The script should be run from one of two places:
+
+* The root directory of your Django project (the one that contains `manage.py`).
+* The root directory of one of your Django apps.
