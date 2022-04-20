@@ -801,3 +801,92 @@ const formats = ngettext(
 const string = interpolate(formats, data, true);
 ```
 You shouldn't go over the top with string interpolation, though; this is still JavaScript, so the code has to make repeated regular-expression substitutions. This isn't as fast as string interpolation in Python, so keep it to those cases where you really need it (for example, in conjunction with `ngettext` to produce proper pluralizations).
+
+#### `get_format`
+
+The `get_format` function has access to the configured i18n formatting settings and can retrieve the format string for a given setting name:
+```
+document.write(get_format('DATE_FORMAT'));
+// 'N j, Y'
+```
+It has access to the following settings:
+
+* [`DATE_FORMAT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATE_FORMAT)
+* [`DATE_INPUT_FORMATS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATE_INPUT_FORMATS)
+* [`DATETIME_FORMAT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATETIME_FORMAT)
+* [`DATETIME_INPUT_FORMATS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DATETIME_INPUT_FORMATS)
+* [`DECIMAL_SEPARATOR`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-DECIMAL_SEPARATOR)
+* [`FIRST_DAY_OF_WEEK`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-FIRST_DAY_OF_WEEK)
+* [`MONTH_DAY_FORMAT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-MONTH_DAY_FORMAT)
+* [`NUMBER_GROUPING`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-NUMBER_GROUPING)
+* [`SHORT_DATE_FORMAT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SHORT_DATE_FORMAT)
+* [`SHORT_DATETIME_FORMAT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-SHORT_DATETIME_FORMAT)
+* [`THOUSAND_SEPARATOR`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-THOUSAND_SEPARATOR)
+* [`TIME_FORMAT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TIME_FORMAT)
+* [`TIME_INPUT_FORMATS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TIME_INPUT_FORMATS)
+* [`YEAR_MONTH_FORMAT`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-YEAR_MONTH_FORMAT)
+
+This is useful for maintaining formatting consistency with the Python-rendered values.
+
+#### `gettext_noop`
+
+This emulates the `gettext` function but does nothing, returning whatever is passed to it:
+```
+document.write(gettext_noop('this will not be translated'));
+```
+This is useful for stubbing out portions of the code that will need translation in the future.
+
+#### `pgettext`
+
+The `pgettext` function behaves like the Python variant ([`pgettext()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.pgettext)), providing a contextually translated word:
+```
+document.write(pgettext('month name', 'May'));
+```
+
+#### `npgettext`
+
+The `npgettext` function also behaves like the Python variant ([`npgettext()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.npgettext)), providing a **pluralized** contextually translated word:
+```
+document.write(npgettext('group', 'party', 1));
+// party
+document.write(npgettext('group', 'party', 2));
+// parties
+```
+
+#### `pluralidx`
+
+The `pluralidx` function works in a similar way to the [`pluralize`](https://docs.djangoproject.com/en/4.0/ref/templates/builtins/#std:templatefilter-pluralize) template filter, determining if a given `count` should use a plural form of a word or not:
+```
+document.write(pluralidx(0));
+// true
+document.write(pluralidx(1));
+// false
+document.write(pluralidx(2));
+// true
+```
+In the simplest case, if no custom pluralization is needed, this returns `false` for the integer `1` and `true` for all other numbers.
+
+However, pluralization is not this simple in all languages. If the language does not support pluralization, an empty value is provided.
+
+Additionally, if there are complex rules around pluralization, the catalog view will render a conditional expression. This will evaluate to either a `true` (should pluralize) or `false` (should **not** pluralize) value.
+
+### The `JSONCatalog` view
+
+##### `class JSONCatalog`
+
+In order to use another client-side library to handle translations, you may want to take advantage of the `JSONCatalog` view. It's similar to [`JavaScriptCatalog`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#class-javascriptcatalog) but returns a JSON response.
+
+See the documentation for `JavaScriptCatalog` to learn about possible values and use of the `domain` and `packages` attributes.
+
+The response format is as follows:
+```
+{
+    "catalog": {
+        # Translation catalog
+    },
+    "formats": {
+        # Language formats for date, time, etc.
+    },
+    "plural": "..."   # Expression for plural forms, or null.
+}
+```
