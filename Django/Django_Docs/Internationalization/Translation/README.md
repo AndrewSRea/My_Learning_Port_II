@@ -1292,3 +1292,85 @@ path('i18n/', include('django.conf.urls.i18n')),
 <hr>
 
 The view expects to be called via the `POST` method, with a `language` parameter set in request. If session support is enabled, the view saves the language choice in the user's session. It also saves the language choice in a cookie that is named `django_language` by default. (The name can be changed thourgh the [`LANGUAGE_COOKIE_NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_COOKIE_NAME) setting.)
+
+After setting the language choice, Django looks for a `next` parameter in the `POST` or `GET` data. If that is found and Django considers it to be a safe URL (i.e. it doesn't point to a different host and uses a safe scheme), a redirect to that URL will be performed. Otherwise, Django may fall back to redirecting the user to the URL from the `Referer` header or, if it is not set, to `/`, depending on the nature of the request:
+
+* If the request accepts HTML content (based on its `Accept` HTTP header), the fallback will always be performed.
+* If the request doesn't accept HTML, the fallback will be performed only if the `next` parameter was set. Otherwise, a 204 status code (No Content) will be returned.
+
+Here's an example HTML template code:
+```
+{% load i18n %}
+
+<form action="{% url 'set_language' %}" method="post">{% csrf_token %}
+    <input name="next" type="hidden" value="{{ redirect_to }}">
+    <select name="language">
+        {% get_current_language as LANGUAGE_CODE %}
+        {% get_available_languages as LANGUAGES %}
+        {% get_language_info_list for LANGUAGES as languages %}
+        {% for language in languages %}
+            <option value="{{ language.code }}"{% if language code == LANGUAGE_CODE %} selected{% endif %}>
+                {{ language.name_local }} ({{ language.code }})
+            </option>
+        {% endfor %}
+    </select>
+    <input type="submit" value="Go">
+</form>
+```
+In this example, Django looks up the URL of the page to which the user will be redirected in the `redirect_to` context variable.
+
+### Explicitly setting the active language
+
+You may want to set the active language for the current session explicitly. Perhaps a user's language preference is retrieved from another system, for example. You've already been introduced to [`django.utils.translation.activate()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.activate). That applies to the current thread only. To persist the language for the entire session in a cookie, set the [`LANGUAGE_COOKIE_NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_COOKIE_NAME) cookie on the response:
+```
+from django.conf import settings
+from django.http import HttpResponse
+from django.utils import translation
+user_language = 'fr'
+translation.activate(user_language)
+response = HttpResponse(...)
+response.set_cookie(settings.LANGUAGE_COOKIE_NAME, user_language)
+```
+You would typically want to use both: [`django.utils.translation.activate()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.activate) changes the language for this thread, and setting the cookie makes this preference persist in future requests.
+
+### Using translations outside views and templates
+
+While Django provides a rich set of i18n tools for use in views and templates, it does not restrict the usage to Django-specific code. The Django translation mechanisms can be used to translate arbitrary texts to any language that is supported by Django (as long as an appropriate translation catalog exists, of course). You can load a translation catalog, activate it and translate text to language of your choice, but remember to switch back to original language, as activating a translation catalog is done on per-thread basis and such change will affect code running in the same thread.
+
+For example:
+```
+from django.utils import translation
+
+def welcome_translated(language):
+    cur_language = translation.get_language()
+    try:
+        translation.activate(language)
+        text = translation.gettext('welcome')
+    finally:
+        translation.activate(cur_language)
+    return text
+```
+Calling this function with the value `'de'` will give you `"Willkomen"`, regardless of [`LANGUAGE_CODE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_CODE) and language set by middleware.
+
+Functions of particular interest are [`django.utils.translation.get_language()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.get_language) which returns the language used in the current thread, [`django.utils.translation.activate()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.activate) which activates a translation catalog for the current thread, and [`django.utils.translation.check_for_language()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.check_for_language) which checks if the given language is supported by Django.
+
+To help write more concise code, there is also a context manager [`django.utils.translation.override()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.override) that stores the current language on enter and restores it on exit. With it, the above example becomes:
+```
+from django.utils import translation
+
+def welcome_translated(language):
+    with translation.override(language):
+        return translation.gettext('welcome')
+```
+
+### Language cookie
+
+A number of settings can be used to adjust language cookie options:
+
+* [`LANGUAGE_COOKIE_NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_COOKIE_NAME)
+* [`LANGUAGE_COOKIE_AGE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_COOKIE_AGE)
+* [`LANGUAGE_COOKIE_DOMAIN`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_COOKIE_DOMAIN)
+* [`LANGUAGE_COOKIE_HTTPONLY`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_COOKIE_HTTPONLY)
+* [`LANGUAGE_COOKIE_PATH`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_COOKIE_PATH)
+* [`LANGUAGE_COOKIE_SAMESITE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_COOKIE_SAMESITE)
+* [`LANGUAGE_COOKIE_SECURE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_COOKIE_SECURE)
