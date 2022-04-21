@@ -1094,3 +1094,116 @@ The script should be run from one of two places:
 
 * The root directory of your Django project (the one that contains `manage.py`).
 * The root directory of one of your Django apps.
+
+The script runs over your project source tree or your application source tree and pulls out all strings marked for translation (see [How Django discovers translations]() <!-- same title below --> and be sure [`LOCALE_PATHS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOCALE_PATHS) is configured correctly). It creates (or updates) a message file in the directory `locale/LANG/LC_MESSAGES`. In the `de` example, the file will be `locale/de/LC_MESSAGES/django.po`.
+
+When you run `makemessages` from the root directory of your project, the extracted strings will be automatically distributed to the proper message files. That is, a string extracted from a file of an app containing a `locale` directory will go in a message file under that directory. A string extracted from a file of an app without any `locale` directory will either go in a mesage file under the directory listed first in [`LOCALE_PATHS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOCALE_PATHS) or will generate an error if `LOCALE_PATHS` is empty.
+
+By default, [`django-admin makemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemessages) examines every file that has the `.html`, `.txt`, or `.py` file extension. If you want to override that default, use the [`--extension`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#cmdoption-makemessages-extension) or `-e` option to specify the file extension to examine:
+```
+django-admin makemessages -l de -e txt
+```
+Separate multiple extensions with commas and/or use `-e` or `--extension` multiple times:
+```
+django-admin makemessages -l de -e html,txt -e xml
+```
+
+<hr>
+
+:warning: **Warning**: When [creating message files from JavaScript source code](), you need to use the special `djangojs` domain, **not** `-e js`. <!-- "Creating message files from JavaScript source code" below -->
+
+<hr>
+
+**Using Jinja2 templates?**
+
+[`makemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemessages) doesn't understand the syntax of Jinja2 templates. To extract strings from a project containing Jinja2 templates, use [`Message Extracting`](https://babel.pocoo.org/en/latest/messages.html#message-extraction) from [`Babel`](https://babel.pocoo.org/en/latest/) instead.
+
+Here's an example `babel.cfg` configuration file:
+```
+# Extraction from Python source files
+[python: **.py]
+
+# Extraction from Jinja2 templates
+[jinja2: **.jinja]
+extensions = jinja2.ext.with_
+```
+Make sure you list all extensions you're using! Otherwise Babel won't recognize the tags defined by these extensions and will ignore Jinja2 templates containing them entirely.
+
+Babel provides similar features to `makemessages`, can replace it in general, and doesn't depend on `gettext`. For more information, read its documentation about [working with message catalogs](https://babel.pocoo.org/en/latest/messages.html).
+
+<hr>
+
+**No `gettext`?**
+
+If you don't have the `gettext` utilities installed, [`makemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemessages) will create empty files. If that's the case, either install the `gettext` utilities or copy the English message file (`locale/en/LC_MESSAGES/django.po`) if available and use it as a starting point, which is an empty translation file.
+
+<hr>
+
+**Working on Windows?**
+
+If you're using Windows and need to install the GNU `gettext` utilities so `makemessages` works, see [`getttext` on Windows]() for more information. <!-- same title below -->
+
+<hr>
+
+Each `.po` file contains a small bit of metadata, such as the translation maintainer's contact information, but the bulk of the file is a list of `messages` -- mappings between translation strings and the actual translated text for the particular language.
+
+For example, if your Django app contained a translation string for the text `"Welcome to my site."`, like so:
+```
+_("Welcome to my site.")
+```
+...then [`django-admin makemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemessages) will have created a `.po` file containing the following snippet --  a message:
+```
+#: path/to/python/module.py:23
+msgid "Welcome to my site."
+msgstr ""
+```
+A quick explanation:
+
+* `msgid` is the translation string, which appears in the source. Don't change it.
+* `msgstr` is where you put the language-specific translation. It starts out empty, so it's your responsibility to change it. Make sure you keep the quotes around your translation.
+* As a convenience, each message includes, in the form of a comment line prefixed with `#` and located above the `msgid` line, the filename and line number from which the translation string was gleaned.
+
+Long messages are a special case. There, the first string directly after the `msgstr` (or `msgid`) is an empty string. Then the content itself will be written over the next few lines as one string per line. Those strings are directly concatenated. Don't forget trailing spaces within the strings; otherwise, they'll be tacked together without whitespace!
+
+<hr>
+
+**Mind your charset**
+
+Due to the way the `gettext` tools work internally and because we want to allow non-ASCII source strings in Django's core and your applications, you **must** use UTF-8 as the encoding for your PO files (the default when PO files are created). This means that everybody will be using the same encoding, which is important when Django processes the PO files.
+
+<hr>
+
+**Fuzzy entries**
+
+[`makemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemessages) sometimes generates translation entries marked as fuzzy, e.g. when translations are inferred from previously translated strings. By default, fuzzy entries are **not** processed by [`compilemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-compilemessages).
+
+<hr>
+
+To reexamine all source code and templates for new translation strings and update all message files for **all** languages, run this:
+```
+django-admin makemessages -a
+```
+
+### Compiling message files
+
+After you create your message file -- and each time you make changes to it -- you'll need to compile it into a more efficient form, for use by `gettext`. Do this with the [`django-admin compilemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-compilemessages) utility.
+
+This tool runs over all available `.po` files and creates `.mo` files, which are binary files optimized for use by `gettext`. In the same directory from which you ran [`django-admin makemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemessages), run `django-admin compilemessages` like this:
+```
+django-admin compilemessages
+```
+That's it. Your translations are ready for use.
+
+<hr>
+
+**Working on Windows?**
+
+If you're using Windows and need to install the GNU `gettext` utilities so [`django-admin compilemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-compilemessages) works, see [`gettext` on Windows]() for more information. <!-- same title below -->
+
+<hr>
+
+**`.po` files: Encoding and BOM usage.**
+
+Django only supports `.po` files encoded in UTF-8 and without any BOM (Byte Order Mark) so if your text editor adds such marks to the beginning of files by default, then you will need to reconfigure it.
+
+<hr>
