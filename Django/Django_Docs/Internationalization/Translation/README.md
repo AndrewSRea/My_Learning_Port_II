@@ -1207,3 +1207,88 @@ If you're using Windows and need to install the GNU `gettext` utilities so [`dja
 Django only supports `.po` files encoded in UTF-8 and without any BOM (Byte Order Mark) so if your text editor adds such marks to the beginning of files by default, then you will need to reconfigure it.
 
 <hr>
+
+### Troubleshooting: `gettext()` incorrectly detects `python-format` in strings with percent signs
+
+In some cases, such as strings with a percent sign followed by a space and a [string conversion type](https://docs.python.org/3/library/stdtypes.html#old-string-formatting) (e.g. `_("10% interest")`), [`gettext()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.gettext) incorrectly flags strings with `python-format`.
+
+If you try to compile message files with incorrectly flagged strings, you'll get an error message like `number of format specifications in 'msgid' and 'msgstr' does not match` or `'msgstr' is not a valid Python format string, unlike 'msgid'`.
+
+To work around this, you can escape percent signs by adding a second percent sign:
+```
+from django.utils.translation import gettext as _
+output = _("10%% interest")
+```
+Or you can use `no-python-format` so that all percent signs are treated as literals:
+```
+# xgettext:no-python-format
+output = _("10% interest")
+```
+
+### Creating message files from JavaScript source code
+
+You create and update the message files the same way as the other Django message files -- with the [`django-admin makemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemessages) tool. The only difference is you need to explicitly specify what in `gettext` parlance is known as a domain -- in this case, the `djangojs` domain -- by providing a `-d djangojs` parameter, like this:
+```
+django-admin makemessages -d djangojs -l de
+```
+This would create or update the message file for JavaScript for German. After updating message files, run [`django-admin compilemessages](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-compilemessages) the same way as you do with normal Django message files.
+
+### `gettext` on Windows
+
+This is only needed for people who either want to extract message IDs or compile message files (`.po`). Translation work itself involves editing existing files of this type, but if you want to create your own message files, or want to test or compile a changed message file, download [a precompiled binary installer](https://mlocati.github.io/articles/gettext-iconv-windows.html).
+
+You may also use `gettext` binaries you have obtained elsewhere, so long as the `xgettext --version` command works properly. Do not attempt to use Django translation utilities with a `gettext` package if the command `xgettext --version` entered at a Windows command prompt causes a popup window saying "xgettext.exe has generated errors and will be closed by Windows".
+
+### Customizing the `makemessages` command
+
+If you want to pass additional parameters to `xgettext`, you need to create a custom [`makemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemessages) command and override its `xgettext_options` attribute:
+```
+from django.core.management.commands import makemessages
+
+class Command(makemessages.Command):
+    xgettext_options = makemessages.Command.xgettext_options + ['--keyword=mytrans']
+```
+If you need more flexibility, you could also add a new argument to your custom `makemessages` command:
+```
+from django.core.management.commands import makemessages
+
+class Command(makemessages.Command):
+
+    def add_arguments(self, parser):
+        super().add_arguments(parser)
+        parser.add_argument(
+            '--extra-keyword',
+            dest='xgettext_keywords',
+            action='append',
+        )
+
+    def handle(self, *args, **options):
+        xgettext_keywords = options.pop('xgettext_keywords')
+        if xgettext_keywords:
+            self.xgettext_options = (
+                makemessages.Command.xgettext_options[:] + ['--keyword=%s' % kwd for kwd in xgettext_keywords]
+            )
+        super().handle(*args, **options)
+```
+
+## Miscellaneous
+
+### The `set_language` redirect view
+
+##### `set_language(request)`
+
+As a convenience, Django comes with a view, `django.views.i18n.set_language()`, that sets a user's language preference and redirects to a given URL or, by default, back to the previous page.
+
+Activate this view by adding the following line to your URLconf:
+```
+path('i18n/', include('django.conf.urls.i18n')),
+```
+(Note that this example makes the view available at `/i18n/setlang/`.)
+
+<hr>
+
+:warning: **Warning**: Make sure that you don't include the above URL within [`i18n_patterns()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#i18n_patternsurls-prefix_default_languagetrue) -- it needs to be language-independent itself to work correctly.
+
+<hr>
+
+The view expects to be called via the `POST` method, with a `language` parameter set in request. If session support is enabled, the view saves the language choice in the user's session. It also saves the language choice in a cookie that is named `django_language` by default. (The name can be changed thourgh the [`LANGUAGE_COOKIE_NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_COOKIE_NAME) setting.)
