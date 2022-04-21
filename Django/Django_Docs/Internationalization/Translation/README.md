@@ -1374,3 +1374,110 @@ A number of settings can be used to adjust language cookie options:
 * [`LANGUAGE_COOKIE_PATH`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_COOKIE_PATH)
 * [`LANGUAGE_COOKIE_SAMESITE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_COOKIE_SAMESITE)
 * [`LANGUAGE_COOKIE_SECURE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_COOKIE_SECURE)
+
+## Implementation notes
+
+### Specialties of Django translation
+
+Django's translation machinery uses the standard `gettext` module that comes with Python. If you know `gettext`, you might note these specialties in the way Django does translation:
+
+* The string domain is `django` or `djangojs`. This string domain is used to differentiate between different programs that store their data in a common message-file library (usually `/usr/share/locale/`). The `django` domain is used for Python and template translation strings and is loaded into the global translation catalogs. The `djangojs` domain is only used for JavaScript translation catalogs to make sure that those are as small as possible.
+* Django doesn't use `xgettext` alone. It uses Python wrappers around `xgettext` and `msgfmt`. This is mostly for convenience.
+
+### How Django discovers language preference
+
+Once you've prepared your translations -- or, if you want to use the translations that come with Django -- you'll need to activate translation for your app.
+
+Behind the scenes, Django has a very flexible model of deciding which language should be used -- installation-wide, for a particular user, or both.
+
+To set an installation-wide language preference, set [`LANGUAGE_CODE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_CODE). Django uses this language as the default translation -- the final attempt if no better matching translation is found through one of the methods employed by the locale middleware (see below).
+
+If all you want is to run Django with your native language, all you need to do is set `LANGUAGE_CODE` and make sure the corresponding [message files](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization#message-file) and their compiled versions (`.mo`) exist.
+
+If you want to let each individual user specify which language they prefer, then you also need to use the `LocaleMiddleware`. `LocaleMiddleware` enables language selection based on data from the request. It customizes content for each user.
+
+To use `LocaleMiddleware`, add `'django.middleware.locale.LocaleMiddleware'` to your [`MIDDLEWARE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-MIDDLEWARE) setting. Because middleware order matters, follow these guidelines:
+
+* Make sure it's one of the first middleware installed.
+* It should come after `SessionMiddleware`, because `LocaleMiddleware` makes use of session data. And it should come before `CommonMiddleware` because `CommonMiddleware` needs an activated language in order to resolve the requested URL.
+* If you use `CacheMiddleware`, put `LocaleMiddleware` after it.
+
+For example, your [`MIDDLEWARE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-MIDDLEWARE) might look like this:
+```
+MIDDLEWARE = [
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
+    'django.middleware.common.CommonMiddleware',
+]
+```
+(For more on middleware, see the [middleware documentation](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Handling_HTTP_Requests/Middleware#middleware).)
+
+`LocaleMiddleware` tries to determine the user's language preference by following this algorithm:
+
+* First, it looks for the language prefix in the requested URL. This is only performed when you are using the `i18n_patterns` function in your root URLconf. See [Internationalization: in URL patterns](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#internationalization-in-url-patterns) for more information about the language prefix and how to internationalize URL patterns.
+
+* Failing that, it looks for a cookie.
+
+    The name of the cookie used is set by the [`LANGUAGE_COOKIE_NAME`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_COOKIE_NAME) setting. (The default name is `django_language`.)
+
+* Failing that, it looks at the `Accept-Language` HTTP header. This header is sent by your browser and tells the server which language(s) you prefer, in order by priority. Django tries each language in the header until it finds one with available translations.
+
+* Failing that, it uses the global [`LANGUAGE_CODE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_CODE) setting.
+
+Notes:
+
+* In each of these places, the language preference is expected to be in the standard [language format](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization#language-code), as a string. For example, Brazilian Portuguese is `pt-br`.
+
+* If a base language is available but the sublanguage specified is not, Django uses the base language. For example, if a user specifies `de-at` (Austrian German) but Django only has `de` available, Django uses `de`.
+
+* Only languages listed in the [`LANGUAGES`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGES) setting can be selected. If you want to restrict the language selection to a subset of provided languages (because your application doesn't provide all those languages), set `LANGUAGES` to a list of languages. For example:
+
+    ```
+    LANGUAGES = [
+        ('de', _('German')),
+        ('en', _('English')),
+    ]
+    ```
+
+    This example restricts languages that are available for automatic selection to German and English (and any sublanguage, like `de-ch` or `en-us`).
+
+* If you define a custom `LANGUAGES` setting, as explained in the previous bullet, you can mark the language names as translation strings -- but use [`gettext_lazy()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.gettext_lazy) instead of [`gettext()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.translation.gettext) to avoid a circular import.
+
+Here's a sample settings file:
+```
+from django.utils.translation import gettext_lazy as _
+
+LANGUAGES = [
+    ('de', _('German')),
+    ('en', _('English')),
+]
+```
+Once `LocaleMiddleware` determines the user's preference, it makes this preference available as `request.LANGUAGE_CODE` for each [`HttpRequest`](https://docs.djangoproject.com/en/4.0/ref/request-response/#django.http.HttpRequest). Feel free to read this value in your view code. Here's an example:
+```
+from django.http import HttpResponse
+
+def hello_world(request, count):
+    if request.LANGUAGE_CODE == 'de-at':
+        return HttpResponse("You prefer to read Austrian German.")
+    else:
+        return HttpResponse("You prefer to read another language.")
+```
+Note that, with static (middleware-less) translation, the language is in `settings.LANGUAGE_CODE`, while with dynamic (middleware) translation, it's in `request.LANGUAGE_CODE`.
+
+### How Django discovers translations
+
+At runtime, Django builds an in-memory unified catalog of literals-translations. To achieve this, it looks for translations by following this algorithm regarding the order in which it examines the different file paths to load the compiled [message files](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization#message-file) (`.mo`) and the preference of multiple translations for the same literal:
+
+1. The directories listed in [`LOCALE_PATHS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOCALE_PATHS) have the highest precendence, with the ones appearing first having higher precedence than the ones appearing later.
+2. Then, it looks for and uses, if it exists, a `locale` directory in each of the installed apps listed in [`INSTALLED_APPS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-INSTALLED_APPS). The ones appearing first have higher precedence than the ones appearing later.
+3. Finally, the Django-provided base translation in `django/conf/locale` is used as a fallback.
+
+<hr>
+
+**See also**
+
+The translations for literals included in JavaScript assets are looked up following a similar but not identical algorithm. See [`JavaScriptCatalog`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#class-javascriptcatalog) for more details.
+
+You can also put [custom format files]() <!-- next module: "Format localization/Creating custom format files" --> in the [`LOCALE_PATHS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOCALE_PATHS) directories if you also set [`FORMAT_MODULE_PATH`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-FORMAT_MODULE_PATH).
+
+<hr>
