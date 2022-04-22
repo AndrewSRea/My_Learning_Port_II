@@ -12,7 +12,7 @@ Django's internationalization hooks are on by default, and that means there's a 
 
 <hr>
 
-**Note**: Make sure you've activated translation for your project (the fastest way is to check if [`MIDDLEWARE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-MIDDLEWARE) includes [`django.middleware.locale.LocaleMiddleware`](https://docs.djangoproject.com/en/4.0/ref/middleware/#django.middleware.locale.LocaleMiddleware)). If you haven't yet, see [How Django discovers language preference](). <!-- "How Django discovers language preference" below -->
+**Note**: Make sure you've activated translation for your project (the fastest way is to check if [`MIDDLEWARE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-MIDDLEWARE) includes [`django.middleware.locale.LocaleMiddleware`](https://docs.djangoproject.com/en/4.0/ref/middleware/#django.middleware.locale.LocaleMiddleware)). If you haven't yet, see [How Django discovers language preference](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#how-django-discovers-language-preference).
 
 <hr>
 
@@ -109,7 +109,7 @@ msgstr ""
 
 <hr>
 
-This also works in templates. See [Comments for translators in templates]() for more details. <!-- same title below -->
+This also works in templates. See [Comments for translators in templates](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#comments-for-translators-in-templates) for more details.
 
 ### Marking strings as no-op
 
@@ -224,7 +224,7 @@ msgctxt "month name"
 msgid "May"
 msgstr ""
 ```
-Contextual markers are also supported by the [`translate`]() <!-- "`translate` template tag" below --> and [`blocktranslate`]() <!-- "`blocktranslate` template tag" below --> template tags.
+Contextual markers are also supported by the [`translate`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#translate-template-tag) and [`blocktranslate`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#blocktranslate-template-tag) template tags.
 
 ### Lazy translation
 
@@ -414,7 +414,7 @@ Internally, inline translations use a [`gettext()`](https://docs.djangoproject.c
 
 In case a template var (`myvar` above) is passed to the tag, the tag will first resolve such a variable to a string at run-time and then look up that string in the message catalogs.
 
-It's not possible to mix a template variable inside a string within `{% translate %}`. If your translations require strings with variables (placeholders), use [`{% blocktranslate %}`]() instead. <!-- below -->
+It's not possible to mix a template variable inside a string within `{% translate %}`. If your translations require strings with variables (placeholders), use [`{% blocktranslate %}`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#blocktranslate-template-tag) instead.
 
 If you'd like to retrieve a translated string without displaying it, you can use the following syntax:
 ```
@@ -445,7 +445,7 @@ In practice, you'll use this to get a string you can use in multiple places in a
 
 ### `blocktranslate` template tag
 
-Contrarily to the [`translate`]() <!-- above --> tag, the `blocktranslate` tag allows you to mark complex sentences consisting of literals and variable content for translation by making use of placeholders:
+Contrarily to the [`translate`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#translate-template-tag) tag, the `blocktranslate` tag allows you to mark complex sentences consisting of literals and variable content for translation by making use of placeholders:
 ```
 {% blocktranslate %}This string will have {{ value }} inside.{L% endblocktranslate %}
 ```
@@ -622,7 +622,7 @@ These tags also require a `{% load i18n %}`.
 
 #### `get_current_language`
 
-`{% get_current_language as LANGUAGE_CODE %}` returns the current user's preferred language as a string. Example: `en-us`. See [How Django discovers language preference](). <!-- same title below -->
+`{% get_current_language as LANGUAGE_CODE %}` returns the current user's preferred language as a string. Example: `en-us`. See [How Django discovers language preference](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#how-django-discovers-language-preference).
 
 #### `get_current_language_bidi`
 
@@ -720,7 +720,7 @@ urlpatterns = [
 ]
 ```
 
-If your URLconf uses [`i18n_patterns()`](), `JavaScriptCatalog` must also be wrapped by `i18n_patterns()` for the catalog to be correctly generated.
+If your URLconf uses [`i18n_patterns()`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#i18n_patternsurls-prefix_default_languagetrue), `JavaScriptCatalog` must also be wrapped by `i18n_patterns()` for the catalog to be correctly generated.
 
 **Example with `i18n_patterns()`**:
 
@@ -938,7 +938,7 @@ Django provides two mechanisms to internationalize URL patterns:
 
 This function can be used in a root URLconf and Django will automatically prepend the current active language code to all URL patterns defined within `i18n_patterns()`.
 
-Setting `prefix_default_language` to `False` removes the prefix from the default language ([`LANGUAGE_CODE`]()). This can be useful when adding translations to an existing site so that the current URLs won't change.
+Setting `prefix_default_language` to `False` removes the prefix from the default language ([`LANGUAGE_CODE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_CODE)). This can be useful when adding translations to an existing site so that the current URLs won't change.
 
 Example URL patterns:
 ```
@@ -1095,7 +1095,7 @@ The script should be run from one of two places:
 * The root directory of your Django project (the one that contains `manage.py`).
 * The root directory of one of your Django apps.
 
-The script runs over your project source tree or your application source tree and pulls out all strings marked for translation (see [How Django discovers translations]() <!-- same title below --> and be sure [`LOCALE_PATHS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOCALE_PATHS) is configured correctly). It creates (or updates) a message file in the directory `locale/LANG/LC_MESSAGES`. In the `de` example, the file will be `locale/de/LC_MESSAGES/django.po`.
+The script runs over your project source tree or your application source tree and pulls out all strings marked for translation (see [How Django discovers translations](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#how-django-discovers-translations) and be sure [`LOCALE_PATHS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOCALE_PATHS) is configured correctly). It creates (or updates) a message file in the directory `locale/LANG/LC_MESSAGES`. In the `de` example, the file will be `locale/de/LC_MESSAGES/django.po`.
 
 When you run `makemessages` from the root directory of your project, the extracted strings will be automatically distributed to the proper message files. That is, a string extracted from a file of an app containing a `locale` directory will go in a message file under that directory. A string extracted from a file of an app without any `locale` directory will either go in a mesage file under the directory listed first in [`LOCALE_PATHS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOCALE_PATHS) or will generate an error if `LOCALE_PATHS` is empty.
 
@@ -1110,7 +1110,7 @@ django-admin makemessages -l de -e html,txt -e xml
 
 <hr>
 
-:warning: **Warning**: When [creating message files from JavaScript source code](), you need to use the special `djangojs` domain, **not** `-e js`. <!-- "Creating message files from JavaScript source code" below -->
+:warning: **Warning**: When [creating message files from JavaScript source code](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#creating-message-files-from-javascript-source-code), you need to use the special `djangojs` domain, **not** `-e js`.
 
 <hr>
 
@@ -1141,7 +1141,7 @@ If you don't have the `gettext` utilities installed, [`makemessages`](https://do
 
 **Working on Windows?**
 
-If you're using Windows and need to install the GNU `gettext` utilities so `makemessages` works, see [`getttext` on Windows]() for more information. <!-- same title below -->
+If you're using Windows and need to install the GNU `gettext` utilities so `makemessages` works, see [`getttext` on Windows](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#gettext-on-windows) for more information. <!-- same title below -->
 
 <hr>
 
@@ -1198,7 +1198,7 @@ That's it. Your translations are ready for use.
 
 **Working on Windows?**
 
-If you're using Windows and need to install the GNU `gettext` utilities so [`django-admin compilemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-compilemessages) works, see [`gettext` on Windows]() for more information. <!-- same title below -->
+If you're using Windows and need to install the GNU `gettext` utilities so [`django-admin compilemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-compilemessages) works, see [`gettext` on Windows](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#gettext-on-windows) for more information.
 
 <hr>
 
