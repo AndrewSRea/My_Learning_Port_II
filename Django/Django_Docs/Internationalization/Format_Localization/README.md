@@ -43,7 +43,7 @@ However, it may not always be appropriate to use localized values -- for example
 
 To allow for fine control over the use of localization, Django provides the `l10n` template library that contains the following tags and filters.
 
-### Template filters
+### Template tags
 
 #### `localize`
 
@@ -103,3 +103,39 @@ Returns a string representation for unlocalized numbers (`int`, `float`, or `Dec
 ## Creating custom format files
 
 Django provides format definitions for many locales, but sometimes you might want to create your own, because a format file doesn't exist for your locale, or because you want to overwrite some of the values.
+
+To use custom formats, specify the path where you'll place format files first. To do that, set your [`FORMAT_MODULE_PATH`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-FORMAT_MODULE_PATH) setting to the package where format files exist, for instance:
+```
+FORMAT_MODULE_PATH = [
+    'mysite.formats',
+    'some_app.formats',
+]
+```
+Files are not placed directly in this directory, but in a directory named as the locale, and must be named `formats.py`. Be careful not to put sensitive information in these files as values inside can be exposed if you pass the string to `django.utils.formats.get_format()` (used by the [`date`](https://docs.djangoproject.com/en/4.0/ref/templates/builtins/#std:templatefilter-date) template filter).
+
+To customize the English formats, a structure like this would be needed:
+```
+mysite/
+    formats/
+        __init__.py
+        en/
+            __init__.py
+            formats.py
+```
+...where `formats.py` contains custom format definitions. For example:
+```
+THOUSAND_SEPARATOR = '\xa0'
+```
+...to use a non-breaking space (Unicode `00A0`) as a thousand separator, instead of the default for English, a comma.
+
+## Limitations of the provided locale formats
+
+Some locales use context-sensitive formats for numbers, which Django's localization system cannot handle automatically.
+
+### Switzerland (German)
+
+The Swiss number formatting depends on the type of number that is being formatted. For monetary values, a comma is used as the thousand separator and a decimal point for the decimal separator. For all other numbers, a comma is used as decimal separator and a space as thousand separator. The locale format provided by Django uses the generic separators, a comma for decimal and a space for thousand separators.
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#translation) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Format_Localization#format-localization) - [[Next page]]()
