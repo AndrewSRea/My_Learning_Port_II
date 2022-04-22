@@ -1481,3 +1481,26 @@ The translations for literals included in JavaScript assets are looked up follow
 You can also put [custom format files]() <!-- next module: "Format localization/Creating custom format files" --> in the [`LOCALE_PATHS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOCALE_PATHS) directories if you also set [`FORMAT_MODULE_PATH`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-FORMAT_MODULE_PATH).
 
 <hr>
+
+In all cases, the name of the directory containing the translation is expected to be named using [locale name](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization#locale-name) notation, e.g. `de`, `pt_BR`, `es_AR`, etc. Untranslated strings for territorial language variants use the translations of the generic language. For example, untranslated `pt_BR` strings use `pt` translations.
+
+This way, you can write applications that include their own translations, and you can override base translations in your project. Or, you can build a big project out of several apps and put all translations into one b ig common message file specific to the project you are composing. The choice is yours.
+
+All message file repositories are structured the same way. They are:
+
+* All paths listed in [`LOCALE_PATHS`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LOCALE_PATHS) in your settings file are searched for `<language>/LC_MESSAGES/django.(po|mo)`.
+* `$APPPATH/locale/<language>/LC_MESSAGES/django.(po|mo)`.
+* `$PYTHONPATH/django/conf/locale/<language>/LC_MESSAGES/django.(po|mo).
+
+To create message files, you use the [`django-admin makemessages`](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-makemessages) tool. And you use [`django-admin compilemessages](https://docs.djangoproject.com/en/4.0/ref/django-admin/#django-admin-compilemessages) to produce the binary `.mo` files that are used by `gettext`.
+
+### Using a non-English base language
+
+Django makes the general assumption that the original strings in a translatable project are written in English. You can choose another language, but you must be aware of certain limitations:
+
+* `gettext` only provides two plural forms for the original messages, so you will also need to provide a translation for the base language to include all plural forms if the plural rules for the base language are different from English.
+* When an English variant is activated and English strings are missing, the fallback language will not be the [`LANGUAGE_CODE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-LANGUAGE_CODE) of the project, but the original strings. For example, an English user visiting a site with `LANGUAGE_CODE` set to Spanish and original strings written in German will see German text rather than Spanish.
+
+<hr>
+
+[[Back to Internationalization and localization module opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization#internationalization-and-localization) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#translation) - [[Next page]]()
