@@ -4,7 +4,7 @@
 
 The goal of internationalization and localization is to allow a single web application to offer its content in languages and formats tailored to the audience.
 
-Django has full support for [translation of text](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#translation), [formatting of dates, times, and numbers](), and [time zones]().
+Django has full support for [translation of text](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#translation), [formatting of dates, times, and numbers](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Format_Localization#format-localization), and [time zones]().
 
 Essentially, Django does two things:
 
