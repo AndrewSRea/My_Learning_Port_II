@@ -70,7 +70,7 @@ To activate or deactivate localization for a template block, use:
 
 <hr>
 
-See [`localize`]() and [`unlocalize`]() for template filters that will do the same job on a per-variable basis. <!-- below -->
+See [`localize`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Format_Localization#localize-1) and [`unlocalize`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Format_Localization#unlocalize) for template filters that will do the same job on a per-variable basis.
 
 ### Template filters
 
@@ -84,7 +84,7 @@ For example:
 
 {{ value|localize }}
 ```
-To disable localization on a single value, use [`unlocalize`](). To control localization over a large section of a template, use the [`localize`]() template tag.
+To disable localization on a single value, use [`unlocalize`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Format_Localization#unlocalize). To control localization over a large section of a template, use the [`localize`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Format_Localization#localize) template tag.
 
 #### `unlocalize`
 
@@ -96,7 +96,7 @@ For example:
 
 {{ value|unlocalize }}
 ```
-To force localization of a single value, use [`localize`](). To control localization over a large section of a template, use the [`localize`]() template tag.
+To force localization of a single value, use [`localize`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Format_Localization#localize-1). To control localization over a large section of a template, use the [`localize`](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Format_Localization#localize) template tag.
 
 Returns a string representation for unlocalized numbers (`int`, `float`, or `Decimal`).
 
