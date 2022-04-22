@@ -4,7 +4,7 @@
 
 The goal of internationalization and localization is to allow a single web application to offer its content in languages and formats tailored to the audience.
 
-Django has full support for [translation of text](), [formatting of dates, times, and numbers](), and [time zones]().
+Django has full support for [translation of text](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#translation), [formatting of dates, times, and numbers](), and [time zones]().
 
 Essentially, Django does two things:
 
@@ -57,4 +57,4 @@ A format file is a Python module that defines the data formats for a given local
 
 <hr>
 
-[[Previous module: Sending email]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#sending-email) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization#internationalization-and-localization) - [[Next page: Translation]]() - [[Next module: Logging]]()
+[[Previous module: Sending email]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Sending_Email#sending-email) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization#internationalization-and-localization) - [[Next page: Translation]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Translation#translation) - [[Next module: Logging]]()
