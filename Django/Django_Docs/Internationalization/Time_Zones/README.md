@@ -85,4 +85,128 @@ When `USE_TZ` is `True`, this is useful to preserve backwards-compatibility with
 
 ### Selecting the current time zone
 
-The current time zone is the equivalent of the current [locale](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization#locale-name) for translations. However, there's no equivalent of the `Accept-Language` HTTP header that Django could use to determine the user's time zone automatically. Instead, Django provides [time zone selection functions](https://docs.djangoproject.com/en/4.0/ref/utils/#time-zone-selection-functions). Use them to build the time zone selection logic that makes sene for you.
+The current time zone is the equivalent of the current [locale](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization#locale-name) for translations. However, there's no equivalent of the `Accept-Language` HTTP header that Django could use to determine the user's time zone automatically. Instead, Django provides [time zone selection functions](https://docs.djangoproject.com/en/4.0/ref/utils/#time-zone-selection-functions). Use them to build the time zone selection logic that makes sense for you.
+
+Most websites that care about time zones ask users in which time zone they live and store this information in the user's profile. For anonymous users, they use the time zone of their primary audience or UTC. [`zoneinfo.available_timezones()`](https://docs.python.org/3/library/zoneinfo.html#zoneinfo.available_timezones) provides a set of available timezones that you can use to build a map from likely locations to time zones.
+
+Here's an example that stores the current timezone in the session. (It skips error handling entirely for the sake of simplicity.)
+
+Add the following middleware to [`MIDDLEWARE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-MIDDLEWARE):
+```
+import zoneinfo
+
+from django.utils import timezone
+
+class TimezoneMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        tzname = request.session.get('django_timezone')
+        if tzname:
+            timezone.activate(zoneinfo.ZoneInfo(tzname))
+        else:
+            timezone.deactivate()
+        return self.get_response(request)
+```
+Create a view that can set the current timezone:
+```
+from django.shortcuts import redirect, render
+
+# Prepare a map of common locations to timezone choices you wish to offer.
+common_timezones = {
+    'London': 'Europe/London',
+    'Paris': 'Europe/Paris',
+    'New York': 'America/New York',
+}
+
+def set_timezone(request):
+    if request.method == 'POST`:
+        request.session['django_timezone'] = request.POST['timezone']
+        return redirect('/')
+    else:
+        return render(request, 'template.html', {'timezones': common_timezones})
+```
+Include a form in `template.html` that will `POST` to this view:
+```
+{% load tz %}
+{% get_current_timezone as TIME_ZONE %}
+<form action="{% url 'set_timezone' %}" method="POST">
+    {% csrf_token %}
+    <label for="timezone">Time zone:</label>
+    <select name="timezone">
+        {% for city, tz in timezones %}
+        <option value="{{ tz }}"{% if tz == TIME_ZONE %} selected{% endif %}>{{ city }}</option>
+        {% endfor %}
+    </select>
+    <input type="submit" value="Set">
+</form>
+```
+
+## Time zone aware input in forms
+
+When you enable time zone support, Django interprets datetimes entered in forms in the [current time zone](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Time_Zones#default-time-zone-and-current-time-zone) and returns aware datetime objects in `cleaned_data`.
+
+Converted datetimes that don't exist or are ambiguous because they fall in a DST transition will be reported as invalid values.
+
+## Time zone aware output in templates
+
+When you enable time zone support, Django converts aware datetime objects to the [current time zone](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Time_Zones#default-time-zone-and-current-time-zone) when they're rendered in templates. This behaves very much like [format localization](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Format_Localization#format-localization).
+
+<hr>
+
+:warning: **Warning**: Django doesn't convert naive datetime objects, because they could be ambiguous, and because your code should never produce naive datetimes when time zone support is enabled. However, you can force conversion with the template filters described below.
+
+<hr>
+
+Conversion to local time isn't always appropriate -- you may be generating output for computers rather than for humans. The following filters and tags, provided by the `tz` template tag library, allow you to control the time zone conversions.
+
+### Template tags
+
+#### `localtime`
+
+Enables or disables conversion of aware datetime objects to the current time zone in the contained block.
+
+This tag has exactly the same effects as the [`USE_TZ`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-USE_TZ) setting as far as the tempalte engine is concerned. It allows a more fine grained control of conversion.
+
+To activate or deactivate conversion for a template block, use:
+```
+{% load tz %}
+
+{% localtime on %}
+    {{ value }}
+{% endlocaltime %}
+
+{% localtime off %}
+    {{ value }}
+{% endlocaltime %}
+```
+
+<hr>
+
+**Note**: The value of [`USE_TZ`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-USE_TZ) isn't respected inside of a `{% localtime %}` block.
+
+<hr>
+
+#### `timezone`
+
+Sets or unsets the current time zone in the contained block. When the current time zone is unset, the default time zone applies.
+```
+{% load tz %}
+
+{% timezone "Europe/Paris" %}
+    Paris time: {{ value }}
+{% endtimezone %}
+
+{% timezone None %}
+    Server time: {{ value }}
+{% endtimezone %}
+```
+
+#### `get_current_timezone`
+
+You can get the name of the current time zone using the `get_current_timezone` tag:
+```
+{% get_current_timezone as TIME_ZONE %}
+```
+Alternatively, you can activate the [`tz()`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.context_processors.tz) context processor and use the `TIME_ZONE` context variable.
