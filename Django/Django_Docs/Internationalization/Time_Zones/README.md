@@ -399,3 +399,68 @@ You can regenerate fixtures with [`loaddata`](https://docs.djangoproject.com/en/
     >>> new_york
     datetime.datetime(2012, 3, 2, 19, 30, tzinfo=zoneinfo.ZoneInfo(key='America/New_York'))
     ```
+
+    As this example shows, the same datetime has a different date, depending on the time zone in which it is represented. But the real problem is more fundamental.
+
+    A datetime represents a **point in time**. It's absolute: it doesn't depend on anything. On the contrary, a date is a **calendaring concept**. It's period of time whose bounds depend on the time zone in which the date is considered. As you can see, these two concepts are fundamentally different, and converting a datetime to a date isn't a deterministic operation.
+
+    What does this mean in practice?
+
+    Generally, you should avoid converting a [`datetime`](https://docs.python.org/3/library/datetime.html#datetime.datetime) to [`date`](https://docs.python.org/3/library/datetime.html#datetime.date). For instance, you can use the [`date`](https://docs.djangoproject.com/en/4.0/ref/templates/builtins/#std:templatefilter-date) template filter to only show the date part of a datetime. This filter will convert the datetime into the current time zone before formatting it, ensuring the results appear correctly.
+
+    If you really need to do the conversion yourself, you must ensure the datetime is converted to the appropriate time zone first. Usually, this will be the current timezone:
+    ```
+    >>> from django.utils import timezone
+    >>> timezone.activate(zoneinfo.ZoneInfo("Asia/Singapore"))
+    # For this example, we set the time zone to Singapore, but here's how
+    # you would obtain the current time zone in the general case.
+    >>> current_tz = timezone.get_current_timezone()
+    >>> local = paris.astimezone(current_tz)
+    >>> local
+    datetime.datetime(2012, 3, 3, 8, 30, tzinfo=zoneinfo.ZoneInfo(key='Asia/Singapore'))
+    >>> local.date()
+    datetime.date(2012, 3, 3)
+
+4. **I get an error "`Are time zone definitions for your database installed?`"**
+
+    If you are using MySQL, see the [Time zone definitions](https://docs.djangoproject.com/en/4.0/ref/databases/#mysql-time-zone-definitions) section of the MySQL notes for instructions on loading time zone definitions.
+
+### Usage
+
+1. **I have a string `"2012-02-21 10:28:45"` and I know it's in the `"Europe/Helsinki"` time zone. How do I turn that into an aware datetime?**
+
+    Here you need to create the required `ZoneInfo` instance and attach it to the naive datetime:
+
+    ```
+    >>> import zoneinfo
+    >>> from django.utils.dateparse import parse_datetime
+    >>> naive = parse_datetime("2012-02-21 10:28:45")
+    >>> naive.replace(tzinfo=zoneinfo.ZoneInfo("Europe/Helsinki"))
+    datetime.datetime(2012, 2, 21, 10, 28, 45, tzinfo=zoneinfo.ZoneInfo(key='Europe/Helsinki'))
+    ```
+
+2. **How can I obtain the local time in the current time zone?**
+
+    Well, the first question is, do you really need to?
+
+    You should only use local time when you're interacting with humans, and the template layer provides [filters and tags](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Time_Zones#time-zone-aware-output-in-templates) to convert datetimes to the time zone of your choice.
+
+    Furthermore, Python knows how to compare aware datetimes, taking into account UTC offsets when necessary. It's much easier (and possibly faster) to write all your model and view code in UTC. So, in most circumstances, the datetime in UTC returned by [`django.utils.timezone.now()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.timezone.now) will be sufficient.
+
+    For the sake of completeness, though, if you really want the local time in the current time zone, here's how you can obtain it:
+
+    ```
+    >>> from django.utils import timezone
+    >>> timezone.localtime(timezone.now())
+    datetime.datetime(2012, 3, 3, 20, 10, 53, 873365, tzinfo=zoneinfo.ZoneInfo(key='Europe/Paris'))
+    ```
+
+    In this example, the current time zone is `"Europe/Paris"`.
+
+3. **How can I see all available time zones?**
+
+    [`zoneinfo.available_timezones()`](https://docs.python.org/3/library/zoneinfo.html#zoneinfo.available_timezones) provides the set of all valid keys for IANA time zones available to your system. See the docs for usage considerations.
+
+<hr>
+
+[[Previous page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Format_Localization#format-localization) - [[Top]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization/Time_Zones#time-zones) - [[Back to Internationalization and localization module opening page]](https://github.com/AndrewSRea/My_Learning_Port_II/tree/main/Django/Django_Docs/Internationalization#internationalization-and-localization) - [[Next module: Logging]]()
