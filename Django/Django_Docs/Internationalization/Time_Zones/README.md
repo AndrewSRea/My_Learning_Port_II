@@ -210,3 +210,79 @@ You can get the name of the current time zone using the `get_current_timezone` t
 {% get_current_timezone as TIME_ZONE %}
 ```
 Alternatively, you can activate the [`tz()`](https://docs.djangoproject.com/en/4.0/ref/templates/api/#django.template.context_processors.tz) context processor and use the `TIME_ZONE` context variable.
+
+### Template filters
+
+These filters accept both aware and naive datetimes. For conversion purposes, they assume that naive datetimes are in the default time zone. They always return aware datetimes.
+
+#### `localtime`
+
+Forces conversion of a single value to the current time zone.
+
+For example:
+```
+{% load tz %}
+
+{{ value|localtime }}
+```
+
+#### `utc`
+
+Forces conversion of a single value to UTC.
+
+For example:
+```
+{% load tz %}
+
+{{ value|utc }}
+```
+
+#### `timezone`
+
+Forces conversion of a single value to an arbitrary timezone.
+
+The argument must be an instance of a [`tzinfo`](https://docs.python.org/3/library/datetime.html#datetime.tzinfo) subclass or a time zone name.
+
+For example:
+```
+{% load tz %}
+
+{{ value|timezone:"Europe/Paris" }}
+```
+
+## Migration guide
+
+Here's how to migrate a project that was started before Django supported time zones.
+
+### Database
+
+#### PostgreSQL
+
+The PostgreSQL backend stores datetimes as `timestamp with time zone`. In practice, this means it converts datetimes from the connection's time zone to UTC on storage, and from UTC to the connection's time zone on retrieval.
+
+As a consequence, if you're using PostgreSQL, you can switch between `USE_TZ = False` and `USE_TZ = True` freely. The database connection's time zone will be set to [`TIME_ZONE`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-TIME_ZONE) or `UTC` respectively, so that Django obtains correct datetimes in all cases. You don't need to perform any data conversions.
+
+#### Other databases
+
+Other backends store datetimes without time zone information. If you switch from `USE_TZ = False` to `USE_TZ = True`, you must convert your data from local time to UTC -- which isn't deterministic if your local time has DST.
+
+### Code
+
+The first step is to add [`USE_TZ = True`](https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-USE_TZ) to your settings file. At this point, things should mostly work. If you create naive datetime objects in your code, Django makes them aware when necessary.
+
+However, these conversions may fail around DST transitions, which means you aren't getting the full benefits of time zone support yet. Also, you're likely to run into a few problems because it's impossible to compare a naive datetime with an aware datetime. Since Django now gives you aware datetimes, you'll get exceptions wherever you compare a datetime that comes from a model or a form with a naive datetime that you've created in your code.
+
+So the second step is to refactor your code wherever you instantiate datetime objects to make them aware. This can be done incrementally. [`django.utils.timezone`](https://docs.djangoproject.com/en/4.0/ref/utils/#module-django.utils.timezone) defines some handy helpers for compatibility code: [`now()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.timezone.now), [`is_aware()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.timezone.is_aware), [`is_naive()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.timezone.is_naive), [`make_aware()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.timezone.make_aware), and [`make_naive()`](https://docs.djangoproject.com/en/4.0/ref/utils/#django.utils.timezone.make_naive).
+
+Finally, in order to help you locate code that needs upgrading, Django raises a warning when you attempt to save a naive datetime to the database:
+```
+RuntimeWarning: DateTimeField ModelName.field_name received a naive datetime (2012-01-01 00:00:00) while time zone support is active.
+```
+During development, you can turn such warnings into exceptions and get a traceback by adding the following to your settings file:
+```
+import warnings
+warnings.filterwarnings(
+    'error', r"DateTimeField .* received a naive datetime",
+    RuntimeWarning, r'django\.db\.models\.fields',
+)
+```
